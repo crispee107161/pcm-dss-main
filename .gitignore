@@ -45,3 +45,6 @@ next-env.d.ts
 # SQLite dev database
 dev.db
 *.db
+
+# Legacy subfolder (app lives at repo root)
+/pc-merchandise-dss/
