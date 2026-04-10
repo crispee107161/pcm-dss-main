@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --app --no-eslint --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npx create-next-app@latest pc-merchandise-dss --typescript --tailwind --app --no-eslint --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(npx tsx -e ':*)",
+      "Bash(npx tsx:*)",
+      "Bash(node -e 'const {PrismaClient} = require\\('\\\\''./app/generated/prisma/client'\\\\''\\); const p = new PrismaClient\\(\\); p.user.findMany\\(\\).then\\(u => { console.log\\('\\\\''DB OK, users:'\\\\'', u.length\\); p.$disconnect\\(\\); }\\).catch\\(e => { console.error\\(e.message\\); p.$disconnect\\(\\); }\\)')",
+      "Bash(node -e ':*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(curl -s -L http://localhost:3000/login)",
+      "Bash(curl:*)",
+      "Bash(sort find:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(sed -i 's|<div className=\"w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0\">.*|<img src=\"/pcm-logo.png\" alt=\"PC Merchandise\" className=\"w-8 h-8 object-contain flex-shrink-0\" />|' 'c:/Users/Administrator/.gemini/antigravity/scratch/pc_merchandise_react - Copy/pc-merchandise-dss/app/login/page.tsx')",
+      "Bash(sed -i 's|<div className=\"w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center\">.*|<img src=\"/pcm-logo.png\" alt=\"PC Merchandise\" className=\"w-7 h-7 object-contain\" />|' 'c:/Users/Administrator/.gemini/antigravity/scratch/pc_merchandise_react - Copy/pc-merchandise-dss/app/login/page.tsx')",
+      "Bash(openssl rand:*)",
+      "Bash(NODE_OPTIONS=\"--stack-trace-limit=50\" npm run build)",
+      "Bash(npx next:*)",
+      "Bash(node --stack-trace-limit=100 node_modules/.bin/next build)",
+      "Bash(NEXT_PRIVATE_DEBUG_CACHE=1 npx next build)",
+      "Bash(grep -v \"^$\")",
+      "Bash(node --no-warnings -e ':*)",
+      "Bash(node --stack-trace-limit=50 --no-warnings -e ':*)",
+      "Bash(grep -v \"//.*\\\\.generate\")",
+      "Bash(npm info:*)",
+      "Bash(grep -v \"//.*\\\\.generate\\\\|generateStaticParams\\\\|generateMetadata\\\\|generateBuildId\\\\|generateManifest\\\\|generateClientManifest\\\\|generateAppBuildManifest\\\\|generateBuildManifest\\\\|generateFontManifest\\\\|generateSourceMaps\")",
+      "Bash(TURBOPACK=0 npm run build)",
+      "Bash(node --input-type=module -e ':*)",
+      "Bash(unset __NEXT_PRIVATE_STANDALONE_CONFIG)"
+    ]
+  }
+}
