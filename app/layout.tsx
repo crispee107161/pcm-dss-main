@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: 'PC Merchandise DSS',
@@ -13,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className={cn("h-full", "font-sans", geist.variable)}>
       <body className="min-h-full bg-slate-50 antialiased">
         {children}
         <Analytics />

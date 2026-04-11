@@ -32,7 +32,8 @@
       "Bash(grep -v \"//.*\\\\.generate\\\\|generateStaticParams\\\\|generateMetadata\\\\|generateBuildId\\\\|generateManifest\\\\|generateClientManifest\\\\|generateAppBuildManifest\\\\|generateBuildManifest\\\\|generateFontManifest\\\\|generateSourceMaps\")",
       "Bash(TURBOPACK=0 npm run build)",
       "Bash(node --input-type=module -e ':*)",
-      "Bash(unset __NEXT_PRIVATE_STANDALONE_CONFIG)"
+      "Bash(unset __NEXT_PRIVATE_STANDALONE_CONFIG)",
+      "Bash(npx shadcn@latest init -d)"
     ]
   }
 }
