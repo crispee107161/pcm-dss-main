@@ -347,8 +347,8 @@ export default function UIShowcase() {
             </Dialog>
 
             <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="destructive">Delete Item</Button>
+              <DialogTrigger render={<Button variant="destructive" />}>
+                Delete Item
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -371,8 +371,8 @@ export default function UIShowcase() {
           <SectionTitle>Dropdown Menu</SectionTitle>
           <div className="flex flex-wrap gap-3">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">Open Menu</Button>
+              <DropdownMenuTrigger render={<Button variant="outline" />}>
+                Open Menu
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -386,12 +386,10 @@ export default function UIShowcase() {
             </DropdownMenu>
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="ghost">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
-                  </svg>
-                </Button>
+              <DropdownMenuTrigger render={<Button size="icon" variant="ghost" />}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
+                </svg>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>Change Password</DropdownMenuItem>
