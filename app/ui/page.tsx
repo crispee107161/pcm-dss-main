@@ -329,8 +329,8 @@ export default function UIShowcase() {
           <SectionTitle>Dialog</SectionTitle>
           <div className="flex flex-wrap gap-3">
             <Dialog>
-              <DialogTrigger asChild>
-                <Button>Open Dialog</Button>
+              <DialogTrigger render={<Button />}>
+                Open Dialog
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
