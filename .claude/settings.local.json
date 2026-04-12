@@ -36,7 +36,8 @@
       "Bash(npx shadcn@latest init -d)",
       "Bash(npx shadcn@latest add card input badge label table dialog dropdown-menu select sonner separator skeleton -y)",
       "Bash(npx shadcn@latest add card input badge label table dialog dropdown-menu select sonner separator skeleton --overwrite)",
-      "Bash(npx shadcn@latest add alert --overwrite)"
+      "Bash(npx shadcn@latest add alert --overwrite)",
+      "WebFetch(domain:dribbble.com)"
     ]
   }
 }
