@@ -35,7 +35,7 @@ function KpiCard({
         <p className={`text-2xl font-bold mt-1 ${valueClass}`}>{value}</p>
         {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
       </div>
-      <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-400">
+      <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center flex-shrink-0 text-red-500">
         {icon}
       </div>
     </div>
@@ -136,7 +136,7 @@ export default async function OwnerDashboard() {
             </div>
             <div>
               <p className="text-zinc-400 text-sm">Ads with Purchases</p>
-              <p className="text-3xl font-bold text-green-400 mt-1">{adsWithPurchases}</p>
+              <p className="text-3xl font-bold text-red-400 mt-1">{adsWithPurchases}</p>
               <p className="text-xs text-zinc-500 mt-1">of {adCount} total ads</p>
             </div>
           </div>
@@ -150,16 +150,16 @@ export default async function OwnerDashboard() {
           <Link href="/dashboard/owner/campaign-rankings" className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
             Campaign Rankings
           </Link>
-          <Link href="/dashboard/owner/trend-analysis" className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+          <Link href="/dashboard/owner/trend-analysis" className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-100 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
             Trend Analysis
           </Link>
-          <Link href="/dashboard/owner/page-metrics" className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+          <Link href="/dashboard/owner/page-metrics" className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-100 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
             Page Metrics
           </Link>
-          <Link href="/dashboard/owner/simulation" className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+          <Link href="/dashboard/owner/simulation" className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-100 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
             Budget Simulator
           </Link>
-          <Link href="/dashboard/owner/report" className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+          <Link href="/dashboard/owner/report" className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-100 rounded-lg px-4 py-2 text-sm font-medium transition-colors">
             Generate Report
           </Link>
         </div>
