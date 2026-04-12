@@ -97,7 +97,7 @@ export default async function TrendAnalysisPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Trend Analysis"
         description="Month-over-month performance across paid ads and organic posts"

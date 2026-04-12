@@ -67,7 +67,7 @@ export default async function CategorizePage() {
   }))
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Categorize Content"
         description="Assign categories to organic posts and ads. Keywords from Manage Keywords are used to auto-suggest."

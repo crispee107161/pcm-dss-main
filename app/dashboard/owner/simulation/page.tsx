@@ -31,7 +31,7 @@ export default async function OwnerSimulationPage() {
   })
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="What-If Simulation" description="Estimate purchases from a hypothetical ad budget" />
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">

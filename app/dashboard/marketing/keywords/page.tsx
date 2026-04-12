@@ -16,7 +16,7 @@ export default async function KeywordsPage() {
   })
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="Manage Keywords" description="Keywords are used to auto-suggest categories for posts and ads" />
 
       {/* Category list */}

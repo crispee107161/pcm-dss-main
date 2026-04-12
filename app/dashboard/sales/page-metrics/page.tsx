@@ -92,7 +92,7 @@ export default async function SalesPageMetricsPage() {
   const hasAnyData = dailyMetrics.length > 0 || followerHistory.length > 0 || pageViewers.length > 0 || genderData.length > 0
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="Page Metrics" description="Facebook page-level performance: follows, views, interactions, demographics" />
 
       {!hasAnyData && postCount === 0 && (

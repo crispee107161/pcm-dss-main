@@ -75,7 +75,7 @@ export default async function SalesTrendAnalysisPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="Trend Analysis" description="Month-over-month performance across paid ads and organic posts" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

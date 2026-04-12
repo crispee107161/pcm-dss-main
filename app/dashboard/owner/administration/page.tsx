@@ -30,7 +30,7 @@ export default async function OwnerAdministrationPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="User Management" description="Create accounts, manage roles, and monitor upload activity" />
 
       {/* KPI row */}

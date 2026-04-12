@@ -10,9 +10,10 @@ interface TopBarProps {
   roleLabel: string
   collapsed: boolean
   onToggle: () => void
+  onMobileMenuOpen: () => void
 }
 
-export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle }: TopBarProps) {
+export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle, onMobileMenuOpen }: TopBarProps) {
   const pathname = usePathname()
 
   // Resolve section for each item (items inherit section from previous)
@@ -45,11 +46,22 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
     <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-40 print:hidden flex-shrink-0">
       {/* Left: toggle + breadcrumb */}
       <div className="flex items-center gap-2 min-w-0">
-        {/* Sidebar toggle */}
+        {/* Mobile hamburger — visible only on small screens */}
+        <button
+          onClick={onMobileMenuOpen}
+          aria-label="Open menu"
+          className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {/* Desktop sidebar collapse toggle — hidden on mobile */}
         <button
           onClick={onToggle}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
+          className="hidden md:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
         >
           {collapsed ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -13,7 +13,7 @@ export default async function CorrelationPage() {
   const spearmanRows = await computeSpearmanMatrix()
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="Spearman Correlation Analysis" description="Rank-order correlation between ad metrics and purchase outcomes" />
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">

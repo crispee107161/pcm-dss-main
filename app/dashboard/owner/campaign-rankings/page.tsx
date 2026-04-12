@@ -109,7 +109,7 @@ export default async function OwnerCampaignRankingsPage() {
   const totalSpendValue = totalSpend._sum.amount_spent ?? 0
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="Campaign Rankings" description="Top 10 ads ranked by spend, purchases, and reach" />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">

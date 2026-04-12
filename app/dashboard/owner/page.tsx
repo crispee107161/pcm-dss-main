@@ -70,7 +70,7 @@ export default async function OwnerDashboard() {
   const totalReach = totalReachAgg._sum.reach ?? 0
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
 
       {/* Welcome */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
