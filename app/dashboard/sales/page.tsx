@@ -116,7 +116,11 @@ export default async function SalesDashboard() {
     if (value === null) return <span className="text-slate-400 text-xs">—</span>
     const up = value >= 0
     return (
-      <span className={`text-xs font-medium ${up ? 'text-green-600' : 'text-red-500'}`}>
+      <span className={`inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2.5 py-0.5 border ${
+        up
+          ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+          : 'bg-red-50 text-red-500 border-red-100'
+      }`}>
         {up ? '▲' : '▼'} {Math.abs(value).toFixed(1)}% vs prev period
       </span>
     )
@@ -125,30 +129,36 @@ export default async function SalesDashboard() {
   const topTerritory = [...territoryData].sort((a, b) => b.distribution - a.distribution)[0]
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 max-w-7xl mx-auto space-y-6">
+
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Welcome back, {displayName}!</h1>
-        <p className="text-slate-500 text-sm mt-1">Analyze campaign performance and run What-If scenarios</p>
+      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Dashboard</h1>
+          <p className="text-slate-400 text-sm mt-0.5">Campaign performance and What-If scenarios</p>
+        </div>
+        <span className="text-sm text-slate-500 font-medium">
+          Welcome back, <span className="text-slate-800 font-semibold">{displayName}</span>
+        </span>
       </div>
 
       {/* Monthly KPIs */}
       <div>
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">Monthly KPI Summary</h2>
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-4">Monthly KPI Summary</p>
         <MonthlyKpiCards data={monthlyKpis} />
       </div>
 
       {/* MoM trend deltas */}
       {lastTwo.length === 2 && (
-        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 flex flex-wrap gap-6">
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 flex flex-wrap gap-6">
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-2">
               {lastTwo[0].period} → {lastTwo[1].period} · Spend
             </p>
             <DeltaBadge value={spendDelta} />
           </div>
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-2">
               {lastTwo[0].period} → {lastTwo[1].period} · Purchases
             </p>
             <DeltaBadge value={purchaseDelta} />
@@ -158,37 +168,37 @@ export default async function SalesDashboard() {
 
       {/* Trend charts */}
       {allAds.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="font-semibold text-slate-800 mb-1">Ad Spend vs. Purchases by Month</h2>
-            <p className="text-xs text-slate-500 mb-4">Total spend (PHP) and resulting purchases per period</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-slate-100 p-5">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">Ad Spend vs. Purchases</p>
+            <p className="text-xs text-slate-400 mb-4">Total spend (PHP) and resulting purchases per period</p>
             <SpendPurchasesChart data={adTrends} />
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="font-semibold text-slate-800 mb-1">Ad Reach by Month</h2>
-            <p className="text-xs text-slate-500 mb-4">Total unique reach from paid ads</p>
+          <div className="bg-white rounded-2xl border border-slate-100 p-5">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">Ad Reach by Month</p>
+            <p className="text-xs text-slate-400 mb-4">Total unique reach from paid ads</p>
             <ReachTrendChart data={adTrends} />
           </div>
         </div>
       )}
 
       {/* Campaign rankings */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Top by Spend */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">Top Campaigns by Spend</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Top 5 ads with highest budget allocation</p>
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Top Campaigns by Spend</p>
+            <p className="text-xs text-slate-400 mt-1">Top 5 ads with highest budget allocation</p>
           </div>
           {topSpend.length === 0 ? (
-            <p className="text-slate-500 text-sm p-6">No ad data. Upload an Ads CSV first.</p>
+            <p className="text-slate-500 text-sm p-5">No ad data. Upload an Ads CSV first.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50">
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 w-10">#</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Ad Name</th>
-                  <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Spend</th>
+                  <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-4 py-3 w-10">#</th>
+                  <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-4 py-3">Ad Name</th>
+                  <th className="text-right text-xs font-medium text-slate-400 uppercase tracking-wider px-4 py-3">Spend</th>
                 </tr>
               </thead>
               <tbody>
@@ -208,20 +218,20 @@ export default async function SalesDashboard() {
         </div>
 
         {/* Top by Purchases */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">Top Campaigns by Purchases</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Top 5 ads that drove the most purchases</p>
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Top Campaigns by Purchases</p>
+            <p className="text-xs text-slate-400 mt-1">Top 5 ads that drove the most purchases</p>
           </div>
           {topPurchases.length === 0 ? (
-            <p className="text-slate-500 text-sm p-6">No purchase data available.</p>
+            <p className="text-slate-500 text-sm p-5">No purchase data available.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50">
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 w-10">#</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Ad Name</th>
-                  <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Purchases</th>
+                  <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-4 py-3 w-10">#</th>
+                  <th className="text-left text-xs font-medium text-slate-400 uppercase tracking-wider px-4 py-3">Ad Name</th>
+                  <th className="text-right text-xs font-medium text-slate-400 uppercase tracking-wider px-4 py-3">Purchases</th>
                 </tr>
               </thead>
               <tbody>
@@ -232,7 +242,7 @@ export default async function SalesDashboard() {
                       <div className="font-medium text-slate-800 text-sm max-w-xs truncate" title={ad.ad_name}>{ad.ad_name}</div>
                       <div className="text-xs text-slate-400">{formatDate(ad.reporting_starts)} – {formatDate(ad.reporting_ends)}</div>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-green-700">{(ad.purchases ?? 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-emerald-600">{(ad.purchases ?? 0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -244,22 +254,22 @@ export default async function SalesDashboard() {
       {/* Audience demographics */}
       {(genderData.length > 0 || territoryData.length > 0) && (
         <div>
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Audience Demographics</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-4">Audience Demographics</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {genderData.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h3 className="font-semibold text-slate-700 mb-1">Gender Distribution</h3>
-                <p className="text-xs text-slate-500 mb-4">Breakdown of followers by gender</p>
+              <div className="bg-white rounded-2xl border border-slate-100 p-5">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">Gender Distribution</p>
+                <p className="text-xs text-slate-400 mb-4">Breakdown of followers by gender</p>
                 <GenderPieChart data={genderData} />
               </div>
             )}
             {territoryData.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h3 className="font-semibold text-slate-700 mb-1">Top Territories</h3>
-                <p className="text-xs text-slate-500 mb-4">
+              <div className="bg-white rounded-2xl border border-slate-100 p-5">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">Top Territories</p>
+                <p className="text-xs text-slate-400 mb-4">
                   Audience reach by region
                   {topTerritory && (
-                    <> — top market: <strong className="text-slate-700">{topTerritory.territory}</strong> ({(topTerritory.distribution * 100).toFixed(1)}%)</>
+                    <> — top market: <strong className="text-slate-600">{topTerritory.territory}</strong> ({(topTerritory.distribution * 100).toFixed(1)}%)</>
                   )}
                 </p>
                 <TerritoryChart data={territoryData} />
@@ -270,29 +280,29 @@ export default async function SalesDashboard() {
       )}
 
       {/* Correlation analysis */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-800 mb-1">Spearman Correlation Analysis</h2>
-        <p className="text-slate-500 text-sm mb-4">
-          Rank-order correlation between ad metrics and outcomes (–1 to +1).
-          Values closer to ±1 indicate stronger relationships.
+      <div className="bg-white rounded-2xl border border-slate-100 p-5">
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">Spearman Correlation Analysis</p>
+        <p className="text-xs text-slate-400 mb-4">
+          Rank-order correlation between ad metrics and outcomes (–1 to +1). Values closer to ±1 indicate stronger relationships.
         </p>
         <CorrelationTable rows={spearmanRows} />
       </div>
 
       {/* Regression model */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">Predictive Regression Model</h2>
+      <div className="bg-white rounded-2xl border border-slate-100 p-5">
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-4">Predictive Regression Model</p>
         <RegressionSummary model={latestModel} />
       </div>
 
       {/* What-If simulator */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-800 mb-1">What-If Simulator</h2>
-        <p className="text-slate-500 text-sm mb-4">
+      <div className="bg-white rounded-2xl border border-slate-100 p-5">
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-1">What-If Simulator</p>
+        <p className="text-xs text-slate-400 mb-4">
           Enter a budget amount to predict how many purchases it may generate.
         </p>
         <WhatIfSimulator />
       </div>
+
     </div>
   )
 }
