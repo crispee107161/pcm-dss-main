@@ -31,8 +31,8 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
   return (
     <div className="space-y-4">
       {/* Equation display */}
-      <div className="bg-slate-900 rounded-xl p-5 font-mono text-sm text-green-400 overflow-x-auto">
-        <p className="text-slate-500 text-xs mb-2 font-sans"># Regression Equation</p>
+      <div className="bg-slate-100 border border-slate-200 border-l-4 border-l-slate-400 rounded-xl p-5 font-mono text-sm text-slate-700 overflow-x-auto">
+        <p className="text-slate-400 text-xs mb-2 font-sans"># Regression Equation</p>
         {equation}
       </div>
 
