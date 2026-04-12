@@ -120,24 +120,24 @@ export default async function OwnerDashboard() {
 
       {/* ROI summary */}
       {totalPurchases > 0 && (
-        <div className="bg-gradient-to-br from-red-700 to-red-900 rounded-2xl p-6 mb-8">
-          <h2 className="text-lg font-semibold text-red-100 mb-4">ROI Summary</h2>
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 mb-8">
+          <h2 className="text-lg font-semibold text-slate-200 mb-4">ROI Summary</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <p className="text-red-300 text-sm">Average Cost Per Purchase</p>
+              <p className="text-slate-400 text-sm">Average Cost Per Purchase</p>
               <p className="text-3xl font-bold text-white mt-1">{formatPhp(totalSpend / totalPurchases)}</p>
             </div>
             <div>
-              <p className="text-red-300 text-sm">Purchase Rate</p>
+              <p className="text-slate-400 text-sm">Purchase Rate</p>
               <p className="text-3xl font-bold text-white mt-1">
                 {totalReach > 0 ? ((totalPurchases / totalReach) * 100).toFixed(3) : '0'}%
               </p>
-              <p className="text-xs text-red-400 mt-1">of reached audience</p>
+              <p className="text-xs text-slate-500 mt-1">of reached audience</p>
             </div>
             <div>
-              <p className="text-red-300 text-sm">Ads with Purchases</p>
-              <p className="text-3xl font-bold text-white mt-1">{adsWithPurchases}</p>
-              <p className="text-xs text-red-400 mt-1">of {adCount} total ads</p>
+              <p className="text-slate-400 text-sm">Ads with Purchases</p>
+              <p className="text-3xl font-bold text-red-400 mt-1">{adsWithPurchases}</p>
+              <p className="text-xs text-slate-500 mt-1">of {adCount} total ads</p>
             </div>
           </div>
         </div>
