@@ -77,26 +77,7 @@ export default function LoginPage() {
         </form>
       </div>
 
-      {/* Demo accounts */}
-      <div className="w-full max-w-sm mt-6">
-        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-wider text-center mb-3">Demo Accounts</p>
-        <div className="space-y-2 text-xs">
-          {[
-            { role: 'Marketing Manager', email: 'marketing@pcmerchandise.com' },
-            { role: 'Sales Director', email: 'sales@pcmerchandise.com' },
-            { role: 'Business Owner', email: 'owner@pcmerchandise.com' },
-          ].map(({ role, email }) => (
-            <div key={role} className="flex justify-between items-center py-1.5 border-b border-zinc-900">
-              <span className="text-zinc-600">{role}</span>
-              <span className="font-mono text-zinc-400">{email}</span>
-            </div>
-          ))}
-          <div className="flex justify-between items-center pt-1">
-            <span className="text-zinc-600">Password</span>
-            <span className="font-mono font-semibold text-zinc-300">password123</span>
-          </div>
-        </div>
-      </div>
+      
 
     </div>
   )
