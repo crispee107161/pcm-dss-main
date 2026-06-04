@@ -114,10 +114,12 @@ model RegressionModel {
   coef_messaging      Float?
   coef_amount_spent   Float?
   coef_spend_sq       Float?
+  coef_link_clicks    Float?
   model_type          String?
   residual_std_error  Float?
   best_lag            Int?
   r_squared           Float
+  adj_r_squared       Float?
   n                   Int
   trained_at          DateTime @default(now())
 }

@@ -48,3 +48,5 @@ dev.db
 
 # Legacy subfolder (app lives at repo root)
 /pc-merchandise-dss/
+
+.vercel

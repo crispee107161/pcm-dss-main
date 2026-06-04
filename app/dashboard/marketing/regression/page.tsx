@@ -14,6 +14,7 @@ const MODEL_TYPE_LABELS: Record<string, string> = {
   wls_mlr:         'WLS MLR',
   robust_mlr:      'Robust MLR',
   log_log_mlr:     'Log-Log MLR',
+  expanded_mlr:    'Expanded MLR',
 }
 
 function modelTypeLabel(modelType: string | null, isMLR: boolean): string {
@@ -82,7 +83,7 @@ export default async function RegressionPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr>
-                      {['ID', 'Type', 'R²', 'n', 'RSE', 'Trained'].map(h => (
+                      {['ID', 'Type', 'R²', 'Adj R²', 'n', 'RSE', 'Trained'].map(h => (
                         <th key={h} className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 bg-slate-50">{h}</th>
                       ))}
                     </tr>
@@ -100,6 +101,11 @@ export default async function RegressionPage() {
                           <span className={`font-semibold ${m.r_squared >= 0.5 ? 'text-green-700' : 'text-amber-700'}`}>
                             {(m.r_squared * 100).toFixed(1)}%
                           </span>
+                        </td>
+                        <td className="px-4 py-3 border-t border-slate-100">
+                          {m.adj_r_squared != null
+                            ? <span className={`font-semibold ${m.adj_r_squared >= 0.5 ? 'text-green-700' : 'text-amber-700'}`}>{(m.adj_r_squared * 100).toFixed(1)}%</span>
+                            : <span className="text-slate-400">—</span>}
                         </td>
                         <td className="px-4 py-3 text-slate-700 border-t border-slate-100">{m.n}</td>
                         <td className="px-4 py-3 text-slate-600 border-t border-slate-100 text-xs">

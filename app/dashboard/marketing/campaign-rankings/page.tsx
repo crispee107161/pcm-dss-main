@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
+import DateRangeFilter from '@/components/ui/DateRangeFilter'
 
 function formatPHP(value: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(value)
@@ -77,33 +78,46 @@ function RankingTable({
   )
 }
 
-export default async function CampaignRankingsPage() {
+export default async function CampaignRankingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>
+}) {
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
     redirect('/login')
   }
 
+  const { from, to } = await searchParams
+  const dateFilter = {
+    ...(from ? { gte: new Date(from) } : {}),
+    ...(to   ? { lte: new Date(to)   } : {}),
+  }
+  const hasDateFilter = Boolean(from || to)
+  const adWhere = hasDateFilter ? { reporting_starts: dateFilter } : {}
+
   const [topSpend, topPurchases, topReach, totalAds, totalSpend, adsWithPurchases] = await Promise.all([
     prisma.ad.findMany({
+      where: adWhere,
       orderBy: { amount_spent: 'desc' },
       take: 10,
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
-      where: { purchases: { gt: 0 } },
+      where: { ...adWhere, purchases: { gt: 0 } },
       orderBy: { purchases: 'desc' },
       take: 10,
       select: { ad_name: true, ad_set_name: true, purchases: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
-      where: { reach: { not: null } },
+      where: { ...adWhere, reach: { not: null } },
       orderBy: { reach: 'desc' },
       take: 10,
       select: { ad_name: true, ad_set_name: true, reach: true, reporting_starts: true, reporting_ends: true },
     }),
-    prisma.ad.count(),
-    prisma.ad.aggregate({ _sum: { amount_spent: true } }),
-    prisma.ad.count({ where: { purchases: { gt: 0 } } }),
+    prisma.ad.count({ where: adWhere }),
+    prisma.ad.aggregate({ where: adWhere, _sum: { amount_spent: true } }),
+    prisma.ad.count({ where: { ...adWhere, purchases: { gt: 0 } } }),
   ])
 
   const bySpend: RankRow[] = topSpend.map(a => ({
@@ -138,6 +152,7 @@ export default async function CampaignRankingsPage() {
         title="Campaign Rankings"
         description="Top 10 ads ranked by spend, purchases, and reach"
       />
+      <DateRangeFilter from={from} to={to} className="mb-6" />
 
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
