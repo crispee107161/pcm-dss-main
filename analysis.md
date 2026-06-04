@@ -47,7 +47,7 @@ PC Merchandise DSS is a role-based analytics dashboard for Facebook ad campaign 
 | `PageViewers` | Daily viewer breakdown | `date`, `total_viewers`, `new_viewers`, `returning_viewers` |
 | `FollowerGender` | Gender distribution snapshot | `gender`, `distribution` |
 | `FollowerTerritory` | Territory distribution snapshot | `territory`, `distribution` |
-| `RegressionModel` | Stored model record | `intercept`, `coefficient`, `coef_reach`, `coef_messaging`, `coef_amount_spent`, `coef_spend_sq`, `model_type`, `residual_std_error`, `best_lag`, `r_squared`, `n`, `trained_at` |
+| `RegressionModel` | Stored model record | `intercept`, `coefficient`, `coef_reach`, `coef_messaging`, `coef_amount_spent`, `coef_spend_sq`, `coef_link_clicks`, `model_type`, `residual_std_error`, `best_lag`, `r_squared`, `adj_r_squared`, `n`, `trained_at` |
 | `SimulationResult` | What-If run history | `reach_input`, `messaging_input`, `amount_spent_input`, `projected_purchases`, `interval_lower`, `interval_upper`, `model_id` |
 
 **Unique constraints:**
@@ -60,42 +60,39 @@ PC Merchandise DSS is a role-based analytics dashboard for Facebook ad campaign 
 
 ## Analytics Pipeline
 
-### 1. Regression — 9-Algorithm Auto-Selection
+### 1. Regression — 10-Algorithm Auto-Selection with 5-Fold CV
 **File:** `lib/stats/regression.ts`
 
-The system fits **9 model variants** on every retrain and auto-selects the one with the highest **adjusted R²**:
+The system fits **10 model variants** on every retrain. Model selection uses **5-fold cross-validation MSE** (lower = better generalisation), with adj-R² as tiebreaker. The winner is persisted to `RegressionModel`.
 
 | # | Model Type | Formula / Approach | Best For |
 |---|---|---|---|
-| 1 | `log_mlr` | `Purchases = β₀ + β₁·log(1+Reach) + β₂·log(1+Msgs) + β₃·log(1+Spend)` | Baseline log-transformed MLR |
-| 2 | `plain_mlr` | Same but raw (untransformed) predictors | Linear spend-purchase relationship |
-| 3 | `poly_mlr` | Adds `log(1+Spend)²` term | Diminishing returns on spend |
-| 4 | `ridge_mlr` | Log MLR + L2 penalty λ=0.1 on non-intercept coefficients | Correlated predictors |
-| 5 | `lasso_mlr` | Log features, L1 coordinate descent λ=0.1 | Zeros out weak predictors (good for small n) |
-| 6 | `elastic_net_mlr` | Log features, L1+L2 mix α=0.5 λ=0.1 | Correlated predictors + feature selection |
-| 7 | `wls_mlr` | Log MLR with 90-day half-life time-decay weights | Recent campaigns weighted more heavily |
-| 8 | `robust_mlr` | IRLS with Huber loss δ=1.345σ̂ | Outlier campaign resistance |
-| 9 | `log_log_mlr` | `log(1+Purchases) = β₀ + β·log(1+X)`, R² on back-transformed scale | Elasticity model — coefs = % change per 1% input |
+| 1 | `log_mlr` | `Purchases = β₀ + β₁·log(1+Reach) + β₂·log(1+Msgs) + β₃·log(1+Spend)` | Baseline |
+| 2 | `plain_mlr` | Raw (untransformed) predictors | Linear relationships |
+| 3 | `poly_mlr` | Adds `log(1+Spend)²` | Diminishing spend returns |
+| 4 | `ridge_mlr` | Log MLR + L2 penalty λ=0.1 | Correlated predictors |
+| 5 | `lasso_mlr` | L1 coordinate descent λ=0.1 | Feature selection at small n |
+| 6 | `elastic_net_mlr` | L1+L2 mix α=0.5 λ=0.1 | Correlated predictors + selection |
+| 7 | `wls_mlr` | Time-decay weights, 90-day half-life | Recent campaigns matter more |
+| 8 | `robust_mlr` | IRLS Huber loss δ=1.345σ̂ | Outlier campaign resistance |
+| 9 | `log_log_mlr` | `log(1+Purchases) ~ log(1+X)`, back-transformed R² | Elasticity model |
+| 10 | `expanded_mlr` | Adds `log(1+link_clicks)` as 4th predictor | Purchase-intent signal |
 
-**Solver:** Gaussian elimination with partial pivoting (OLS core); coordinate descent (lasso/elastic net); IRLS (robust Huber and WLS).
+**DB fields saved per retrain:** `model_type`, `intercept`, `coef_reach`, `coef_messaging`, `coef_amount_spent`, `coef_spend_sq`, `coef_link_clicks`, `r_squared`, `adj_r_squared`, `residual_std_error`, `n`
 
-**Auto-retrains** after each Ads CSV upload when n ≥ 10 ads with purchases. Persists selected model to `RegressionModel` table including `model_type` string.
-
-**Note:** `adj_r_squared` is used for in-memory model selection but is not persisted to the DB (`RegressionModel` only stores `r_squared`).
+**Auto-retrains** after each Ads CSV upload when n ≥ 10 purchase records.
 
 ---
 
 ### 2. What-If Simulation
 **File:** `lib/stats/simulation.ts`
 
-- Applies current model to user-supplied (Reach, Messaging, AmountSpent) via `predictFromModel()`
-- `predictFromModel()` dispatches all 9 model types — including log-log back-transform (`exp(ŷ) - 1`)
-- Generates **80% prediction intervals** using the correct formula for a new observation:
+- Applies current model via `predictFromModel()` — dispatches all 10 model types including log-log back-transform and expanded_mlr link_clicks term
+- **80% prediction intervals** (proper new-observation formula):
   ```
   SE = RSE × √(1 + 1/n)
-  interval = projected ± Z₈₀ × SE    where Z₈₀ = 1.2816
+  interval = projected ± Z₈₀ × SE    (Z₈₀ = 1.2816)
   ```
-- Falls back to legacy SLR if no model exists
 - Logs each run to `SimulationResult`
 
 ---
@@ -104,9 +101,8 @@ The system fits **9 model variants** on every retrain and auto-selects the one w
 **File:** `lib/stats/budget-allocator.ts`
 
 - Groups ads by `ad_set_name`
-- Computes **Laplace-smoothed efficiency** = `(purchases + 1) / (spend + CPA_estimate)` — prevents single-purchase ad sets from appearing artificially superior over well-tested ad sets
-- Allocates user-specified budget proportionally to smoothed efficiency (top 8 ad sets)
-- Projects reach, messaging, and purchases per set via the active model
+- **Laplace-smoothed efficiency** = `(purchases + 1) / (spend + CPA_estimate)` — resists single-purchase flukes
+- Proportional allocation across top 8 ad sets by smoothed efficiency
 - Prediction intervals use corrected SE = RSE × √(1 + 1/n)
 
 ---
@@ -114,18 +110,17 @@ The system fits **9 model variants** on every retrain and auto-selects the one w
 ### 4. Lagged Pearson Correlation
 **File:** `lib/stats/laggedCorrelation.ts`
 
-- Expands monthly ad records to daily metrics via uniform spread
+- Expands monthly ad records to daily metrics
 - Tests **lags [1, 2, 3, 5, 7, 14] days**: Reach/Messaging/Spend (t) vs. Purchases (t+lag)
-- Computes p-values via Fisher z-transform → normal CDF approximation (Abramowitz & Stegun)
-- Identifies best significant correlation (p < 0.05) or highest |r| fallback
+- p-values via Fisher z-transform → Abramowitz & Stegun normal CDF approximation
+- Best = highest significant |r| (p < 0.05); fallback to highest |r| if none significant
 
 ---
 
 ### 5. Spearman Rank-Order Correlation
 **File:** `lib/stats/spearman.ts`
 
-- Ranks arrays with tie-handling (average rank)
-- Computes Spearman via Pearson on ranks
+- Ranks with tie-handling (average rank)
 - Correlation matrix: Amount Spent, Reach, Impressions, Link Clicks vs. Purchases & Messaging
 
 ---
@@ -133,39 +128,29 @@ The system fits **9 model variants** on every retrain and auto-selects the one w
 ### 6. Campaign Health Scoring
 **File:** `lib/stats/health-score.ts`
 
-Composite score per ad (0–100):
-
 | Metric | Weight | Direction | Normalization |
 |---|---|---|---|
-| CPA (Cost Per Acquisition) | 50% | Lower = better | 95th-percentile cap |
-| Purchase Rate (Purchases / Reach) | 35% | Higher = better | 95th-percentile cap |
+| CPA | 50% | Lower = better | 95th-percentile cap |
+| Purchase Rate | 35% | Higher = better | 95th-percentile cap |
 | Reach | 15% | Higher = better | 95th-percentile cap |
 
 **Grades:** Excellent (80+), Good (60+), Fair (40+), Poor (20+), Critical (<20)
-
-Uses 95th-percentile normalization ceiling (not absolute max) to prevent a single outlier campaign from compressing all other scores into a false "Excellent" band.
 
 ---
 
 ### 7. Holt-Winters Forecast
 **File:** `lib/stats/forecast.ts`
 
-**Triple exponential smoothing** with additive seasonality:
-- α=0.3 (level), β=0.1 (trend), γ=0.3 (seasonal), period=7 (weekly)
-- Falls back to **Holt linear** (double exponential smoothing) when n < 2 × period (< 14 points)
-- Projects 7 days forward; history includes fitted values for chart overlay
+Triple exponential smoothing (additive seasonality): α=0.3, β=0.1, γ=0.3, period=7. Falls back to Holt linear when n < 14. Projects 7 days forward.
 
 ---
 
 ### 8. AI Insights & ChatBot
 **Files:** `actions/ai-insights.ts`, `actions/chat.ts`
 
-- **Groq API** (llama-3.1-8b-instant)
-- **AI Insights:** Summarizes KPIs in plain English for non-technical stakeholders
-  - Interval display uses corrected formula: `RSE × 1.2816 × √(1 + 1/n)`
-  - `InsightData` interface includes `n: number | null`
-- **ChatBot:** Answers questions with live data context injected into the system prompt
-  - Equation rendering is model-type-aware (`plain_mlr`, `poly_mlr`, `log_log_mlr`, `ridge_mlr`, etc.)
+- Groq API (llama-3.1-8b-instant)
+- Interval label uses corrected formula: `RSE × 1.2816 × √(1 + 1/n)`
+- ChatBot equation display is model-type-aware for all 10 model types
 
 ---
 
@@ -182,17 +167,46 @@ Uses 95th-percentile normalization ceiling (not absolute max) to prevent a singl
 | PAGE_VIEWERS_CSV | UTF-8 | Date, Total/New/Returning Viewers | date |
 | DEMOGRAPHICS_CSV | UTF-8 | Gender or Territory + Distribution | gender / territory |
 
-### Flow
-
 ```
 CSV Upload
-  ↓ detect.ts      — identify file type by header fingerprint + buffer sniff
-  ↓ parse.ts       — handle UTF-16 LE (TextDecoder), UTF-8 BOM, plain UTF-8
-  ↓ validate-*.ts  — reject malformed rows, invalid dates, negative spend
-  ↓ upsert-*.ts    — Prisma UPSERT; returns inserted/updated counts
-  ↓ UploadLog      — record attempt (success or error) with user + timestamp
-  ↓ maybeRetrainRegression() — fits all 9 models, persists winner if n ≥ 10
+  → detect.ts → parse.ts → validate-*.ts → upsert-*.ts → UploadLog
+  → maybeRetrainRegression() — fits all 10 models, persists CV winner if n ≥ 10
 ```
+
+---
+
+## Synthetic Data
+
+**Status: Generated and ready to seed.**
+
+`generate_synthetic_data.py` has been run. Output:
+- `data/Ads/synthetic/` — 14 monthly Ads CSVs, 306 rows, **163 purchase records**
+- `data/Page-Level Metrics/synthetic/` — 70 metric files (5 metrics × 14 months)
+
+Combined with ~42 real purchase records → **~205 total purchase records** after seeding.
+
+**To seed the database:**
+```bash
+# 1. Ensure .env has DATABASE_URL pointing to Neon
+# 2. Push the updated schema (adds adj_r_squared + coef_link_clicks columns)
+npx prisma db push
+# 3. Bulk-load synthetic CSVs and retrain
+npx tsx prisma/seed-synthetic.ts
+```
+
+Expected improvement after seeding:
+- R² likely 0.40–0.60 (up from ~0.27)
+- Prediction intervals ~30–40% narrower
+- Holt-Winters seasonal patterns will emerge
+- Lagged correlation can test multi-week lags meaningfully
+
+---
+
+## Date Range Filtering
+
+**Status: Implemented on campaign rankings pages (all 3 roles).**
+
+URL search params (`?from=YYYY-MM-DD&to=YYYY-MM-DD`) filter all Prisma `ad` queries by `reporting_starts`. The `DateRangeFilter` client component (`components/ui/DateRangeFilter.tsx`) renders date pickers and updates the URL on change.
 
 ---
 
@@ -204,56 +218,46 @@ CSV Upload
 |---|---|
 | `/dashboard/marketing` | KPIs, model summary, recent uploads |
 | `/upload` | CSV upload form (all 6 types) |
-| `/categorize` | Assign categories to posts/ads; auto-categorize |
-| `/keywords` | Add/delete keywords; AI keyword suggestions |
-| `/regression` | Active model type + equation, R², RSE, full model history |
-| `/correlation` | Lagged Pearson (6 lags) + Spearman tables |
-| `/page-metrics` | Follows, Interactions, Link Clicks trends |
-| `/trend-analysis` | Post engagement trends by type |
-| `/campaign-rankings` | Top 10 ads by spend/reach/purchases |
-| `/simulation` | What-If simulator with corrected 80% PI |
-| `/report` | Printable analytics report with AI Insights |
+| `/categorize` | Assign categories to posts/ads |
+| `/keywords` | Add/delete keywords; AI suggestions |
+| `/regression` | Active model type, R², Adj R², RSE, model history |
+| `/correlation` | Lagged Pearson (6 lags) + Spearman |
+| `/page-metrics` | Daily page metric trends |
+| `/trend-analysis` | Post engagement trends |
+| `/campaign-rankings` | Top 10 ads — date-range filterable |
+| `/simulation` | What-If simulator (80% PI) |
+| `/report` | Printable report with AI Insights |
 
 ### SALES_DIRECTOR
 
 | Page | Features |
 |---|---|
-| `/dashboard/sales` | Monthly KPIs, ad trends, health scores, demographics |
-| `/campaign-rankings` | Top ads by spend/purchases |
-| `/correlation` | Correlation analysis (read-only) |
-| `/regression` | Regression summary (read-only) |
-| `/page-metrics` | Page metrics charts |
-| `/trend-analysis` | Trend analysis |
-| `/simulation` | What-If simulator |
-| `/report` | Analytics report |
+| `/dashboard/sales` | Monthly KPIs, health scores, demographics |
+| `/campaign-rankings` | Date-range filterable rankings |
+| `/correlation` | Read-only |
+| `/regression` | Read-only |
+| `/page-metrics`, `/trend-analysis`, `/simulation`, `/report` | Standard |
 
 ### BUSINESS_OWNER
 
 | Page | Features |
 |---|---|
-| `/dashboard/owner` | ROI summary, follower snapshot, quick nav |
+| `/dashboard/owner` | ROI summary, follower snapshot |
 | `/administration` | User CRUD, upload audit logs |
-| `/campaign-rankings` | Campaign rankings |
-| `/correlation` | Correlation analysis (read-only) |
-| `/regression` | Regression summary (read-only) |
-| `/page-metrics` | Page metrics |
-| `/trend-analysis` | Trend analysis |
+| `/campaign-rankings` | Date-range filterable rankings |
 | `/category-performance` | Category vs. category (paid + organic) |
-| `/simulation` | What-If simulator |
-| `/report` | Analytics report |
+| `/correlation`, `/regression`, `/page-metrics`, `/trend-analysis`, `/simulation`, `/report` | Standard |
 
 ---
 
 ## Current Data State
 
-| Source | Coverage | Records |
-|---|---|---|
-| Ads CSVs (Sep, Dec 2025, Jan 2026 partial) | ~3 months | ~230 total; **~42 with purchases** |
-| Organic Posts (Sep 2025 only) | 1 month | 81 posts |
-| Page-Level Metrics | Sep 2025 – Jan 2026 | ~120 daily rows |
-| Demographics | Snapshots | Gender (3 rows), Territories (~12 rows) |
-
-**The n=42 purchase records is the critical bottleneck.** All 9 regression models train on these 42 rows. More data improves model selection reliability and tightens prediction intervals.
+| Source | Real Data | Synthetic Data | After Seeding |
+|---|---|---|---|
+| Ads with purchases | ~42 records | 163 records | ~205 |
+| All ads | ~230 records | 306 records | ~536 |
+| Daily page metrics | ~120 rows | ~420 rows (14 months) | ~540 |
+| Organic posts | 81 (Sep 2025 only) | — | 81 |
 
 ---
 
@@ -261,49 +265,30 @@ CSV Upload
 
 ### Complete
 - [x] CSV upload (6 file types, multi-encoding)
-- [x] 9-algorithm regression with automatic model selection (adj-R²)
-- [x] What-If simulation with corrected 80% prediction intervals (RSE × √(1+1/n))
+- [x] 10-algorithm regression, 5-fold CV model selection
+- [x] `expanded_mlr` — link_clicks as 4th predictor
+- [x] `adj_r_squared` persisted to DB and shown in model history
+- [x] What-If simulation with corrected 80% PI
 - [x] Lagged Pearson correlation (6 lags: 1, 2, 3, 5, 7, 14 days)
 - [x] Spearman rank correlation matrix
-- [x] Campaign health scoring (95th-percentile normalized CPA, purchase rate, reach)
-- [x] Budget allocation optimizer (Laplace-smoothed efficiency + corrected intervals)
-- [x] Holt-Winters forecast (triple exponential smoothing, weekly seasonality)
-- [x] AI Insights (Groq) with corrected interval display and n-aware formula
+- [x] Campaign health scoring (95th-percentile normalized)
+- [x] Budget allocation optimizer (Laplace-smoothed efficiency)
+- [x] Holt-Winters forecast (weekly seasonality)
+- [x] AI Insights with n-aware corrected interval display
 - [x] ChatBot with model-type-aware equation rendering
+- [x] Date range filtering on campaign rankings (all 3 roles)
+- [x] Synthetic data generated (ready to seed via `seed-synthetic.ts`)
 - [x] Content categorization + keyword management
-- [x] Campaign rankings
-- [x] Category performance analytics
+- [x] Campaign rankings, category performance
 - [x] Role-based auth + route guards (3 roles)
-- [x] User management (BUSINESS_OWNER only)
-- [x] Upload audit log
-- [x] Printable reports
+- [x] User management, upload audit log, printable reports
 
-### Incomplete / Not Yet Built
-- [ ] Synthetic data generation (`generate_synthetic_data.py` exists but has not been run — model underpowered at n=42)
-- [ ] `adj_r_squared` not persisted to DB (used for in-memory model selection only)
-- [ ] Custom date range filtering on dashboards
-- [ ] Export to Excel/CSV (currently print-based only)
+### Not Yet Done
+- [ ] **Seed the synthetic data** — run `prisma db push` + `seed-synthetic.ts` (needs `.env`)
+- [ ] Custom date range filtering on correlation and trend-analysis pages
+- [ ] Export to Excel/CSV (print-based only currently)
 - [ ] Automated alerts / threshold notifications
 - [ ] Real-time dashboard refresh
-
----
-
-## Synthetic Data — What's Needed
-
-| Algorithm | Current n | Recommended minimum | Status |
-|---|---|---|---|
-| Regression (9 models) | 42 (ads with purchases) | 100–200 | Underpowered |
-| Spearman correlation | 230 (all ads) | 100+ | Thin but acceptable |
-| Lagged correlation | ~120 daily rows | 365+ days | Cannot detect seasonality |
-| Holt-Winters forecast | ~120 daily rows | 365+ days | No seasonal baseline |
-| Budget allocator | ~3 months of ad sets | 6–12 months | Limited efficiency history |
-
-**Priority for `generate_synthetic_data.py`:**
-1. **Ads CSV** — extend to 12 months; target 150–200 purchase records while preserving the `amount_spent → reach → messaging → purchases` causal chain
-2. **Page-Level Metrics** — extend daily series to 12–18 months for seasonality detection
-3. **Organic Posts** — fill Oct 2025 – Jan 2026 (3 missing months)
-
-Synthetic records must preserve inter-metric correlations. Data that breaks causal relationships will corrupt all 9 regression models rather than improve them.
 
 ---
 
@@ -312,20 +297,18 @@ Synthetic records must preserve inter-metric correlations. Data that breaks caus
 | What | Path |
 |---|---|
 | Database schema | `prisma/schema.prisma` |
-| Auth config | `lib/auth.ts` |
-| CSV detection | `lib/csv/detect.ts` |
-| CSV parsing | `lib/csv/parse.ts` |
-| Regression (9 models) | `lib/stats/regression.ts` |
+| Regression (10 models, CV selection) | `lib/stats/regression.ts` |
 | Simulation | `lib/stats/simulation.ts` |
 | Budget allocator | `lib/stats/budget-allocator.ts` |
 | Lagged correlation | `lib/stats/laggedCorrelation.ts` |
 | Spearman | `lib/stats/spearman.ts` |
 | Health scoring | `lib/stats/health-score.ts` |
-| Forecasting (Holt-Winters) | `lib/stats/forecast.ts` |
+| Holt-Winters forecast | `lib/stats/forecast.ts` |
 | AI Insights | `actions/ai-insights.ts` |
 | ChatBot | `actions/chat.ts` |
-| Server actions | `actions/` |
-| Dashboards | `app/dashboard/[role]/` |
-| Components | `components/` |
-| Environment | `.env.example` |
+| Date range filter component | `components/ui/DateRangeFilter.tsx` |
 | Synthetic data generator | `generate_synthetic_data.py` |
+| Synthetic data seeder | `prisma/seed-synthetic.ts` |
+| Synthetic Ads CSVs | `data/Ads/synthetic/` |
+| Synthetic Page Metric CSVs | `data/Page-Level Metrics/synthetic/` |
+| Dashboards | `app/dashboard/[role]/` |
