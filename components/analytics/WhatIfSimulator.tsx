@@ -13,9 +13,9 @@ function formatPhp(amount: number): string {
 }
 
 function InputField({
-  id, name, label, prefix, placeholder, required,
+  id, name, label, prefix, placeholder, required, max,
 }: {
-  id: string; name: string; label: string; prefix?: string; placeholder: string; required?: boolean
+  id: string; name: string; label: string; prefix?: string; placeholder: string; required?: boolean; max?: number
 }) {
   return (
     <div className="flex-1 min-w-[140px]">
@@ -31,6 +31,7 @@ function InputField({
           name={name}
           type="number"
           min="0"
+          max={max}
           step={prefix === '₱' ? '0.01' : '1'}
           placeholder={placeholder}
           className={`w-full ${prefix ? 'pl-8' : 'pl-3'} pr-3 py-2 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm`}
@@ -57,9 +58,9 @@ export default function WhatIfSimulator() {
       </p>
 
       <form action={formAction} className="flex flex-wrap gap-3 items-end">
-        <InputField id="reach" name="reach" label="Reach (people)" placeholder="5000" />
-        <InputField id="messaging" name="messaging" label="Messaging Contacts" placeholder="120" />
-        <InputField id="amount_spent" name="amount_spent" label="Ad Spend (PHP)" prefix="₱" placeholder="5000" required />
+        <InputField id="reach" name="reach" label="Reach (people)" placeholder="5000" max={10_000_000} />
+        <InputField id="messaging" name="messaging" label="Messaging Contacts" placeholder="120" max={500_000} />
+        <InputField id="amount_spent" name="amount_spent" label="Ad Spend (PHP)" prefix="₱" placeholder="5000" required max={1_000_000} />
 
         <div className="flex items-end">
           <button
@@ -105,11 +106,11 @@ export default function WhatIfSimulator() {
                 <span className="text-base font-normal text-zinc-500 ml-1">purchases</span>
               </p>
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-zinc-400">80% prediction interval:</span>
+                <span className="text-xs text-zinc-400">Approximate 80% prediction interval:</span>
                 <span className="text-sm font-semibold text-amber-400">{lower} – {upper}</span>
               </div>
               <p className="text-xs text-zinc-600 mt-1">
-                There is an 80% chance the actual purchase count falls in this range.
+                Based on model residual error (±RSE × 1.28). Actual results may vary, especially for inputs outside the training data range.
               </p>
             </div>
           </div>

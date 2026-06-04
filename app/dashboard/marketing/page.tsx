@@ -48,7 +48,7 @@ export default async function MarketingDashboard() {
 
   const [adCount, adsWithPurchases, latestModel, recentUploads, totalUploads] = await Promise.all([
     prisma.ad.count(),
-    prisma.ad.count({ where: { purchases: { not: null } } }),
+    prisma.ad.count({ where: { purchases: { gt: 0 } } }),
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
     prisma.uploadLog.findMany({
       orderBy: { uploaded_at: 'desc' },

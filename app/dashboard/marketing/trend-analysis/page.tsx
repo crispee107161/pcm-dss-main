@@ -91,7 +91,7 @@ export default async function TrendAnalysisPage() {
     const up = value >= 0
     return (
       <span className={`text-xs font-medium ${up ? 'text-green-600' : 'text-red-500'}`}>
-        {up ? '▲' : '▼'} {Math.abs(value).toFixed(1)}% vs prev month
+        {up ? '▲' : '▼'} {Math.abs(value).toFixed(1)}% vs prev period
       </span>
     )
   }
@@ -100,7 +100,7 @@ export default async function TrendAnalysisPage() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Trend Analysis"
-        description="Month-over-month performance across paid ads and organic posts"
+        description="Period-over-period performance across paid ads and organic posts"
       />
 
       {/* Summary cards */}

@@ -327,7 +327,7 @@ export default async function SalesReportPage() {
           rSquared: latestModel?.r_squared ?? null,
           isMLR,
           rse: latestModel?.residual_std_error ?? null,
-          forecastBaseline: dailyMetrics.length >= 7 ? viewsForecast.lastMA : null,
+          forecastBaseline: dailyMetrics.length >= 7 ? viewsForecast.lastLevel : null,
           avgEngagement: null,
         }} />
 

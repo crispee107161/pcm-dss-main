@@ -51,7 +51,7 @@ export default async function SalesDashboard() {
         select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
       }),
       prisma.ad.findMany({
-        where: { purchases: { not: null } },
+        where: { purchases: { gt: 0 } },
         orderBy: { purchases: 'desc' },
         take: 5,
         select: { ad_name: true, ad_set_name: true, purchases: true, reporting_starts: true, reporting_ends: true },

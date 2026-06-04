@@ -161,7 +161,7 @@ export default function BudgetAllocator() {
           </div>
 
           <p className="text-[11px] text-slate-400">
-            Allocation weighted by historical purchase efficiency (purchases ÷ spend) per ad set. Projected purchases use the {result.is_mlr ? 'Multiple' : 'Simple'} Linear Regression model with scaled reach and messaging estimates from historical ratios. 80% prediction intervals shown below each purchase count.
+            Allocation weighted by historical purchase efficiency (purchases ÷ spend) per ad set. Projected purchases use the {result.is_mlr ? 'Multiple' : 'Simple'} Linear Regression model with scaled reach and messaging estimates from historical ratios. Approximate 80% prediction intervals shown below each purchase count (constant-width, based on model RSE).
           </p>
         </div>
       )}

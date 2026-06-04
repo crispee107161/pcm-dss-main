@@ -21,9 +21,13 @@ export async function runWhatIfAction(
 
   const amountSpent = parse('amount_spent')
   if (amountSpent === null) return { error: 'Please enter a valid positive amount spent' }
+  if (amountSpent > 1_000_000) return { error: 'Amount spent exceeds the supported range (max ₱1,000,000)' }
 
   const reach = parse('reach') ?? 0
   const messaging = parse('messaging') ?? 0
+
+  if (reach > 10_000_000) return { error: 'Reach exceeds the supported range (max 10,000,000)' }
+  if (messaging > 500_000) return { error: 'Messaging contacts exceeds the supported range (max 500,000)' }
 
   try {
     const userId = parseInt(session.user.id, 10)

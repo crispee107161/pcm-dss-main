@@ -54,7 +54,7 @@ export async function runSimulation(
       messaging_input: messaging,
       amount_spent_input: amountSpent,
       projected_purchases,
-      interval_lower,
+      interval_lower: Math.max(0, interval_lower),
       interval_upper,
       model_id: latestModel.id,
     },

@@ -83,14 +83,14 @@ export default async function CampaignRankingsPage() {
     redirect('/login')
   }
 
-  const [topSpend, topPurchases, topReach, totalAds, totalSpend] = await Promise.all([
+  const [topSpend, topPurchases, topReach, totalAds, totalSpend, adsWithPurchases] = await Promise.all([
     prisma.ad.findMany({
       orderBy: { amount_spent: 'desc' },
       take: 10,
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
-      where: { purchases: { not: null } },
+      where: { purchases: { gt: 0 } },
       orderBy: { purchases: 'desc' },
       take: 10,
       select: { ad_name: true, ad_set_name: true, purchases: true, reporting_starts: true, reporting_ends: true },
@@ -103,6 +103,7 @@ export default async function CampaignRankingsPage() {
     }),
     prisma.ad.count(),
     prisma.ad.aggregate({ _sum: { amount_spent: true } }),
+    prisma.ad.count({ where: { purchases: { gt: 0 } } }),
   ])
 
   const bySpend: RankRow[] = topSpend.map(a => ({
@@ -150,7 +151,7 @@ export default async function CampaignRankingsPage() {
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 col-span-2 md:col-span-1">
           <p className="text-xs text-slate-500 uppercase tracking-wider">Ads with Purchases</p>
-          <p className="text-2xl font-bold text-green-700 mt-1">{topPurchases.length > 0 ? `${topPurchases.length}+` : '0'}</p>
+          <p className="text-2xl font-bold text-green-700 mt-1">{adsWithPurchases}</p>
         </div>
       </div>
 

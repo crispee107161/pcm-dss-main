@@ -71,14 +71,14 @@ export default async function OwnerTrendAnalysisPage() {
     const up = value >= 0
     return (
       <span className={`text-xs font-medium ${up ? 'text-green-600' : 'text-red-500'}`}>
-        {up ? '▲' : '▼'} {Math.abs(value).toFixed(1)}% vs prev month
+        {up ? '▲' : '▼'} {Math.abs(value).toFixed(1)}% vs prev period
       </span>
     )
   }
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <PageHeader title="Trend Analysis" description="Month-over-month performance across paid ads and organic posts" />
+      <PageHeader title="Trend Analysis" description="Period-over-period performance across paid ads and organic posts" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {adTrends.map(t => (
