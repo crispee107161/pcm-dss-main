@@ -64,10 +64,14 @@ export interface PageMetricParseResult {
 // Maps the metric name line (line 2) to a DB column name
 const METRIC_NAME_MAP: Record<string, PageMetricColumn> = {
   'Facebook follows':     'follows',
+  'Follows':              'follows',
   'Content interactions': 'interactions',
+  'Interactions':         'interactions',
   'Facebook link clicks': 'link_clicks',
+  'Link clicks':          'link_clicks',
   'Views':                'views',
   'Facebook visits':      'visits',
+  'Visits':               'visits',
 }
 
 /**
