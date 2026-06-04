@@ -142,9 +142,16 @@ export async function addKeywordsBulk(items: { word: string; categoryId: number 
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') throw new Error('Unauthorized')
   if (items.length === 0) return
+  if (items.length > 100) throw new Error('Too many keywords in a single bulk insert (max 100).')
+
+  const sanitized = items
+    .map(i => ({ word: i.word.trim(), category_id: i.categoryId }))
+    .filter(i => i.word.length > 1 && i.word.length <= 100)
+
+  if (sanitized.length === 0) return
 
   await prisma.keyword.createMany({
-    data: items.map(i => ({ word: i.word.trim(), category_id: i.categoryId })),
+    data: sanitized,
     skipDuplicates: true,
   })
 

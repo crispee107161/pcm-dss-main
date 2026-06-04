@@ -1,5 +1,7 @@
 'use server'
 
+import { auth } from '@/lib/auth'
+
 export interface InsightData {
   totalSpend: number
   totalPurchases: number
@@ -16,6 +18,9 @@ export interface InsightData {
 }
 
 export async function generateAIInsights(data: InsightData): Promise<string> {
+  const session = await auth()
+  if (!session?.user) return 'Unauthorized'
+
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return 'AI insights unavailable — add GROQ_API_KEY to your environment variables.'
 

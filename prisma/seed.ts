@@ -78,10 +78,9 @@ async function main() {
 
   for (const user of users) {
     const password_hash = await bcryptjs.hash(user.password, 12)
-    const created = await prisma.user.upsert({
-      where: { email: user.email },
-      create: { email: user.email, password_hash, role: user.role },
-      update: { password_hash, role: user.role },
+    const existing = await prisma.user.findUnique({ where: { email: user.email } })
+    const created = existing ?? await prisma.user.create({
+      data: { email: user.email, password_hash, role: user.role },
     })
     console.log(`User: ${created.email} (${created.role})`)
   }

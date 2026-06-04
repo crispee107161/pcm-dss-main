@@ -156,7 +156,8 @@ export async function uploadCSV(
       retrained,
     }
   } catch (err) {
-    const error_message = (err as Error).message
+    const internalMessage = (err as Error).message
+    const clientMessage = 'Upload failed. Please check your file and try again.'
 
     try {
       await prisma.uploadLog.create({
@@ -167,7 +168,7 @@ export async function uploadCSV(
           status: 'FAILED',
           records_inserted: 0,
           records_updated: 0,
-          error_message,
+          error_message: internalMessage,
         },
       })
     } catch {
@@ -179,7 +180,7 @@ export async function uploadCSV(
       upload_type: detectedType,
       records_inserted: 0,
       records_updated: 0,
-      error_message,
+      error_message: clientMessage,
       retrained: false,
     }
   }

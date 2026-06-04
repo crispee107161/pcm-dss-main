@@ -12,6 +12,8 @@ export async function sendChatMessage(history: ChatMessage[], userMessage: strin
   const session = await auth()
   if (!session?.user) return 'Unauthorized'
 
+  if (userMessage.length > 2000) return 'Message too long (max 2000 characters).'
+
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return 'AI chat unavailable — GROQ_API_KEY not configured.'
 
@@ -84,9 +86,10 @@ ${dailyMetrics.length > 0
 Current followers: ${followerHistory[0]?.followers?.toLocaleString() ?? 'N/A'}
 =================`
 
+  const trimmedHistory = history.slice(-20)
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...history.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text })),
+    ...trimmedHistory.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text })),
     { role: 'user', content: userMessage },
   ]
 
