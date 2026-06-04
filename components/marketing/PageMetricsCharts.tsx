@@ -164,7 +164,7 @@ export function MovingAverageForecastChart({ data }: { data: ForecastChartPoint[
         />
         <Line
           dataKey="ma"
-          name="7-day Moving Avg"
+          name="H-W Fitted"
           stroke="#ef4444"
           strokeWidth={2}
           dot={false}
@@ -172,7 +172,7 @@ export function MovingAverageForecastChart({ data }: { data: ForecastChartPoint[
         />
         <Line
           dataKey="forecast"
-          name="7-day Forecast"
+          name="H-W Forecast"
           stroke="#f59e0b"
           strokeWidth={2}
           strokeDasharray="6 3"

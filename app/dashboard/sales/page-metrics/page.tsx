@@ -11,7 +11,7 @@ import {
   TerritoryChart,
   MovingAverageForecastChart,
 } from '@/components/marketing/PageMetricsCharts'
-import { computeMovingAverageForecast } from '@/lib/stats/forecast'
+import { computeHoltWintersForecast } from '@/lib/stats/forecast'
 
 function fmt(date: Date) {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(date))
@@ -78,7 +78,7 @@ export default async function SalesPageMetricsPage() {
   const avgEngagement = postAgg._avg.engagement_rate ?? 0
   const totalPostReach = postAgg._sum.reach ?? 0
 
-  const viewsForecast = computeMovingAverageForecast(
+  const viewsForecast = computeHoltWintersForecast(
     dailyMetrics.map(d => ({ date: d.date, value: d.views })),
     7, 7
   )
@@ -200,13 +200,13 @@ export default async function SalesPageMetricsPage() {
         <section className="mb-10">
           <h2 className="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-indigo-500 rounded-full inline-block" />
-            Page Views — 7-Day Moving Average Forecast
+            Page Views — Holt-Winters Forecast
             <span className="text-xs font-normal text-slate-400">(FR-22)</span>
           </h2>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-medium text-slate-700 text-sm">Historical views + 7-day forecast</h3>
-              <span className="text-xs text-slate-400">MA baseline: {viewsForecast.lastMA.toLocaleString()} views/day</span>
+              <span className="text-xs text-slate-400">Level: {viewsForecast.lastLevel.toLocaleString()} views/day{viewsForecast.method === 'holt-winters' ? ' · Triple exp. smoothing' : ' · Double exp. smoothing'}</span>
             </div>
             <p className="text-xs text-slate-400 mb-4">
               Solid line = actual daily views · Dashed red = 7-day moving average · Orange dots = 7-day forecast

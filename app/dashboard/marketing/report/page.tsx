@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/nav/PageHeader'
 import { PrintButton } from '@/components/marketing/PrintButton'
 import LaggedCorrelationPanel from '@/components/analytics/LaggedCorrelationPanel'
 import { computeLaggedCorrelations } from '@/lib/stats/laggedCorrelation'
-import { computeMovingAverageForecast } from '@/lib/stats/forecast'
+import { computeHoltWintersForecast } from '@/lib/stats/forecast'
 import { MovingAverageForecastChart } from '@/components/marketing/PageMetricsCharts'
 import AIInsightCard from '@/components/analytics/AIInsightCard'
 
@@ -95,7 +95,7 @@ export default async function ReportPage() {
   }
 
   // Page views forecast (FR-22)
-  const viewsForecast = computeMovingAverageForecast(
+  const viewsForecast = computeHoltWintersForecast(
     dailyMetrics.map(d => ({ date: d.date, value: d.views })),
     7, 7
   )
@@ -221,7 +221,7 @@ export default async function ReportPage() {
                   <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Total Spend</th>
                   <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Purchases</th>
                   <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Reach</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">ROAS</th>
+                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">CPA</th>
                 </tr>
               </thead>
               <tbody>
@@ -233,20 +233,28 @@ export default async function ReportPage() {
                     <td className="px-4 py-3 text-green-700 font-semibold">{row.purchases}</td>
                     <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">{row.reach.toLocaleString()}</td>
                     <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">
-                      {row.spend > 0 ? (row.purchases / row.spend * 1000).toFixed(4) : '—'}
+                      {row.purchases > 0 ? formatPHP(row.spend / row.purchases) : '—'}
                     </td>
                   </tr>
                 ))}
-                <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-                  <td className="px-4 py-3 text-slate-800">Total</td>
-                  <td className="px-4 py-3 text-slate-800 hidden sm:table-cell">{allAds.length}</td>
-                  <td className="px-4 py-3 text-red-700">{formatPHP(totalSpend)}</td>
-                  <td className="px-4 py-3 text-green-700">{totalPurchases}</td>
-                  <td className="px-4 py-3 text-slate-800 hidden sm:table-cell">{totalReach.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">
-                    {totalSpend > 0 ? (totalPurchases / totalSpend * 1000).toFixed(4) : '—'}
-                  </td>
-                </tr>
+                {(() => {
+                  const mSpend = monthlyData.reduce((s, r) => s + r.spend, 0)
+                  const mPurchases = monthlyData.reduce((s, r) => s + r.purchases, 0)
+                  const mReach = monthlyData.reduce((s, r) => s + r.reach, 0)
+                  const mCount = monthlyData.reduce((s, r) => s + r.ad_count, 0)
+                  return (
+                    <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
+                      <td className="px-4 py-3 text-slate-800">Total</td>
+                      <td className="px-4 py-3 text-slate-800 hidden sm:table-cell">{mCount}</td>
+                      <td className="px-4 py-3 text-red-700">{formatPHP(mSpend)}</td>
+                      <td className="px-4 py-3 text-green-700">{mPurchases}</td>
+                      <td className="px-4 py-3 text-slate-800 hidden sm:table-cell">{mReach.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">
+                        {mPurchases > 0 ? formatPHP(mSpend / mPurchases) : '—'}
+                      </td>
+                    </tr>
+                  )
+                })()}
               </tbody>
             </table>
           </div>
@@ -292,10 +300,12 @@ export default async function ReportPage() {
               7-Day Page Views Forecast (FR-22)
             </h2>
             <p className="text-sm text-slate-500 mb-1">
-              Moving average baseline: <strong>{viewsForecast.lastMA.toLocaleString()} views/day</strong>. Next 7 days shown as orange dots.
+              Holt-Winters level: <strong>{viewsForecast.lastLevel.toLocaleString()} views/day</strong>. Next 7 days shown as orange dots.
             </p>
             <p className="text-xs text-slate-400 mb-4">
-              This is a flat MA projection — it serves as a benchmark for upcoming ad campaign planning.
+              {viewsForecast.method === 'holt-winters'
+                ? 'Triple exponential smoothing (α=0.3, β=0.1, γ=0.3, period=7) — captures trend and weekly seasonality.'
+                : 'Double exponential smoothing (Holt linear) — upload more data to enable seasonal model.'}
             </p>
             <MovingAverageForecastChart data={forecastChartData} />
           </div>
@@ -398,7 +408,7 @@ export default async function ReportPage() {
             {viewsForecast.forecast.length > 0 && (
               <li className="flex gap-2">
                 <span className="text-red-400 mt-0.5">•</span>
-                7-day page views forecast baseline: <strong>{viewsForecast.lastMA.toLocaleString()} views/day</strong> (trailing 7-day MA).
+                7-day page views forecast baseline: <strong>{viewsForecast.lastLevel.toLocaleString()} views/day</strong> (Holt-Winters level).
               </li>
             )}
           </ul>
