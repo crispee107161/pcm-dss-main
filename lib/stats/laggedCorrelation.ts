@@ -131,7 +131,8 @@ export async function computeLaggedCorrelations(): Promise<LaggedCorrelationOutp
   const dailyMap = expandAndAggregate(ads)
   const results: LagResult[] = []
 
-  for (const lag of [1, 3, 7]) {
+  // Extended lag range: adds 2, 5, 14 to capture shorter cycles and bi-weekly patterns
+  for (const lag of [1, 2, 3, 5, 7, 14]) {
     const corrs = computeLaggedPearson(dailyMap, lag)
 
     const reach_r = corrs.reach_r

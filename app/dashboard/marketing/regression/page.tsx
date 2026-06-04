@@ -5,10 +5,15 @@ import { PageHeader } from '@/components/nav/PageHeader'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
 
 const MODEL_TYPE_LABELS: Record<string, string> = {
-  log_mlr:   'Log MLR',
-  plain_mlr: 'Plain MLR',
-  poly_mlr:  'Poly MLR',
-  ridge_mlr: 'Ridge MLR',
+  log_mlr:         'Log MLR',
+  plain_mlr:       'Plain MLR',
+  poly_mlr:        'Poly MLR',
+  ridge_mlr:       'Ridge MLR',
+  lasso_mlr:       'Lasso MLR',
+  elastic_net_mlr: 'Elastic Net MLR',
+  wls_mlr:         'WLS MLR',
+  robust_mlr:      'Robust MLR',
+  log_log_mlr:     'Log-Log MLR',
 }
 
 function modelTypeLabel(modelType: string | null, isMLR: boolean): string {

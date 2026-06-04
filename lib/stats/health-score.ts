@@ -26,10 +26,19 @@ export function computeHealthScores(ads: AdForHealth[]): ScoredAd[] {
   const rates        = withPurchases.map(a => (a.purchases!) / (a.reach!))
   const reaches      = ads.filter(a => (a.reach ?? 0) > 0).map(a => a.reach!)
 
-  const minCpa  = cpas.length  ? Math.min(...cpas)  : 0
-  const maxCpa  = cpas.length  ? Math.max(...cpas)  : 1
-  const maxRate = rates.length ? Math.max(...rates)  : 1
-  const maxReach = reaches.length ? Math.max(...reaches) : 1
+  // Use 95th-percentile cap instead of absolute max to prevent a single outlier
+  // from compressing the entire score distribution into a false "Excellent" band
+  function pct95(arr: number[]): number {
+    if (arr.length === 0) return 1
+    const sorted = [...arr].sort((a, b) => a - b)
+    const idx = Math.min(Math.ceil(sorted.length * 0.95) - 1, sorted.length - 1)
+    return sorted[idx]
+  }
+
+  const minCpa   = cpas.length   ? Math.min(...cpas)  : 0
+  const maxCpa   = cpas.length   ? pct95(cpas)        : 1
+  const maxRate  = rates.length  ? pct95(rates)       : 1
+  const maxReach = reaches.length ? pct95(reaches)    : 1
 
   function normalize(val: number, min: number, max: number, invert = false): number {
     if (max === min) return invert ? 0 : 100

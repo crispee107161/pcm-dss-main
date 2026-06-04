@@ -61,9 +61,21 @@ ${latestModel
   ? [
       `- R²: ${(latestModel.r_squared * 100).toFixed(2)}% of purchase variance explained`,
       `- Sample size: ${latestModel.n} campaigns`,
-      isMLR
-        ? `- Equation: Purchases = ${latestModel.intercept.toFixed(3)} + ${latestModel.coef_reach?.toFixed(4)}·log(1+Reach) + ${latestModel.coef_messaging?.toFixed(4)}·log(1+Msgs) + ${latestModel.coef_amount_spent?.toFixed(4)}·log(1+Spend)`
-        : `- Equation: Purchases = ${latestModel.intercept.toFixed(3)} + ${latestModel.coefficient.toFixed(6)} × Amount Spent`,
+      (() => {
+          const type = latestModel.model_type ?? (isMLR ? 'log_mlr' : 'slr')
+          const b0 = latestModel.intercept.toFixed(3)
+          if (type === 'plain_mlr') {
+            return `- Equation: Purchases = ${b0} + ${latestModel.coef_reach?.toFixed(4)}·Reach + ${latestModel.coef_messaging?.toFixed(4)}·Msgs + ${latestModel.coef_amount_spent?.toFixed(4)}·Spend`
+          }
+          if (type === 'poly_mlr') {
+            return `- Equation: Purchases = ${b0} + ${latestModel.coef_reach?.toFixed(4)}·log(1+Reach) + ${latestModel.coef_messaging?.toFixed(4)}·log(1+Msgs) + ${latestModel.coef_amount_spent?.toFixed(4)}·log(1+Spend) + coef²·log(1+Spend)²`
+          }
+          if (isMLR) {
+            const suffix = type === 'ridge_mlr' ? ' [ridge]' : ''
+            return `- Equation: Purchases = ${b0} + ${latestModel.coef_reach?.toFixed(4)}·log(1+Reach) + ${latestModel.coef_messaging?.toFixed(4)}·log(1+Msgs) + ${latestModel.coef_amount_spent?.toFixed(4)}·log(1+Spend)${suffix}`
+          }
+          return `- Equation: Purchases = ${b0} + ${latestModel.coefficient.toFixed(6)} × Amount Spent`
+        })(),
       latestModel.residual_std_error != null
         ? `- 80% prediction interval: ±${(latestModel.residual_std_error * 1.2816).toFixed(2)} purchases`
         : null,

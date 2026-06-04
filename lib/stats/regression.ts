@@ -1,6 +1,15 @@
 import { prisma } from '@/lib/prisma'
 
-export type ModelType = 'log_mlr' | 'plain_mlr' | 'poly_mlr' | 'ridge_mlr'
+export type ModelType =
+  | 'log_mlr'
+  | 'plain_mlr'
+  | 'poly_mlr'
+  | 'ridge_mlr'
+  | 'lasso_mlr'
+  | 'elastic_net_mlr'
+  | 'wls_mlr'
+  | 'robust_mlr'
+  | 'log_log_mlr'
 
 // Solve Ax = b using Gaussian elimination with partial pivoting
 function gaussianElimination(A: number[][], b: number[]): number[] {
@@ -38,6 +47,7 @@ interface TrainingData {
   messaging: number
   amount_spent: number
   purchases: number
+  reporting_starts?: Date  // used by WLS time-decay weighting
 }
 
 interface FitResult {
@@ -66,21 +76,24 @@ export interface MLRResult {
   equation: string
 }
 
-// Core solver: normal equations with optional ridge penalty on non-intercept coefficients
+// Core OLS solver: normal equations with optional L2 ridge penalty and per-observation weights.
+// R² is always computed on unweighted residuals so WLS/robust models compare fairly with OLS.
 function fitLinear(
   X: number[][],
   y: number[],
   numPredictors: number,
-  ridge: number = 0,
-): { beta: number[], r_squared: number, adj_r_squared: number, residual_std_error: number } {
+  ridge = 0,
+  weights?: number[],
+): { beta: number[]; r_squared: number; adj_r_squared: number; residual_std_error: number } {
   const n = X.length
   const p = X[0].length
+  const w = weights ?? new Array(n).fill(1)
 
   const XtX: number[][] = Array.from({ length: p }, () => new Array(p).fill(0))
   for (let i = 0; i < p; i++)
     for (let j = 0; j < p; j++)
       for (let k = 0; k < n; k++)
-        XtX[i][j] += X[k][i] * X[k][j]
+        XtX[i][j] += w[k] * X[k][i] * X[k][j]
 
   // Ridge: add λ to diagonal of non-intercept terms only
   if (ridge > 0) {
@@ -90,7 +103,7 @@ function fitLinear(
   const Xty = new Array(p).fill(0)
   for (let i = 0; i < p; i++)
     for (let k = 0; k < n; k++)
-      Xty[i] += X[k][i] * y[k]
+      Xty[i] += w[k] * X[k][i] * y[k]
 
   const beta = gaussianElimination(XtX, Xty)
 
@@ -113,9 +126,94 @@ function fitLinear(
   return { beta, r_squared, adj_r_squared, residual_std_error }
 }
 
+// Soft-thresholding operator for L1 coordinate descent
+function softThreshold(z: number, lambda: number): number {
+  return z > lambda ? z - lambda : z < -lambda ? z + lambda : 0
+}
+
+// Shared coordinate descent solver for Lasso (alpha=1) and Elastic Net (0 < alpha < 1).
+// Features are log-transformed then standardized; coefficients are unstandardized after convergence.
+function fitCoordDescent(
+  data: TrainingData[],
+  modelType: 'lasso_mlr' | 'elastic_net_mlr',
+  alpha: number,
+  lambda: number,
+  maxIter = 2000,
+): FitResult {
+  const n = data.length
+  const y = data.map(d => d.purchases)
+  const Xraw = data.map(d => [
+    Math.log1p(d.reach),
+    Math.log1p(d.messaging),
+    Math.log1p(d.amount_spent),
+  ])
+
+  const meanY = y.reduce((a, b) => a + b, 0) / n
+  const yc = y.map(v => v - meanY)
+
+  const p = 3
+  const colMeans = Array.from({ length: p }, (_, j) => Xraw.reduce((s, r) => s + r[j], 0) / n)
+  const colSds = Array.from({ length: p }, (_, j) => {
+    const m = colMeans[j]
+    return Math.sqrt(Xraw.reduce((s, r) => s + (r[j] - m) ** 2, 0) / n) || 1
+  })
+  const Xs = Xraw.map(r => r.map((v, j) => (v - colMeans[j]) / colSds[j]))
+  const colNormSq = Array.from({ length: p }, (_, j) => Xs.reduce((s, r) => s + r[j] ** 2, 0))
+
+  const beta = new Array(p).fill(0)
+  const residuals = [...yc]
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    let maxChange = 0
+    for (let j = 0; j < p; j++) {
+      if (colNormSq[j] === 0) continue
+      const rho = Xs.reduce((s, r, i) => s + r[j] * residuals[i], 0) + colNormSq[j] * beta[j]
+      // Elastic net update: L1 soft-threshold, L2 denominator inflation
+      const l2Denom = colNormSq[j] + (1 - alpha) * lambda * n
+      const newBeta = softThreshold(rho / colNormSq[j], alpha * lambda) * colNormSq[j] / l2Denom
+      const delta = newBeta - beta[j]
+      if (Math.abs(delta) > 1e-10) {
+        for (let i = 0; i < n; i++) residuals[i] -= Xs[i][j] * delta
+        maxChange = Math.max(maxChange, Math.abs(delta))
+        beta[j] = newBeta
+      }
+    }
+    if (maxChange < 1e-6) break
+  }
+
+  // Unstandardize coefficients back to original feature scale
+  const coefs = beta.map((b, j) => b / colSds[j])
+  const intercept = meanY - coefs.reduce((s, b, j) => s + b * colMeans[j], 0)
+  const [coef_reach, coef_messaging, coef_amount_spent] = coefs
+
+  const ybar = y.reduce((a, b) => a + b, 0) / n
+  const ssTot = y.reduce((s, yi) => s + (yi - ybar) ** 2, 0)
+  let ssRes = 0
+  for (let i = 0; i < n; i++) {
+    const yhat = intercept + Xraw[i].reduce((s, v, j) => s + coefs[j] * v, 0)
+    ssRes += (y[i] - yhat) ** 2
+  }
+  const r_squared = ssTot === 0 ? 0 : 1 - ssRes / ssTot
+  const adj_r_squared = n > 4 ? 1 - (1 - r_squared) * (n - 1) / (n - 4) : 0
+  const residual_std_error = n > 4 ? Math.sqrt(ssRes / (n - 4)) : 0
+
+  const tag = modelType === 'lasso_mlr'
+    ? `[lasso λ=${lambda}]`
+    : `[elastic net α=${alpha} λ=${lambda}]`
+
+  return {
+    modelType,
+    intercept, coef_reach, coef_messaging, coef_amount_spent, coef_spend_sq: 0,
+    r_squared, adj_r_squared, residual_std_error, n,
+    equation: `Purchases = ${intercept.toFixed(4)} ${fmt(coef_reach)}·log(1+Reach) ${fmt(coef_messaging)}·log(1+Msgs) ${fmt(coef_amount_spent)}·log(1+Spend) ${tag}`,
+  }
+}
+
 function fmt(v: number): string {
   return v >= 0 ? `+${v.toFixed(4)}` : v.toFixed(4)
 }
+
+// ─── Existing 4 model fitters ─────────────────────────────────────────────────
 
 function fitLogMLR(data: TrainingData[]): FitResult {
   const y = data.map(d => d.purchases)
@@ -172,12 +270,134 @@ function fitRidgeMLR(data: TrainingData[]): FitResult {
   }
 }
 
+// ─── 5 New MSME-optimized model fitters ──────────────────────────────────────
+
+// Lasso: L1 regularization — zeroes out the weakest predictor when n is small
+function fitLassoMLR(data: TrainingData[]): FitResult {
+  return fitCoordDescent(data, 'lasso_mlr', 1, 0.1)
+}
+
+// Elastic Net: L1 + L2 — handles correlated predictors (reach ≈ impressions) better than lasso alone
+function fitElasticNetMLR(data: TrainingData[]): FitResult {
+  return fitCoordDescent(data, 'elastic_net_mlr', 0.5, 0.1)
+}
+
+// WLS with 90-day half-life decay: recent campaigns are weighted more heavily
+function fitWLSMLR(data: TrainingData[]): FitResult {
+  const DECAY = Math.log(2) / 90
+  const now = Date.now()
+  const weights = data.map(d => {
+    if (!d.reporting_starts) return 1
+    const ageDays = (now - d.reporting_starts.getTime()) / 86_400_000
+    return Math.exp(-DECAY * Math.max(0, ageDays))
+  })
+
+  const y = data.map(d => d.purchases)
+  const X = data.map(d => [1, Math.log1p(d.reach), Math.log1p(d.messaging), Math.log1p(d.amount_spent)])
+  const { beta, r_squared, adj_r_squared, residual_std_error } = fitLinear(X, y, 3, 0, weights)
+  const [intercept, coef_reach, coef_messaging, coef_amount_spent] = beta
+
+  return {
+    modelType: 'wls_mlr',
+    intercept, coef_reach, coef_messaging, coef_amount_spent, coef_spend_sq: 0,
+    r_squared, adj_r_squared, residual_std_error, n: data.length,
+    equation: `Purchases = ${intercept.toFixed(4)} ${fmt(coef_reach)}·log(1+Reach) ${fmt(coef_messaging)}·log(1+Msgs) ${fmt(coef_amount_spent)}·log(1+Spend) [wls 90d decay]`,
+  }
+}
+
+// Robust Huber IRLS: down-weights outlier campaigns (e.g., a single viral ad)
+function fitRobustMLR(data: TrainingData[]): FitResult {
+  const n = data.length
+  const y = data.map(d => d.purchases)
+  const X = data.map(d => [1, Math.log1p(d.reach), Math.log1p(d.messaging), Math.log1p(d.amount_spent)])
+
+  let { beta } = fitLinear(X, y, 3)
+
+  for (let iter = 0; iter < 50; iter++) {
+    const residuals = y.map((yi, i) => yi - X[i].reduce((s, v, j) => s + v * beta[j], 0))
+    const sorted = residuals.map(Math.abs).sort((a, b) => a - b)
+    const mad = sorted[Math.floor(n / 2)] || 1
+    const sigma = Math.max(mad * 1.4826, 1e-6)
+    const delta = 1.345 * sigma
+
+    const weights = residuals.map(r => Math.min(1, delta / (Math.abs(r) || 1e-10)))
+    const prevBeta = [...beta]
+    beta = fitLinear(X, y, 3, 0, weights).beta
+    if (beta.every((b, j) => Math.abs(b - prevBeta[j]) < 1e-6)) break
+  }
+
+  const [intercept, coef_reach, coef_messaging, coef_amount_spent] = beta
+  const ybar = y.reduce((a, b) => a + b, 0) / n
+  const ssTot = y.reduce((s, yi) => s + (yi - ybar) ** 2, 0)
+  let ssRes = 0
+  for (let i = 0; i < n; i++) {
+    const yhat = X[i].reduce((s, v, j) => s + v * beta[j], 0)
+    ssRes += (y[i] - yhat) ** 2
+  }
+  const r_squared = ssTot === 0 ? 0 : 1 - ssRes / ssTot
+  const adj_r_squared = n > 4 ? 1 - (1 - r_squared) * (n - 1) / (n - 4) : 0
+  const residual_std_error = n > 4 ? Math.sqrt(ssRes / (n - 4)) : 0
+
+  return {
+    modelType: 'robust_mlr',
+    intercept, coef_reach, coef_messaging, coef_amount_spent, coef_spend_sq: 0,
+    r_squared, adj_r_squared, residual_std_error, n,
+    equation: `Purchases = ${intercept.toFixed(4)} ${fmt(coef_reach)}·log(1+Reach) ${fmt(coef_messaging)}·log(1+Msgs) ${fmt(coef_amount_spent)}·log(1+Spend) [robust huber]`,
+  }
+}
+
+// Log-Log elasticity model: log(1+Purchases) ~ log(1+X)
+// Coefficients are % elasticities ("1% more spend → coef_spend% more purchases")
+// R² and RSE are computed on back-transformed (original) purchase scale for fair comparison
+function fitLogLogMLR(data: TrainingData[]): FitResult {
+  const n = data.length
+  const yOrig = data.map(d => d.purchases)
+  const yLog = yOrig.map(v => Math.log1p(v))
+  const X = data.map(d => [1, Math.log1p(d.reach), Math.log1p(d.messaging), Math.log1p(d.amount_spent)])
+
+  const { beta } = fitLinear(X, yLog, 3)
+  const [intercept, coef_reach, coef_messaging, coef_amount_spent] = beta
+
+  const ybar = yOrig.reduce((a, b) => a + b, 0) / n
+  const ssTot = yOrig.reduce((s, yi) => s + (yi - ybar) ** 2, 0)
+  let ssRes = 0
+  for (let i = 0; i < n; i++) {
+    const logHat = X[i].reduce((s, v, j) => s + v * beta[j], 0)
+    const yhat = Math.exp(logHat) - 1
+    ssRes += (yOrig[i] - yhat) ** 2
+  }
+  const r_squared = ssTot === 0 ? 0 : 1 - ssRes / ssTot
+  const adj_r_squared = n > 4 ? 1 - (1 - r_squared) * (n - 1) / (n - 4) : 0
+  const residual_std_error = n > 4 ? Math.sqrt(ssRes / (n - 4)) : 0
+
+  return {
+    modelType: 'log_log_mlr',
+    intercept, coef_reach, coef_messaging, coef_amount_spent, coef_spend_sq: 0,
+    r_squared, adj_r_squared, residual_std_error, n,
+    equation: `log(1+Purchases) = ${intercept.toFixed(4)} ${fmt(coef_reach)}·log(1+Reach) ${fmt(coef_messaging)}·log(1+Msgs) ${fmt(coef_amount_spent)}·log(1+Spend) [elasticity]`,
+  }
+}
+
+// ─── Auto-selection ───────────────────────────────────────────────────────────
+
 function selectBestModel(data: TrainingData[]): FitResult {
-  const candidates = [fitLogMLR(data), fitPlainMLR(data), fitPolyMLR(data), fitRidgeMLR(data)]
+  const candidates = [
+    fitLogMLR(data),
+    fitPlainMLR(data),
+    fitPolyMLR(data),
+    fitRidgeMLR(data),
+    fitLassoMLR(data),
+    fitElasticNetMLR(data),
+    fitWLSMLR(data),
+    fitRobustMLR(data),
+    fitLogLogMLR(data),
+  ]
   return candidates.reduce((best, c) => c.adj_r_squared > best.adj_r_squared ? c : best)
 }
 
-// Predict purchases from any stored model record — handles all model types and legacy SLR
+// ─── Prediction ───────────────────────────────────────────────────────────────
+
+// Predict purchases from any stored model record — handles all 9 model types and legacy SLR
 export function predictFromModel(
   model: {
     model_type?: string | null
@@ -210,8 +430,17 @@ export function predictFromModel(
       + (model.coef_spend_sq ?? 0) * ls * ls
   }
 
+  // Log-log elasticity: back-transform from log scale
+  if (type === 'log_log_mlr') {
+    const logPred = model.intercept
+      + (model.coef_reach ?? 0) * Math.log1p(reach)
+      + (model.coef_messaging ?? 0) * Math.log1p(messaging)
+      + (model.coef_amount_spent ?? 0) * Math.log1p(spend)
+    return Math.max(0, Math.exp(logPred) - 1)
+  }
+
+  // log_mlr, ridge_mlr, lasso_mlr, elastic_net_mlr, wls_mlr, robust_mlr — all use log-transform prediction
   if (model.coef_reach != null && model.coef_messaging != null && model.coef_amount_spent != null) {
-    // log_mlr, ridge_mlr, or legacy MLR — all use the same log-transform prediction formula
     return model.intercept
       + model.coef_reach * Math.log1p(reach)
       + model.coef_messaging * Math.log1p(messaging)
@@ -221,6 +450,8 @@ export function predictFromModel(
   // Legacy SLR fallback
   return model.intercept + model.coefficient * spend
 }
+
+// ─── Public exports ───────────────────────────────────────────────────────────
 
 // Kept for any existing callers — delegates to auto-selection
 export function fitMLR(data: { reach: number; messaging: number; amount_spent: number; purchases: number }[]): MLRResult {
@@ -246,6 +477,7 @@ export async function maybeRetrainRegression(): Promise<boolean> {
     messaging: a.total_messaging_contacts ?? 0,
     amount_spent: a.amount_spent,
     purchases: a.purchases as number,
+    reporting_starts: a.reporting_starts,  // enables WLS time-decay
   }))
 
   const result = selectBestModel(data)

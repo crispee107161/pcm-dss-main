@@ -13,6 +13,7 @@ export interface InsightData {
   rSquared: number | null
   isMLR: boolean
   rse: number | null
+  n: number | null
   forecastBaseline: number | null
   avgEngagement?: number | null
 }
@@ -39,7 +40,7 @@ export async function generateAIInsights(data: InsightData): Promise<string> {
       ? `- Predictive model (${data.isMLR ? 'MLR' : 'SLR'}) explains ${(data.rSquared * 100).toFixed(1)}% of purchase variance`
       : null,
     data.rse != null
-      ? `- 80% prediction interval: ±${(data.rse * 1.2816).toFixed(1)} purchases`
+      ? `- 80% prediction interval: ±${(data.rse * 1.2816 * Math.sqrt(1 + 1 / Math.max(data.n ?? 1, 1))).toFixed(1)} purchases`
       : null,
     data.forecastBaseline != null
       ? `- 7-day page views forecast baseline: ${data.forecastBaseline.toLocaleString()} views/day`

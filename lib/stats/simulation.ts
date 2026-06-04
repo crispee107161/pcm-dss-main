@@ -23,8 +23,18 @@ function buildEquation(model: {
   if (type === 'poly_mlr') {
     return `${model.intercept.toFixed(4)} ${s(model.coef_reach!)}·log(1+Reach) ${s(model.coef_messaging!)}·log(1+Msgs) ${s(model.coef_amount_spent!)}·log(1+Spend) ${s(model.coef_spend_sq ?? 0)}·log(1+Spend)²`
   }
+  if (type === 'log_log_mlr') {
+    return `log(1+Purchases) = ${model.intercept.toFixed(4)} ${s(model.coef_reach!)}·log(1+Reach) ${s(model.coef_messaging!)}·log(1+Msgs) ${s(model.coef_amount_spent!)}·log(1+Spend) [elasticity]`
+  }
   if (model.coef_reach != null && model.coef_messaging != null && model.coef_amount_spent != null) {
-    const suffix = type === 'ridge_mlr' ? ' [ridge λ=0.1]' : ''
+    const suffixMap: Record<string, string> = {
+      ridge_mlr: ' [ridge λ=0.1]',
+      lasso_mlr: ' [lasso λ=0.1]',
+      elastic_net_mlr: ' [elastic net]',
+      wls_mlr: ' [wls 90d decay]',
+      robust_mlr: ' [robust huber]',
+    }
+    const suffix = suffixMap[type] ?? ''
     return `${model.intercept.toFixed(4)} ${s(model.coef_reach)}·log(1+Reach) ${s(model.coef_messaging)}·log(1+Msgs) ${s(model.coef_amount_spent)}·log(1+Spend)${suffix}`
   }
   return `${model.intercept.toFixed(4)} + ${model.coefficient.toFixed(6)} × Amount Spent`
@@ -46,8 +56,12 @@ export async function runSimulation(
 
   const projected_purchases = predictFromModel(latestModel, reach, messaging, amountSpent)
   const rse = latestModel.residual_std_error ?? 1
-  const interval_lower = Math.max(0, projected_purchases - Z_80 * rse)
-  const interval_upper = projected_purchases + Z_80 * rse
+  // Prediction interval for a new observation: SE = RSE * sqrt(1 + 1/n)
+  // (approximate — full formula requires the leverage term x^T(X^TX)^{-1}x)
+  const n = latestModel.n ?? 1
+  const predSE = rse * Math.sqrt(1 + 1 / Math.max(n, 1))
+  const interval_lower = Math.max(0, projected_purchases - Z_80 * predSE)
+  const interval_upper = projected_purchases + Z_80 * predSE
 
   await prisma.simulationResult.create({
     data: {

@@ -363,6 +363,7 @@ export default async function ReportPage() {
           rSquared: latestModel?.r_squared ?? null,
           isMLR,
           rse: latestModel?.residual_std_error ?? null,
+          n: latestModel?.n ?? null,
           forecastBaseline: dailyMetrics.length >= 7 ? viewsForecast.lastLevel : null,
           avgEngagement: allPosts.length > 0 ? avgEngagement : null,
         }} />

@@ -66,18 +66,25 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
   // Only include ad sets with spend > 0 and at least 1 purchase
   const eligible = [...grouped.entries()]
     .filter(([, g]) => g.total_spend > 0 && g.total_purchases > 0)
-    .map(([name, g]) => ({
-      name,
-      efficiency: g.total_purchases / g.total_spend,
-      reach_per_peso: g.total_spend > 0 ? g.total_reach / g.total_spend : 0,
-      messaging_per_peso: g.total_spend > 0 ? g.total_messaging / g.total_spend : 0,
-      historical_cpa: g.total_purchases > 0 ? g.total_spend / g.total_purchases : null,
-      historical_purchases: g.total_purchases,
-    }))
+    .map(([name, g]) => {
+      // Laplace-smoothed efficiency: add a pseudo-count of 1 purchase at the group's own CPA
+      // so that ad sets with very few purchases don't appear artificially superior
+      const cpaEstimate = g.total_spend / Math.max(g.total_purchases, 1)
+      const smoothedPurchases = g.total_purchases + 1
+      const smoothedSpend = g.total_spend + cpaEstimate
+      return {
+        name,
+        efficiency: smoothedPurchases / smoothedSpend,
+        reach_per_peso: g.total_spend > 0 ? g.total_reach / g.total_spend : 0,
+        messaging_per_peso: g.total_spend > 0 ? g.total_messaging / g.total_spend : 0,
+        historical_cpa: g.total_purchases > 0 ? g.total_spend / g.total_purchases : null,
+        historical_purchases: g.total_purchases,
+      }
+    })
 
   if (eligible.length === 0) throw new Error('No ad sets with purchase data found. Ensure your uploaded ads include purchase counts.')
 
-  // Cap at top 8 ad sets by efficiency to keep the UI readable
+  // Cap at top 8 ad sets by smoothed efficiency to keep the UI readable
   const top = eligible.sort((a, b) => b.efficiency - a.efficiency).slice(0, 8)
 
   const totalEfficiency = top.reduce((s, g) => s + g.efficiency, 0)
@@ -90,6 +97,8 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
   }
 
   const rse = m.residual_std_error ?? 1
+  // Prediction interval for a new observation — sqrt(1 + 1/n) approximation
+  const predSE = rse * Math.sqrt(1 + 1 / Math.max(m.n ?? 1, 1))
 
   const allocations: AdSetAllocation[] = top.map(g => {
     const pct = g.efficiency / totalEfficiency
@@ -104,8 +113,8 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
       projected_reach,
       projected_messaging,
       projected_purchases,
-      interval_lower: Math.max(0, projected_purchases - Z_80 * rse),
-      interval_upper: projected_purchases + Z_80 * rse,
+      interval_lower: Math.max(0, projected_purchases - Z_80 * predSE),
+      interval_upper: projected_purchases + Z_80 * predSE,
       historical_cpa: g.historical_cpa,
       historical_purchases: g.historical_purchases,
     }
