@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { predictFromModel } from '@/lib/stats/regression'
 
 export interface AdSetAllocation {
   ad_set_name: string
@@ -19,6 +20,7 @@ export interface AllocationResult {
   allocations: AdSetAllocation[]
   model_r_squared: number
   is_mlr: boolean
+  model_type: string
 }
 
 const Z_80 = 1.2816
@@ -84,13 +86,7 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
   const isMLR = m.coef_reach != null && m.coef_messaging != null && m.coef_amount_spent != null
 
   function predict(reach: number, messaging: number, spend: number) {
-    if (isMLR) {
-      return m.intercept
-        + (m.coef_reach ?? 0) * Math.log1p(reach)
-        + (m.coef_messaging ?? 0) * Math.log1p(messaging)
-        + (m.coef_amount_spent ?? m.coefficient) * Math.log1p(spend)
-    }
-    return m.intercept + m.coefficient * spend
+    return predictFromModel(m, reach, messaging, spend)
   }
 
   const rse = m.residual_std_error ?? 1
@@ -123,5 +119,6 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
     allocations,
     model_r_squared: m.r_squared,
     is_mlr: isMLR,
+    model_type: m.model_type ?? (isMLR ? 'log_mlr' : 'slr'),
   }
 }

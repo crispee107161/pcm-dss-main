@@ -4,6 +4,18 @@ import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
 
+const MODEL_TYPE_LABELS: Record<string, string> = {
+  log_mlr:   'Log MLR',
+  plain_mlr: 'Plain MLR',
+  poly_mlr:  'Poly MLR',
+  ridge_mlr: 'Ridge MLR',
+}
+
+function modelTypeLabel(modelType: string | null, isMLR: boolean): string {
+  if (modelType) return MODEL_TYPE_LABELS[modelType] ?? modelType
+  return isMLR ? 'Log MLR' : 'SLR'
+}
+
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('en-PH', {
     year: 'numeric', month: 'short', day: 'numeric',
@@ -57,7 +69,7 @@ export default async function OwnerRegressionPage() {
                           #{m.id} {m.id === latestModel.id && <span className="text-red-600 text-xs font-medium">(current)</span>}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600 border-t border-slate-100">
-                          {m.coef_reach != null ? 'MLR' : 'SLR'}
+                          {modelTypeLabel(m.model_type, m.coef_reach != null)}
                         </td>
                         <td className="px-4 py-3 border-t border-slate-100">
                           <span className={`font-semibold ${m.r_squared >= 0.5 ? 'text-green-700' : 'text-amber-700'}`}>

@@ -113,6 +113,8 @@ model RegressionModel {
   coef_reach          Float?
   coef_messaging      Float?
   coef_amount_spent   Float?
+  coef_spend_sq       Float?
+  model_type          String?
   residual_std_error  Float?
   best_lag            Int?
   r_squared           Float

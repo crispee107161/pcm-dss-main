@@ -32,6 +32,8 @@ export interface MLRModelInfo {
   residual_std_error: number
   n: number
   equation: string
+  model_type?: string
+  coef_spend_sq?: number
 }
 
 export interface SimulationOutput {
