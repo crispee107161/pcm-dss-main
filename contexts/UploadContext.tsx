@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
-import { uploadCSV } from '@/actions/upload'
+import { uploadCSV, revalidateDashboards } from '@/actions/upload'
 import type { UploadResult } from '@/types/index'
 
 type FileStatus = 'pending' | 'uploading' | 'success' | 'failed'
@@ -53,23 +53,26 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     if (pending.length === 0) return
 
     setIsPending(true)
-    for (const entry of pending) {
-      setQueue((prev) =>
-        prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading' } : f))
-      )
+    setQueue((prev) =>
+      prev.map((f) => (f.status === 'pending' ? { ...f, status: 'uploading' } : f))
+    )
 
-      const formData = new FormData()
-      formData.append('file', entry.file)
-      const result = await uploadCSV(null, formData)
-
-      setQueue((prev) =>
-        prev.map((f) =>
-          f.id === entry.id
-            ? { ...f, status: result.status === 'SUCCESS' ? 'success' : 'failed', result }
-            : f
+    await Promise.all(
+      pending.map(async (entry) => {
+        const formData = new FormData()
+        formData.append('file', entry.file)
+        const result = await uploadCSV(null, formData, true)
+        setQueue((prev) =>
+          prev.map((f) =>
+            f.id === entry.id
+              ? { ...f, status: result.status === 'SUCCESS' ? 'success' : 'failed', result }
+              : f
+          )
         )
-      )
-    }
+      })
+    )
+
+    await revalidateDashboards()
     setIsPending(false)
   }
 

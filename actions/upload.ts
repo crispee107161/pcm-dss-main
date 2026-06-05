@@ -20,9 +20,16 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import type { UploadResult, UploadType } from '@/types/index'
 
+export async function revalidateDashboards() {
+  revalidatePath('/dashboard/marketing')
+  revalidatePath('/dashboard/marketing/page-metrics')
+  revalidatePath('/dashboard/sales')
+}
+
 export async function uploadCSV(
   prevState: UploadResult | null,
-  formData: FormData
+  formData: FormData,
+  skipRevalidate = false
 ): Promise<UploadResult> {
   const session = await auth()
 
@@ -144,9 +151,11 @@ export async function uploadCSV(
       },
     })
 
-    revalidatePath('/dashboard/marketing')
-    revalidatePath('/dashboard/marketing/page-metrics')
-    revalidatePath('/dashboard/sales')
+    if (!skipRevalidate) {
+      revalidatePath('/dashboard/marketing')
+      revalidatePath('/dashboard/marketing/page-metrics')
+      revalidatePath('/dashboard/sales')
+    }
 
     return {
       status: 'SUCCESS',
