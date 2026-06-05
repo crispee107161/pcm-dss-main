@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useTransition } from 'react'
+import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
 import { uploadCSV } from '@/actions/upload'
 import type { UploadResult } from '@/types/index'
@@ -27,7 +27,7 @@ const UploadContext = createContext<UploadContextValue | null>(null)
 
 export function UploadProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<QueuedFile[]>([])
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
 
   function addFiles(files: FileList | null) {
     if (!files || files.length === 0) return
@@ -48,29 +48,29 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setQueue([])
   }
 
-  function runBatchUpload() {
+  async function runBatchUpload() {
     const pending = queue.filter((f) => f.status === 'pending')
     if (pending.length === 0) return
 
-    startTransition(async () => {
-      for (const entry of pending) {
-        setQueue((prev) =>
-          prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading' } : f))
-        )
+    setIsPending(true)
+    for (const entry of pending) {
+      setQueue((prev) =>
+        prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading' } : f))
+      )
 
-        const formData = new FormData()
-        formData.append('file', entry.file)
-        const result = await uploadCSV(null, formData)
+      const formData = new FormData()
+      formData.append('file', entry.file)
+      const result = await uploadCSV(null, formData)
 
-        setQueue((prev) =>
-          prev.map((f) =>
-            f.id === entry.id
-              ? { ...f, status: result.status === 'SUCCESS' ? 'success' : 'failed', result }
-              : f
-          )
+      setQueue((prev) =>
+        prev.map((f) =>
+          f.id === entry.id
+            ? { ...f, status: result.status === 'SUCCESS' ? 'success' : 'failed', result }
+            : f
         )
-      }
-    })
+      )
+    }
+    setIsPending(false)
   }
 
   return (
