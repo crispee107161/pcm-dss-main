@@ -5,6 +5,8 @@ import {
   IconHome, IconUpload, IconTag, IconKey, IconChart,
   IconRegression, IconPlay, IconRanking, IconTrendUp, IconMetrics, IconReport,
 } from '@/components/nav/icons'
+import { UploadProvider } from '@/contexts/UploadContext'
+import UploadStatusBar from '@/components/upload/UploadStatusBar'
 
 const navItems: NavItem[] = [
   { section: 'Overview', label: 'Dashboard', href: '/dashboard/marketing', icon: <IconHome /> },
@@ -27,13 +29,16 @@ export default async function MarketingLayout({ children }: { children: React.Re
   }
 
   return (
-    <Sidebar
-      navItems={navItems}
-      email={session.user.email ?? ''}
-      roleLabel="Marketing Manager"
-      roleBadgeClass="bg-red-950 text-red-300 border border-red-900"
-    >
-      {children}
-    </Sidebar>
+    <UploadProvider>
+      <Sidebar
+        navItems={navItems}
+        email={session.user.email ?? ''}
+        roleLabel="Marketing Manager"
+        roleBadgeClass="bg-red-950 text-red-300 border border-red-900"
+      >
+        {children}
+      </Sidebar>
+      <UploadStatusBar />
+    </UploadProvider>
   )
 }

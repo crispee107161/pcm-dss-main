@@ -1,17 +1,7 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
-import { uploadCSV } from '@/actions/upload'
-import type { UploadResult } from '@/types/index'
-
-type FileStatus = 'pending' | 'uploading' | 'success' | 'failed'
-
-interface QueuedFile {
-  id: string
-  file: File
-  status: FileStatus
-  result: UploadResult | null
-}
+import { useRef, useState } from 'react'
+import { useUpload } from '@/contexts/UploadContext'
 
 const UPLOAD_TYPE_LABELS: Record<string, string> = {
   ADS_CSV: 'Ads CSV',
@@ -24,53 +14,12 @@ const UPLOAD_TYPE_LABELS: Record<string, string> = {
 
 export default function UploadForm() {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [queue, setQueue] = useState<QueuedFile[]>([])
-  const [isPending, startTransition] = useTransition()
   const [isDragging, setIsDragging] = useState(false)
+  const { queue, isPending, addFiles, removeFile, clearAll, runBatchUpload } = useUpload()
 
-  function addFiles(files: FileList | null) {
-    if (!files || files.length === 0) return
-    const entries: QueuedFile[] = Array.from(files).map((file) => ({
-      id: `${file.name}-${file.lastModified}-${Math.random()}`,
-      file,
-      status: 'pending',
-      result: null,
-    }))
-    setQueue((prev) => [...prev, ...entries])
-  }
-
-  function removeFile(id: string) {
-    setQueue((prev) => prev.filter((f) => f.id !== id))
-  }
-
-  function clearAll() {
-    setQueue([])
+  function handleClearAll() {
+    clearAll()
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  function runBatchUpload() {
-    const pending = queue.filter((f) => f.status === 'pending')
-    if (pending.length === 0) return
-
-    startTransition(async () => {
-      for (const entry of pending) {
-        setQueue((prev) =>
-          prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading' } : f))
-        )
-
-        const formData = new FormData()
-        formData.append('file', entry.file)
-        const result = await uploadCSV(null, formData)
-
-        setQueue((prev) =>
-          prev.map((f) =>
-            f.id === entry.id
-              ? { ...f, status: result.status === 'SUCCESS' ? 'success' : 'failed', result }
-              : f
-          )
-        )
-      }
-    })
   }
 
   const pendingCount  = queue.filter((f) => f.status === 'pending').length
@@ -130,7 +79,7 @@ export default function UploadForm() {
             </p>
             {!isPending && (
               <button
-                onClick={clearAll}
+                onClick={handleClearAll}
                 className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
               >
                 Clear all
@@ -234,7 +183,7 @@ export default function UploadForm() {
 
         {isDone && failedCount === 0 && (
           <button
-            onClick={clearAll}
+            onClick={handleClearAll}
             className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
           >
             Clear
