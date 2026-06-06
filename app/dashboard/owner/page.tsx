@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
+import FollowerSparkline from '@/components/analytics/FollowerSparkline'
 
 function formatPhp(amount: number): string {
   return new Intl.NumberFormat('en-PH', {
@@ -15,6 +16,33 @@ function formatNumber(n: number): string {
   return new Intl.NumberFormat('en-PH').format(n)
 }
 
+function calcDelta(current: number, previous: number): number | null {
+  if (previous === 0) return null
+  return ((current - previous) / previous) * 100
+}
+
+function timeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  return `${months}mo ago`
+}
+
+const UPLOAD_TYPE_LABELS: Record<string, string> = {
+  ADS_CSV:              'Ads Data',
+  POSTS_CSV:            'Posts Data',
+  PAGE_METRIC_CSV:      'Page Metrics',
+  FOLLOWER_HISTORY_CSV: 'Follower History',
+  PAGE_VIEWERS_CSV:     'Page Viewers',
+  DEMOGRAPHICS_CSV:     'Demographics',
+}
+
 type Accent = 'red' | 'green' | 'amber' | 'slate'
 const accentStyles: Record<Accent, string> = {
   red:   'bg-red-50 text-red-500',
@@ -23,8 +51,26 @@ const accentStyles: Record<Accent, string> = {
   slate: 'bg-slate-100 text-slate-400',
 }
 
-function KpiCard({ label, value, sub, valueClass = 'text-slate-900', icon, accent = 'slate' }: {
-  label: string; value: React.ReactNode; sub?: string; valueClass?: string; icon: React.ReactNode; accent?: Accent
+function DeltaBadge({ delta }: { delta: number | null }) {
+  if (delta === null) return null
+  const up = delta >= 0
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold rounded-full px-2 py-0.5 border ml-1 ${
+      up ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-red-50 border-red-100 text-red-500'
+    }`}>
+      {up ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
+    </span>
+  )
+}
+
+function KpiCard({ label, value, sub, delta, valueClass = 'text-slate-900', icon, accent = 'slate' }: {
+  label: string
+  value: React.ReactNode
+  sub?: string
+  delta?: number | null
+  valueClass?: string
+  icon: React.ReactNode
+  accent?: Accent
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/70 p-5 flex flex-col gap-3"
@@ -37,11 +83,17 @@ function KpiCard({ label, value, sub, valueClass = 'text-slate-900', icon, accen
       </div>
       <div>
         <p className={`text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
-        {sub && (
-          <span className="inline-block mt-2 text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
-            {sub}
-          </span>
-        )}
+        <div className="flex items-center mt-2 flex-wrap gap-1">
+          {sub && (
+            <span className="inline-block text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+              {sub}
+            </span>
+          )}
+          {delta !== undefined && <DeltaBadge delta={delta} />}
+          {delta !== undefined && delta !== null && (
+            <span className="text-[10px] text-slate-400">vs last wk</span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -62,20 +114,85 @@ export default async function OwnerDashboard() {
 
   const displayName = session.user.email?.split('@')[0] ?? 'there'
 
-  const [adCount, adsWithPurchases, latestModel, totalSpendAgg, totalPurchasesAgg, totalReachAgg, latestFollower] =
-    await Promise.all([
-      prisma.ad.count(),
-      prisma.ad.count({ where: { purchases: { gt: 0 } } }),
-      prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
-      prisma.ad.aggregate({ _sum: { amount_spent: true } }),
-      prisma.ad.aggregate({ _sum: { purchases: true } }),
-      prisma.ad.aggregate({ _sum: { reach: true } }),
-      prisma.followerHistory.findFirst({ orderBy: { date: 'desc' } }),
-    ])
+  // Anchor date for week-over-week (relative to the most recent ad, not today)
+  const latestAdDate = await prisma.ad.findFirst({
+    select: { reporting_ends: true },
+    orderBy: { reporting_ends: 'desc' },
+  })
+  const anchor = latestAdDate?.reporting_ends ?? new Date()
+  const weekAgo = new Date(anchor.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const twoWeeksAgo = new Date(anchor.getTime() - 14 * 24 * 60 * 60 * 1000)
+
+  const [
+    adCount,
+    adsWithPurchases,
+    latestModel,
+    totalSpendAgg,
+    totalPurchasesAgg,
+    totalReachAgg,
+    latestFollower,
+    topCampaign,
+    lastUpload,
+    follower7dRaw,
+    thisWeekAgg,
+    lastWeekAgg,
+  ] = await Promise.all([
+    prisma.ad.count(),
+    prisma.ad.count({ where: { purchases: { gt: 0 } } }),
+    prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
+    prisma.ad.aggregate({ _sum: { amount_spent: true } }),
+    prisma.ad.aggregate({ _sum: { purchases: true } }),
+    prisma.ad.aggregate({ _sum: { reach: true } }),
+    prisma.followerHistory.findFirst({ orderBy: { date: 'desc' } }),
+    prisma.ad.findFirst({
+      where: { purchases: { gt: 0 }, amount_spent: { gt: 0 } },
+      orderBy: [
+        { cost_per_result: { sort: 'asc', nulls: 'last' } },
+        { purchases: 'desc' },
+      ],
+    }),
+    prisma.uploadLog.findFirst({
+      where: { status: 'SUCCESS' },
+      orderBy: { uploaded_at: 'desc' },
+    }),
+    prisma.followerHistory.findMany({
+      orderBy: { date: 'desc' },
+      take: 7,
+    }),
+    prisma.ad.aggregate({
+      _sum: { amount_spent: true, purchases: true },
+      where: { reporting_ends: { gte: weekAgo, lte: anchor } },
+    }),
+    prisma.ad.aggregate({
+      _sum: { amount_spent: true, purchases: true },
+      where: { reporting_ends: { gte: twoWeeksAgo, lt: weekAgo } },
+    }),
+  ])
 
   const totalSpend     = totalSpendAgg._sum.amount_spent ?? 0
   const totalPurchases = totalPurchasesAgg._sum.purchases ?? 0
   const totalReach     = totalReachAgg._sum.reach ?? 0
+
+  // Week-over-week deltas
+  const thisWeekSpend     = thisWeekAgg._sum.amount_spent ?? 0
+  const thisWeekPurchases = thisWeekAgg._sum.purchases ?? 0
+  const lastWeekSpend     = lastWeekAgg._sum.amount_spent ?? 0
+  const lastWeekPurchases = lastWeekAgg._sum.purchases ?? 0
+  const spendDelta        = calcDelta(thisWeekSpend, lastWeekSpend)
+  const purchasesDelta    = calcDelta(thisWeekPurchases, lastWeekPurchases)
+
+  // Follower sparkline data (ascending order for chart)
+  const follower7d       = [...follower7dRaw].reverse()
+  const followerNetChange7d = follower7dRaw.reduce((sum, f) => sum + f.daily_change, 0)
+  const sparklineData    = follower7d.map(f => ({
+    date: new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(f.date)),
+    followers: f.followers,
+  }))
+
+  // Top campaign cost per purchase
+  const topCampaignCpp = topCampaign && topCampaign.purchases && topCampaign.purchases > 0
+    ? topCampaign.amount_spent / topCampaign.purchases
+    : null
 
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-5">
@@ -96,11 +213,13 @@ export default async function OwnerDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard
           label="Total Ad Spend" value={formatPhp(totalSpend)} sub="all time"
+          delta={spendDelta}
           valueClass="text-slate-900" accent="red"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
         />
         <KpiCard
           label="Total Purchases" value={formatNumber(totalPurchases)} sub="from ads"
+          delta={purchasesDelta}
           valueClass="text-red-600" accent="green"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
         />
@@ -145,7 +264,7 @@ export default async function OwnerDashboard() {
         </div>
       )}
 
-      {/* Quick navigation + Follower snapshot */}
+      {/* Quick navigation + Follower sparkline */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200/70 p-5"
           style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
@@ -171,28 +290,94 @@ export default async function OwnerDashboard() {
         </div>
 
         {latestFollower && (
-          <div className="bg-white rounded-2xl border border-slate-200/70 p-5 flex flex-col justify-between"
+          <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
             style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">Page Followers</p>
-            <div>
-              <p className="text-3xl font-bold tracking-tight text-red-600 mt-3">
-                {formatNumber(latestFollower.followers)}
+            <FollowerSparkline
+              data={sparklineData}
+              currentCount={latestFollower.followers}
+              netChange7d={followerNetChange7d}
+              asOfDate={new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(latestFollower.date))}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Top Campaign + Last Upload */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {topCampaign && (
+          <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
+            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+            <SectionLabel>Top Performing Campaign</SectionLabel>
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <p className="text-sm font-bold text-slate-800 leading-snug line-clamp-2">
+                {topCampaign.ad_name}
               </p>
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <span className="text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
-                  {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(latestFollower.date))}
-                </span>
-                {latestFollower.daily_change !== 0 && (
-                  <span className={`text-xs font-bold rounded-full px-2.5 py-0.5 ${
-                    latestFollower.daily_change > 0
-                      ? 'bg-emerald-50 border border-emerald-100'
-                      : 'bg-red-50 border border-red-100'
-                  }`} style={{ color: latestFollower.daily_change > 0 ? 'var(--status-positive)' : 'var(--status-negative)' }}>
-                    {latestFollower.daily_change > 0 ? '+' : ''}{latestFollower.daily_change}
-                  </span>
-                )}
+              <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-full px-2.5 py-0.5">
+                Best ROI
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Purchases</p>
+                <p className="text-xl font-bold text-slate-900">{formatNumber(topCampaign.purchases ?? 0)}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Ad Spend</p>
+                <p className="text-xl font-bold text-slate-900">{formatPhp(topCampaign.amount_spent)}</p>
+              </div>
+              <div className="bg-emerald-50 rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Cost / Purchase</p>
+                <p className="text-xl font-bold text-emerald-700">
+                  {topCampaignCpp !== null ? formatPhp(topCampaignCpp) : '—'}
+                </p>
               </div>
             </div>
+            <p className="text-[10px] text-slate-400 mt-3">
+              {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(topCampaign.reporting_starts))}
+              {' – '}
+              {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(topCampaign.reporting_ends))}
+            </p>
+          </div>
+        )}
+
+        {lastUpload && (
+          <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
+            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+            <SectionLabel>Last Data Upload</SectionLabel>
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <p className="text-sm font-bold text-slate-800">
+                  {UPLOAD_TYPE_LABELS[lastUpload.upload_type] ?? lastUpload.upload_type}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5 font-mono truncate max-w-[200px]">
+                  {lastUpload.filename}
+                </p>
+              </div>
+              <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-full px-2.5 py-0.5">
+                Success
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">When</p>
+                <p className="text-base font-bold text-slate-900">{timeAgo(lastUpload.uploaded_at)}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Inserted</p>
+                <p className="text-base font-bold text-slate-900">{formatNumber(lastUpload.records_inserted)}</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Updated</p>
+                <p className="text-base font-bold text-slate-900">{formatNumber(lastUpload.records_updated)}</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-3">
+              {new Intl.DateTimeFormat('en-PH', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+              }).format(new Date(lastUpload.uploaded_at))}
+            </p>
           </div>
         )}
       </div>
