@@ -14,8 +14,14 @@ Usage:
     python generate_synthetic_data.py
 
 Output:
-    data/Ads/synthetic/                — Monthly Ads CSVs (14 months)
-    data/Page-Level Metrics/synthetic/ — Daily metric CSVs (5 metrics × 14 months)
+    data/Ads/synthetic/                — Monthly Ads CSVs (26 months)
+    data/Page-Level Metrics/synthetic/ — Daily metric CSVs (5 metrics × 26 months)
+
+Coverage:
+    Jan 2024 – Dec 2024  (12 months, extends data for Prophet forecasting)
+    Jan 2025 – Aug 2025  (8 months)
+    Oct 2025 – Nov 2025  (2 months, gap fill)
+    Feb 2026 – May 2026  (4 months)
 
 After generation, upload the files through the DSS upload interface.
 The MLR model auto-retrains after each Ads CSV upload.
@@ -274,8 +280,12 @@ def generate_ads_month(year: int, month: int) -> list:
     end = month_end(year, month)
     seasonal_mult = SEASONAL.get(month, 1.0)
 
-    # Earlier in 2025 the account was smaller — ramp up from 60% to 100%
-    if year == 2025 and month < 9:
+    # Account was smaller in earlier periods — ramp up toward Sep 2025 = 1.0
+    if year == 2024:
+        # 2024: business was roughly 30–50% of the Sep 2025 peak.
+        # Scales from 0.30 in Jan 2024 to 0.50 in Dec 2024 (linear growth).
+        ramp = 0.30 + (month / 12) * 0.20
+    elif year == 2025 and month < 9:
         ramp = 0.60 + (month / 9) * 0.40
     else:
         ramp = 1.0
@@ -395,8 +405,12 @@ def write_page_metric_csv(year: int, month: int, metric: str, rows: list) -> Non
 
 # ── Months to generate ────────────────────────────────────────────────────────
 # Real data: Sep 2025, Dec 2025, Jan 2026.
-# Synthetic fills in the gaps for 15-month continuous coverage.
+# Synthetic fills in the gaps for 26-month continuous coverage (Jan 2024 – May 2026).
 SYNTH_MONTHS = [
+    # 2024 — full year, extends coverage for Prophet forecasting (2-year minimum)
+    (2024, 1), (2024, 2), (2024, 3), (2024, 4),
+    (2024, 5), (2024, 6), (2024, 7), (2024, 8),
+    (2024, 9), (2024, 10), (2024, 11), (2024, 12),
     # 2025 — before Sep (growing account)
     (2025, 1), (2025, 2), (2025, 3), (2025, 4),
     (2025, 5), (2025, 6), (2025, 7), (2025, 8),
@@ -418,7 +432,7 @@ def main() -> None:
     print()
     print(f"Generating {len(SYNTH_MONTHS)} months of synthetic data")
     print(f"  Real data covers : Sep 2025 | Dec 2025 | Jan 2026")
-    print(f"  Synthetic fills  : Jan-Aug 2025 | Oct-Nov 2025 | Feb-May 2026")
+    print(f"  Synthetic fills  : Jan-Dec 2024 | Jan-Aug 2025 | Oct-Nov 2025 | Feb-May 2026")
     print()
 
     # ── Ads CSVs ─────────────────────────────────────────────────────────────
