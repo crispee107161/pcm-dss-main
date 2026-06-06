@@ -43,7 +43,11 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
     return seg.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   }
 
-  const currentLabel = current?.label ?? (pathname !== homeItem?.href ? pathLabel(pathname) : null)
+  // Exclude /login from the fallback — Next.js App Router keeps the URL at /login
+  // briefly after a server-action redirect, which would otherwise render "Login" in the breadcrumb.
+  const currentLabel = current?.label ?? (
+    pathname !== homeItem?.href && !pathname.startsWith('/login') ? pathLabel(pathname) : null
+  )
   const isHome = !currentLabel || current?.href === homeItem?.href
   const initial = email.charAt(0).toUpperCase()
 
