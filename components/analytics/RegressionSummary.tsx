@@ -114,9 +114,14 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
       </div>
 
       {isMLR && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
-          <p className="font-semibold mb-1">How to read the {meta.label} coefficients</p>
-          <ul className="space-y-1 text-xs text-blue-700">
+        <details className="group bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800 open:pb-4">
+          <summary className="cursor-pointer select-none px-4 py-3 font-semibold flex items-center justify-between list-none [&::-webkit-details-marker]:hidden">
+            <span>How to read the {meta.label} coefficients</span>
+            <svg className="w-4 h-4 text-blue-400 flex-shrink-0 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <ul className="space-y-2 text-xs text-blue-700 px-4">
             {model.model_type === 'plain_mlr' ? (
               <li>Each coefficient reflects the direct change in purchases per unit increase in the raw metric.</li>
             ) : (
@@ -131,7 +136,7 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
             <li>Residual Std Error (RSE) of {(model.residual_std_error ?? 0).toFixed(3)} means the 80% prediction interval is approximately ±{((model.residual_std_error ?? 0) * 1.2816).toFixed(2)} purchases wide.</li>
             <li>R² = {r2Percent}% · Adj. R² = {(adjR2 * 100).toFixed(1)}% (penalizes extra parameters)</li>
           </ul>
-        </div>
+        </details>
       )}
 
       <p className="text-slate-400 text-xs">

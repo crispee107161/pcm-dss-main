@@ -185,7 +185,7 @@ export default function SalesDashboardTabs({
             <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={tab.icon} />
             </svg>
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="text-[10px] sm:text-sm">{tab.label}</span>
           </button>
         ))}
       </div>

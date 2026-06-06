@@ -297,7 +297,7 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
           onToggle={() => setCollapsed(v => !v)}
           onMobileMenuOpen={() => setMobileOpen(true)}
         />
-        <div className="flex-1">
+        <div className="flex-1 pb-20 md:pb-0">
           {children}
         </div>
       </div>
