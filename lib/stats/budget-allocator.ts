@@ -19,7 +19,6 @@ export interface AllocationResult {
   total_projected_purchases: number
   allocations: AdSetAllocation[]
   model_r_squared: number
-  is_mlr: boolean
   model_type: string
 }
 
@@ -35,6 +34,7 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
         purchases: true,
         reach: true,
         total_messaging_contacts: true,
+        link_clicks: true,
       },
     }),
   ])
@@ -48,18 +48,23 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
     total_purchases: number
     total_reach: number
     total_messaging: number
+    total_link_clicks: number
     count: number
   }>()
 
   for (const ad of ads) {
     const key = ad.ad_set_name
-    const existing = grouped.get(key) ?? { total_spend: 0, total_purchases: 0, total_reach: 0, total_messaging: 0, count: 0 }
+    const existing = grouped.get(key) ?? {
+      total_spend: 0, total_purchases: 0, total_reach: 0,
+      total_messaging: 0, total_link_clicks: 0, count: 0,
+    }
     grouped.set(key, {
-      total_spend:     existing.total_spend + ad.amount_spent,
-      total_purchases: existing.total_purchases + (ad.purchases ?? 0),
-      total_reach:     existing.total_reach + (ad.reach ?? 0),
-      total_messaging: existing.total_messaging + (ad.total_messaging_contacts ?? 0),
-      count:           existing.count + 1,
+      total_spend:       existing.total_spend + ad.amount_spent,
+      total_purchases:   existing.total_purchases + (ad.purchases ?? 0),
+      total_reach:       existing.total_reach + (ad.reach ?? 0),
+      total_messaging:   existing.total_messaging + (ad.total_messaging_contacts ?? 0),
+      total_link_clicks: existing.total_link_clicks + (ad.link_clicks ?? 0),
+      count:             existing.count + 1,
     })
   }
 
@@ -75,8 +80,9 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
       return {
         name,
         efficiency: smoothedPurchases / smoothedSpend,
-        reach_per_peso: g.total_spend > 0 ? g.total_reach / g.total_spend : 0,
-        messaging_per_peso: g.total_spend > 0 ? g.total_messaging / g.total_spend : 0,
+        reach_per_peso:       g.total_reach / g.total_spend,
+        messaging_per_peso:   g.total_messaging / g.total_spend,
+        link_clicks_per_peso: g.total_link_clicks / g.total_spend,
         historical_cpa: g.total_purchases > 0 ? g.total_spend / g.total_purchases : null,
         historical_purchases: g.total_purchases,
       }
@@ -84,17 +90,23 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
 
   if (eligible.length === 0) throw new Error('No ad sets with purchase data found. Ensure your uploaded ads include purchase counts.')
 
+  // Global average ratios — used as fallback when an ad set has 0 for a given metric,
+  // preventing zeroed-out predictor inputs from silently corrupting log-transformed model predictions
+  const globalReachPerPeso      = eligible.reduce((s, g) => s + g.reach_per_peso, 0)       / eligible.length
+  const globalMessagingPerPeso  = eligible.reduce((s, g) => s + g.messaging_per_peso, 0)   / eligible.length
+  const globalLinkClicksPerPeso = eligible.reduce((s, g) => s + g.link_clicks_per_peso, 0) / eligible.length
+
   // Cap at top 8 ad sets by smoothed efficiency to keep the UI readable
   const top = eligible.sort((a, b) => b.efficiency - a.efficiency).slice(0, 8)
 
   const totalEfficiency = top.reduce((s, g) => s + g.efficiency, 0)
 
   const m = model
-  const isMLR = m.coef_reach != null && m.coef_messaging != null && m.coef_amount_spent != null
-
-  function predict(reach: number, messaging: number, spend: number) {
-    return predictFromModel(m, reach, messaging, spend)
-  }
+  const modelType = m.model_type ?? (
+    m.coef_reach != null && m.coef_messaging != null && m.coef_amount_spent != null
+      ? 'log_mlr'
+      : 'slr'
+  )
 
   const rse = m.residual_std_error ?? 1
   // Prediction interval for a new observation — sqrt(1 + 1/n) approximation
@@ -103,9 +115,18 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
   const allocations: AdSetAllocation[] = top.map(g => {
     const pct = g.efficiency / totalEfficiency
     const allocated_spend = totalBudget * pct
-    const projected_reach     = Math.round(allocated_spend * g.reach_per_peso)
-    const projected_messaging = Math.round(allocated_spend * g.messaging_per_peso)
-    const projected_purchases = Math.max(0, predict(projected_reach, projected_messaging, allocated_spend))
+
+    // Fall back to global average when an ad set has no historical data for a metric,
+    // so log-transformed predictors receive a meaningful value instead of log1p(0)
+    const projected_reach       = Math.round(allocated_spend * (g.reach_per_peso       || globalReachPerPeso))
+    const projected_messaging   = Math.round(allocated_spend * (g.messaging_per_peso   || globalMessagingPerPeso))
+    const projected_link_clicks = Math.round(allocated_spend * (g.link_clicks_per_peso || globalLinkClicksPerPeso))
+
+    const projected_purchases = Math.max(
+      0,
+      predictFromModel(m, projected_reach, projected_messaging, allocated_spend, projected_link_clicks),
+    )
+
     return {
       ad_set_name: g.name,
       allocated_spend,
@@ -127,7 +148,6 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
     total_projected_purchases,
     allocations,
     model_r_squared: m.r_squared,
-    is_mlr: isMLR,
-    model_type: m.model_type ?? (isMLR ? 'log_mlr' : 'slr'),
+    model_type: modelType,
   }
 }

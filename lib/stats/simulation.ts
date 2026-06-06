@@ -40,15 +40,29 @@ function buildEquation(model: {
   return `${model.intercept.toFixed(4)} + ${model.coefficient.toFixed(6)} × Amount Spent`
 }
 
+// Returns log-space mean/variance (for leverage) and raw-space min/max (for range checks)
+function computeTrainingStats(vals: number[]) {
+  const lv = vals.map(v => Math.log1p(v))
+  const logMean = lv.reduce((s, v) => s + v, 0) / lv.length
+  const logVariance = lv.reduce((s, v) => s + (v - logMean) ** 2, 0) / Math.max(lv.length - 1, 1)
+  const rawMin = vals.reduce((m, v) => (v < m ? v : m), Infinity)
+  const rawMax = vals.reduce((m, v) => (v > m ? v : m), -Infinity)
+  return { logMean, logVariance, rawMin, rawMax }
+}
+
 export async function runSimulation(
   userId: number,
   reach: number,
   messaging: number,
   amountSpent: number
 ): Promise<SimulationOutput> {
-  const latestModel = await prisma.regressionModel.findFirst({
-    orderBy: { trained_at: 'desc' },
-  })
+  const [latestModel, trainingAds] = await Promise.all([
+    prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
+    prisma.ad.findMany({
+      where: { purchases: { not: null } },
+      select: { reach: true, total_messaging_contacts: true, amount_spent: true },
+    }),
+  ])
 
   if (!latestModel) {
     throw new Error('No regression model available. Please upload ad data first so the model can be trained.')
@@ -56,12 +70,58 @@ export async function runSimulation(
 
   const projected_purchases = predictFromModel(latestModel, reach, messaging, amountSpent)
   const rse = latestModel.residual_std_error ?? 1
-  // Prediction interval for a new observation: SE = RSE * sqrt(1 + 1/n)
-  // (approximate — full formula requires the leverage term x^T(X^TX)^{-1}x)
   const n = latestModel.n ?? 1
-  const predSE = rse * Math.sqrt(1 + 1 / Math.max(n, 1))
+
+  // ── Training stats (computed once, used for both leverage and range checks) ──
+  const trainN = trainingAds.length
+  const reachStats = trainN > 0 ? computeTrainingStats(trainingAds.map(a => a.reach ?? 0)) : null
+  const msgStats = trainN > 0 ? computeTrainingStats(trainingAds.map(a => a.total_messaging_contacts ?? 0)) : null
+  const spendStats = trainN > 0 ? computeTrainingStats(trainingAds.map(a => a.amount_spent)) : null
+
+  // ── Prediction interval with approximate leverage ──────────────────────────
+  // True prediction interval requires x^T (X^TX)^{-1} x (the hat-matrix diagonal).
+  // We approximate it via standardized squared distance from the training centroid
+  // in log-space: predictions far from familiar inputs automatically get wider intervals.
+  let leverage = 1 / Math.max(n, 1)
+  if (reachStats && reachStats.logVariance > 0)
+    leverage += (Math.log1p(reach) - reachStats.logMean) ** 2 / ((n - 1) * reachStats.logVariance)
+  if (msgStats && msgStats.logVariance > 0)
+    leverage += (Math.log1p(messaging) - msgStats.logMean) ** 2 / ((n - 1) * msgStats.logVariance)
+  if (spendStats && spendStats.logVariance > 0)
+    leverage += (Math.log1p(amountSpent) - spendStats.logMean) ** 2 / ((n - 1) * spendStats.logVariance)
+
+  const predSE = rse * Math.sqrt(1 + leverage)
   const interval_lower = Math.max(0, projected_purchases - Z_80 * predSE)
   const interval_upper = projected_purchases + Z_80 * predSE
+
+  // ── Out-of-range warnings ─────────────────────────────────────────────────
+  const warnings: string[] = []
+
+  if (reachStats && reach > 0 && (reach < reachStats.rawMin || reach > reachStats.rawMax)) {
+    warnings.push(
+      `Reach (${reach.toLocaleString()}) is outside the model's training range (${reachStats.rawMin.toLocaleString()}–${reachStats.rawMax.toLocaleString()}). The prediction interval is automatically widened to reflect this.`
+    )
+  }
+  if (msgStats && messaging > 0 && (messaging < msgStats.rawMin || messaging > msgStats.rawMax)) {
+    warnings.push(
+      `Messaging Contacts (${messaging.toLocaleString()}) is outside the training range (${msgStats.rawMin.toLocaleString()}–${msgStats.rawMax.toLocaleString()}). Treat this result as approximate.`
+    )
+  }
+  if (spendStats && (amountSpent < spendStats.rawMin || amountSpent > spendStats.rawMax)) {
+    warnings.push(
+      `Ad Spend (₱${amountSpent.toLocaleString()}) is outside the training range (₱${spendStats.rawMin.toLocaleString()}–₱${spendStats.rawMax.toLocaleString()}). Extrapolation beyond observed spend levels reduces accuracy.`
+    )
+  }
+  if (latestModel.r_squared < 0.5) {
+    warnings.push(
+      `Model fit is low (R² = ${(latestModel.r_squared * 100).toFixed(1)}%). Less than half of purchase variation is explained — uploading more diverse ad data will improve reliability.`
+    )
+  }
+  if (n < 20) {
+    warnings.push(
+      `The model was trained on only ${n} ad record${n === 1 ? '' : 's'}. Predictions become more reliable with 20+ records.`
+    )
+  }
 
   await prisma.simulationResult.create({
     data: {
@@ -95,5 +155,13 @@ export async function runSimulation(
       model_type: latestModel.model_type ?? 'log_mlr',
       coef_spend_sq: latestModel.coef_spend_sq ?? 0,
     },
+    warnings,
+    training_ranges: reachStats && msgStats && spendStats
+      ? {
+          reach: [reachStats.rawMin, reachStats.rawMax],
+          messaging: [msgStats.rawMin, msgStats.rawMax],
+          spend: [spendStats.rawMin, spendStats.rawMax],
+        }
+      : undefined,
   }
 }

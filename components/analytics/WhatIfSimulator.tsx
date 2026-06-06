@@ -91,35 +91,55 @@ export default function WhatIfSimulator() {
 
           <div className="flex flex-col sm:flex-row sm:items-start gap-6">
             <div>
-              <p className="text-zinc-500 text-xs mb-0.5">Inputs</p>
+              <p className="text-zinc-400 text-xs mb-0.5">Inputs</p>
               <p className="text-sm text-zinc-300">Reach: <strong className="text-white">{result.reach_input.toLocaleString()}</strong></p>
               <p className="text-sm text-zinc-300">Messaging: <strong className="text-white">{result.messaging_input.toLocaleString()}</strong></p>
               <p className="text-sm text-zinc-300">Spend: <strong className="text-white">{formatPhp(result.amount_spent_input)}</strong></p>
             </div>
 
-            <div className="text-zinc-600 text-2xl hidden sm:block pt-4">&rarr;</div>
+            <div className="text-zinc-500 text-2xl hidden sm:block pt-4">&rarr;</div>
 
             <div>
-              <p className="text-zinc-500 text-xs mb-1">Predicted Purchases</p>
+              <p className="text-zinc-400 text-xs mb-1">Predicted Purchases</p>
               <p className="text-4xl font-bold text-red-500">
                 {point}
-                <span className="text-base font-normal text-zinc-500 ml-1">purchases</span>
+                <span className="text-base font-normal text-zinc-400 ml-1">purchases</span>
               </p>
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-zinc-400">Approximate 80% prediction interval:</span>
+                <span className="text-xs text-zinc-400">80% prediction interval:</span>
                 <span className="text-sm font-semibold text-amber-400">{lower} – {upper}</span>
               </div>
-              <p className="text-xs text-zinc-600 mt-1">
-                Based on model residual error (±RSE × 1.28). Actual results may vary, especially for inputs outside the training data range.
+              <p className="text-xs text-zinc-500 mt-1">
+                Interval widens automatically when inputs are far from training data.
               </p>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-zinc-800 space-y-0.5">
-            <p className="text-xs text-zinc-500 font-mono break-all">{result.model.equation}</p>
-            <p className="text-xs text-zinc-600">
+          {result.warnings.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {result.warnings.map((w, i) => (
+                <div key={i} className="flex gap-2.5 p-3 rounded-lg bg-amber-950/40 border border-amber-700/40">
+                  <svg className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 3h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  <p className="text-xs text-amber-200/80 leading-relaxed">{w}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 pt-3 border-t border-zinc-800 space-y-1">
+            <p className="text-xs text-zinc-400 font-mono break-all">{result.model.equation}</p>
+            <p className="text-xs text-zinc-500">
               R² = {(result.model.r_squared * 100).toFixed(1)}% · RSE = {result.model.residual_std_error.toFixed(3)} · n = {result.model.n}
             </p>
+            {result.training_ranges && (
+              <p className="text-xs text-zinc-600">
+                Training ranges · Reach {result.training_ranges.reach[0].toLocaleString()}–{result.training_ranges.reach[1].toLocaleString()}
+                {' · '}Msgs {result.training_ranges.messaging[0].toLocaleString()}–{result.training_ranges.messaging[1].toLocaleString()}
+                {' · '}Spend {formatPhp(result.training_ranges.spend[0])}–{formatPhp(result.training_ranges.spend[1])}
+              </p>
+            )}
           </div>
         </div>
       )}

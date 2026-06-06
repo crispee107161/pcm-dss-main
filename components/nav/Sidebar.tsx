@@ -103,22 +103,25 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
         key={item.href}
         href={item.href}
         title={collapsed ? item.label : undefined}
-        className={`flex items-center gap-3 rounded-lg text-sm font-medium transition-colors ${
+        className={`relative flex items-center gap-3 rounded-lg text-sm font-medium transition-[background-color,color] ${
           collapsed ? 'md:justify-center md:px-2 md:py-2 px-3 py-1.5' : 'px-3 py-1.5'
         } ${
           active
-            ? 'bg-red-600 text-white'
-            : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+            ? 'bg-zinc-800 text-white'
+            : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
         }`}
       >
-        <span className="w-4 h-4 flex-shrink-0">{item.icon}</span>
+        {active && !collapsed && (
+          <span className="absolute -left-3 top-1 bottom-1 w-0.5 rounded-r-full bg-red-500" aria-hidden />
+        )}
+        <span className={`w-4 h-4 flex-shrink-0 ${active ? 'text-red-400' : ''}`}>{item.icon}</span>
         <span className={collapsed ? 'md:hidden' : ''}>{item.label}</span>
       </Link>
     )
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-background">
       {/* Mobile backdrop */}
       {mobileOpen && (
         <div

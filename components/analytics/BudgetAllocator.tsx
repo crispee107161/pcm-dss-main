@@ -8,6 +8,23 @@ function formatPHP(v: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(v)
 }
 
+function modelLabel(modelType: string): string {
+  const labels: Record<string, string> = {
+    log_mlr:         'Log-Linear MLR',
+    plain_mlr:       'Linear MLR',
+    poly_mlr:        'Polynomial MLR',
+    ridge_mlr:       'Ridge MLR',
+    lasso_mlr:       'Lasso MLR',
+    elastic_net_mlr: 'Elastic Net MLR',
+    wls_mlr:         'WLS MLR',
+    robust_mlr:      'Robust MLR',
+    log_log_mlr:     'Log-Log MLR',
+    expanded_mlr:    'Expanded MLR',
+    slr:             'Simple Linear Regression',
+  }
+  return labels[modelType] ?? modelType
+}
+
 function PctBar({ pct }: { pct: number }) {
   return (
     <div className="flex items-center gap-2">
@@ -31,7 +48,7 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
         <div className="font-semibold text-slate-800 text-sm max-w-[180px] truncate" title={row.ad_set_name}>
           {row.ad_set_name}
         </div>
-        <div className="text-[11px] text-slate-400 mt-0.5">
+        <div className="text-[11px] text-slate-500 mt-0.5">
           Hist. CPA: {row.historical_cpa !== null ? formatPHP(row.historical_cpa) : '—'} · {row.historical_purchases} past purchases
         </div>
       </td>
@@ -114,15 +131,15 @@ export default function BudgetAllocator() {
           <div className="rounded-2xl p-5 flex flex-wrap gap-6"
             style={{ background: 'linear-gradient(135deg, #1c0808 0%, #111 60%, #0d0d0d 100%)' }}>
             <div>
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-1">Total Budget</p>
+              <p className="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Total Budget</p>
               <p className="text-2xl font-bold text-white">{formatPHP(result.total_budget)}</p>
             </div>
             <div>
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-1">Projected Purchases</p>
+              <p className="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Projected Purchases</p>
               <p className="text-2xl font-bold text-red-400">{Math.round(result.total_projected_purchases)}</p>
             </div>
             <div>
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-1">Projected CPA</p>
+              <p className="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Projected CPA</p>
               <p className="text-2xl font-bold text-white">
                 {result.total_projected_purchases > 0
                   ? formatPHP(result.total_budget / result.total_projected_purchases)
@@ -130,12 +147,12 @@ export default function BudgetAllocator() {
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-1">Ad Sets</p>
-              <p className="text-2xl font-bold text-slate-300">{result.allocations.length}</p>
+              <p className="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Ad Sets</p>
+              <p className="text-2xl font-bold text-slate-200">{result.allocations.length}</p>
             </div>
             <div className="self-end ml-auto hidden sm:block">
-              <p className="text-[10px] text-slate-600">
-                {result.is_mlr ? 'MLR' : 'SLR'} · R² = {(result.model_r_squared * 100).toFixed(1)}%
+              <p className="text-[11px] text-slate-400">
+                {modelLabel(result.model_type)} · R² = {(result.model_r_squared * 100).toFixed(1)}%
               </p>
             </div>
           </div>
@@ -161,7 +178,7 @@ export default function BudgetAllocator() {
           </div>
 
           <p className="text-[11px] text-slate-400">
-            Allocation weighted by historical purchase efficiency (purchases ÷ spend) per ad set. Projected purchases use the {result.is_mlr ? 'Multiple' : 'Simple'} Linear Regression model with scaled reach and messaging estimates from historical ratios. Approximate 80% prediction intervals shown below each purchase count (constant-width, based on model RSE).
+            Allocation weighted by historical purchase efficiency (purchases ÷ spend) per ad set. Projected purchases use the {modelLabel(result.model_type)} model with reach, messaging, and link clicks scaled from historical per-peso ratios (global average used as fallback when an ad set has no historical data for a metric). Approximate 80% prediction intervals shown below each purchase count (constant-width, based on model RSE).
           </p>
         </div>
       )}

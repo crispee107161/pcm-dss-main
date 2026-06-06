@@ -44,6 +44,12 @@ export interface SimulationOutput {
   interval_lower: number
   interval_upper: number
   model: MLRModelInfo
+  warnings: string[]
+  training_ranges?: {
+    reach: [number, number]
+    messaging: [number, number]
+    spend: [number, number]
+  }
 }
 
 export interface MonthlyKpi {
