@@ -6,15 +6,37 @@ import { computeHealthScores } from '@/lib/stats/health-score'
 import SalesDashboardTabs from '@/components/analytics/SalesDashboardTabs'
 import type { MonthlyKpi } from '@/types/index'
 
-const TARGET_MONTHS = [
-  { label: 'Sep 2025', year: 2025, month: 9 },
-  { label: 'Dec 2025', year: 2025, month: 12 },
-  { label: 'Jan 2026', year: 2026, month: 1 },
-]
+async function getRecentTargetMonths(): Promise<{ label: string; year: number; month: number }[]> {
+  const dates = await prisma.ad.findMany({
+    select: { reporting_starts: true },
+    orderBy: { reporting_starts: 'desc' },
+  })
 
-async function getMonthlyKpis(): Promise<MonthlyKpi[]> {
+  const seen = new Set<string>()
+  const months: { label: string; year: number; month: number }[] = []
+
+  for (const { reporting_starts } of dates) {
+    const d = new Date(reporting_starts)
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      months.push({
+        label: new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(d),
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+      })
+      if (months.length === 3) break
+    }
+  }
+
+  return months.reverse()
+}
+
+async function getMonthlyKpis(
+  targetMonths: { label: string; year: number; month: number }[]
+): Promise<MonthlyKpi[]> {
   const kpis: MonthlyKpi[] = []
-  for (const target of TARGET_MONTHS) {
+  for (const target of targetMonths) {
     const startDate = new Date(target.year, target.month - 1, 1)
     const endDate = new Date(target.year, target.month, 0, 23, 59, 59)
     const ads = await prisma.ad.findMany({
@@ -37,9 +59,11 @@ export default async function SalesDashboard() {
 
   const displayName = session.user.email?.split('@')[0] ?? 'there'
 
+  const targetMonths = await getRecentTargetMonths()
+
   const [monthlyKpis, spearmanRows, latestModel, allAds, topSpend, topPurchases, genderData, territoryData, allAdsForHealth] =
     await Promise.all([
-      getMonthlyKpis(),
+      getMonthlyKpis(targetMonths),
       computeSpearmanMatrix(),
       prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
       prisma.ad.findMany({
@@ -65,8 +89,7 @@ export default async function SalesDashboard() {
 
   const scoredAds = computeHealthScores(allAdsForHealth)
 
-  // Build monthly ad trends for charts
-  const adTrends = TARGET_MONTHS.map(({ label, year, month }) => {
+  const adTrends = targetMonths.map(({ label, year, month }) => {
     const start = new Date(year, month - 1, 1)
     const end = new Date(year, month, 0, 23, 59, 59)
     const ads = allAds.filter(a => {
@@ -90,7 +113,6 @@ export default async function SalesDashboard() {
       ? ((lastTwo[1].total_purchases - lastTwo[0].total_purchases) / lastTwo[0].total_purchases) * 100
       : null
 
-  // Serialise dates to strings for client component
   const serialisedTopSpend = topSpend.map(a => ({
     ...a,
     reporting_starts: a.reporting_starts?.toISOString() ?? null,

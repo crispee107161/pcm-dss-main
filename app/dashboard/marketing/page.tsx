@@ -5,8 +5,18 @@ import Link from 'next/link'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
 import UploadHistory from '@/components/upload/UploadHistory'
 
-type Accent = 'red' | 'green' | 'amber' | 'slate'
+function formatPhp(amount: number): string {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency', currency: 'PHP',
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(amount)
+}
 
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
+}
+
+type Accent = 'red' | 'green' | 'amber' | 'slate'
 const accentStyles: Record<Accent, string> = {
   red:   'bg-red-50 text-red-500',
   green: 'bg-emerald-50 text-emerald-500',
@@ -14,8 +24,13 @@ const accentStyles: Record<Accent, string> = {
   slate: 'bg-slate-100 text-slate-400',
 }
 
-function KpiCard({ label, value, valueClass = 'text-slate-900', icon, accent = 'slate' }: {
-  label: string; value: React.ReactNode; valueClass?: string; icon: React.ReactNode; accent?: Accent
+function KpiCard({ label, value, sub, valueClass = 'text-slate-900', icon, accent = 'slate' }: {
+  label: string
+  value: React.ReactNode
+  sub?: string
+  valueClass?: string
+  icon: React.ReactNode
+  accent?: Accent
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/70 p-5 flex flex-col gap-3"
@@ -26,7 +41,14 @@ function KpiCard({ label, value, valueClass = 'text-slate-900', icon, accent = '
           {icon}
         </span>
       </div>
-      <p className={`text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
+      <div>
+        <p className={`text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
+        {sub && (
+          <span className="inline-block mt-2 text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            {sub}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -46,7 +68,16 @@ export default async function MarketingDashboard() {
 
   const displayName = session.user.email?.split('@')[0] ?? 'there'
 
-  const [adCount, adsWithPurchases, latestModel, recentUploads, totalUploads] = await Promise.all([
+  const [
+    adCount,
+    adsWithPurchases,
+    latestModel,
+    recentUploads,
+    totalUploads,
+    postStats,
+    adCoverage,
+    categories,
+  ] = await Promise.all([
     prisma.ad.count(),
     prisma.ad.count({ where: { purchases: { gt: 0 } } }),
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
@@ -56,7 +87,36 @@ export default async function MarketingDashboard() {
       include: { user: { select: { email: true } } },
     }),
     prisma.uploadLog.count(),
+    prisma.facebookPost.aggregate({
+      _avg: { engagement_rate: true },
+      _count: { _all: true },
+    }),
+    prisma.ad.aggregate({
+      _min: { reporting_starts: true },
+      _max: { reporting_ends: true },
+      _count: { _all: true },
+    }),
+    prisma.category.findMany({
+      include: { ads: { select: { purchases: true, amount_spent: true } } },
+    }),
   ])
+
+  const avgEngagement = postStats._avg.engagement_rate
+  const postCount     = postStats._count._all
+  const coverageMin   = adCoverage._min.reporting_starts
+  const coverageMax   = adCoverage._max.reporting_ends
+
+  const categoriesWithStats = categories
+    .map(cat => ({
+      name: cat.name,
+      totalPurchases: cat.ads.reduce((s, a) => s + (a.purchases ?? 0), 0),
+      totalSpend: cat.ads.reduce((s, a) => s + a.amount_spent, 0),
+      adCount: cat.ads.length,
+    }))
+    .filter(c => c.totalPurchases > 0)
+    .sort((a, b) => b.totalPurchases - a.totalPurchases)
+
+  const topCategory = categoriesWithStats[0] ?? null
 
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-5">
@@ -73,19 +133,14 @@ export default async function MarketingDashboard() {
         </div>
       </div>
 
-      {/* Stats row */}
+      {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard
-          label="Total Ads"
-          value={adCount}
-          accent="slate"
+          label="Total Ads" value={adCount} accent="slate"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
         />
         <KpiCard
-          label="With Purchases"
-          value={adsWithPurchases}
-          valueClass="text-red-600"
-          accent="red"
+          label="With Purchases" value={adsWithPurchases} valueClass="text-red-600" accent="red"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
         />
         <KpiCard
@@ -96,12 +151,119 @@ export default async function MarketingDashboard() {
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>}
         />
         <KpiCard
-          label="Total Uploads"
-          value={totalUploads}
-          accent="slate"
-          icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>}
+          label="Avg Engagement"
+          value={avgEngagement !== null ? `${(avgEngagement * 100).toFixed(2)}%` : '—'}
+          sub={postCount > 0 ? `across ${postCount} posts` : undefined}
+          valueClass="text-amber-600"
+          accent="amber"
+          icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>}
         />
       </div>
+
+      {/* Data coverage strip */}
+      {coverageMin && coverageMax && (
+        <div className="bg-white rounded-2xl border border-slate-200/70 px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-2"
+          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] border-l-2 border-red-300/60 pl-2">
+            Data Coverage
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-700">{formatDate(coverageMin)}</span>
+            <span className="text-slate-300">→</span>
+            <span className="text-xs font-semibold text-slate-700">{formatDate(coverageMax)}</span>
+          </div>
+          <span className="text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            {adCoverage._count._all} ad records
+          </span>
+          <span className="text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            {totalUploads} total uploads
+          </span>
+        </div>
+      )}
+
+      {/* Top Category + Post Engagement */}
+      {(topCategory || postCount > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {topCategory && (
+            <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
+              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+              <SectionLabel>Top Category by Purchases</SectionLabel>
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <p className="text-sm font-bold text-slate-800">{topCategory.name}</p>
+                <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-full px-2.5 py-0.5">
+                  Top Performer
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Purchases</p>
+                  <p className="text-xl font-bold text-slate-900">{topCategory.totalPurchases.toLocaleString()}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Ad Spend</p>
+                  <p className="text-xl font-bold text-slate-900">{formatPhp(topCategory.totalSpend)}</p>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Ads</p>
+                  <p className="text-xl font-bold text-emerald-700">{topCategory.adCount}</p>
+                </div>
+              </div>
+              {categoriesWithStats.length > 1 && (
+                <div className="space-y-1.5">
+                  {categoriesWithStats.slice(0, 4).map((c, i) => {
+                    const pct = topCategory.totalPurchases > 0
+                      ? (c.totalPurchases / topCategory.totalPurchases) * 100
+                      : 0
+                    return (
+                      <div key={c.name} className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 w-3">{i + 1}</span>
+                        <span className="text-[11px] text-slate-600 w-24 truncate">{c.name}</span>
+                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-slate-400 w-8 text-right">{c.totalPurchases}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {postCount > 0 && avgEngagement !== null && (
+            <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
+              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+              <SectionLabel>Post Engagement Summary</SectionLabel>
+              <div className="flex items-end gap-3 mb-4">
+                <p className="text-4xl font-bold tracking-tight text-amber-600">
+                  {(avgEngagement * 100).toFixed(2)}%
+                </p>
+                <span className="text-[11px] text-slate-400 mb-1">avg engagement rate</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total Posts</p>
+                  <p className="text-xl font-bold text-slate-900">{postCount.toLocaleString()}</p>
+                </div>
+                <div className="bg-amber-50 rounded-xl p-3">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Quality</p>
+                  <p className={`text-xl font-bold ${
+                    avgEngagement >= 0.05 ? 'text-emerald-600'
+                    : avgEngagement >= 0.02 ? 'text-amber-600'
+                    : 'text-red-500'
+                  }`}>
+                    {avgEngagement >= 0.05 ? 'Strong' : avgEngagement >= 0.02 ? 'Average' : 'Low'}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-3">
+                Engagement rate = (reactions + comments + shares) / reach. Strong ≥ 5%, Average 2–5%, Low &lt; 2%.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick actions */}
       <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
