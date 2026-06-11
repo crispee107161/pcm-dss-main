@@ -2,12 +2,10 @@ import { prisma } from '@/lib/prisma'
 import type { SpearmanRow } from '@/types/index'
 
 export function rankArray(arr: (number | null)[]): (number | null)[] {
-  // Filter out nulls, keeping track of original indices
   const indexed = arr
     .map((v, i) => ({ v, i }))
     .filter((x) => x.v !== null) as { v: number; i: number }[]
 
-  // Sort by value
   indexed.sort((a, b) => a.v - b.v)
 
   const ranks = new Array(arr.length).fill(null)
@@ -15,11 +13,9 @@ export function rankArray(arr: (number | null)[]): (number | null)[] {
   let i = 0
   while (i < indexed.length) {
     let j = i
-    // Find ties
     while (j < indexed.length && indexed[j].v === indexed[i].v) {
       j++
     }
-    // Average rank for ties (1-based)
     const avgRank = (i + 1 + j) / 2
     for (let k = i; k < j; k++) {
       ranks[indexed[k].i] = avgRank
@@ -54,32 +50,21 @@ export function pearsonCorrelation(x: number[], y: number[]): number {
   return num / den
 }
 
-export function spearman(
+function pearsonFiltered(
   x: (number | null)[],
   y: (number | null)[]
 ): number | null {
-  if (x.length !== y.length) throw new Error('Arrays must have same length')
-
-  // Keep only pairs where both are non-null
   const pairs: { xi: number; yi: number }[] = []
   for (let i = 0; i < x.length; i++) {
     if (x[i] !== null && y[i] !== null) {
       pairs.push({ xi: x[i] as number, yi: y[i] as number })
     }
   }
-
   if (pairs.length < 3) return null
-
-  const xVals = pairs.map((p) => p.xi)
-  const yVals = pairs.map((p) => p.yi)
-
-  const xRanks = rankArray(xVals) as number[]
-  const yRanks = rankArray(yVals) as number[]
-
-  return pearsonCorrelation(xRanks, yRanks)
+  return pearsonCorrelation(pairs.map(p => p.xi), pairs.map(p => p.yi))
 }
 
-export async function computeSpearmanMatrix(): Promise<SpearmanRow[]> {
+export async function computePearsonMatrix(): Promise<SpearmanRow[]> {
   const ads = await prisma.ad.findMany()
 
   const amount_spent = ads.map((a) => a.amount_spent)
@@ -98,7 +83,10 @@ export async function computeSpearmanMatrix(): Promise<SpearmanRow[]> {
 
   return predictors.map(({ name, values }) => ({
     variable: name,
-    vs_purchases: spearman(values, purchases),
-    vs_messaging: spearman(values, messaging),
+    vs_purchases: pearsonFiltered(values, purchases),
+    vs_messaging: pearsonFiltered(values, messaging),
   }))
 }
+
+// Backward-compat alias so existing imports keep working without touching every caller
+export const computeSpearmanMatrix = computePearsonMatrix

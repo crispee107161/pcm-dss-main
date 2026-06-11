@@ -2,8 +2,14 @@ import { prisma } from '@/lib/prisma'
 import { predictFromModel } from '@/lib/stats/regression'
 import type { SimulationOutput } from '@/types/index'
 
-// z* for 80% two-sided prediction interval
-const Z_80 = 1.2816
+const N_ITER = 1000
+
+// Box-Muller transform — generates a standard normal sample
+function randNormal(): number {
+  const u1 = Math.random()
+  const u2 = Math.random()
+  return Math.sqrt(-2 * Math.log(Math.max(u1, 1e-10))) * Math.cos(2 * Math.PI * u2)
+}
 
 function buildEquation(model: {
   model_type?: string | null
@@ -11,43 +17,16 @@ function buildEquation(model: {
   coef_reach?: number | null
   coef_messaging?: number | null
   coef_amount_spent?: number | null
-  coef_spend_sq?: number | null
   coefficient: number
 }): string {
   const s = (v: number) => (v >= 0 ? `+${v.toFixed(4)}` : v.toFixed(4))
-  const type = model.model_type ?? (model.coef_reach != null ? 'log_mlr' : 'slr')
-
-  if (type === 'plain_mlr') {
-    return `${model.intercept.toFixed(4)} ${s(model.coef_reach!)}·Reach ${s(model.coef_messaging!)}·Msgs ${s(model.coef_amount_spent!)}·Spend`
-  }
-  if (type === 'poly_mlr') {
-    return `${model.intercept.toFixed(4)} ${s(model.coef_reach!)}·log(1+Reach) ${s(model.coef_messaging!)}·log(1+Msgs) ${s(model.coef_amount_spent!)}·log(1+Spend) ${s(model.coef_spend_sq ?? 0)}·log(1+Spend)²`
-  }
-  if (type === 'log_log_mlr') {
-    return `log(1+Purchases) = ${model.intercept.toFixed(4)} ${s(model.coef_reach!)}·log(1+Reach) ${s(model.coef_messaging!)}·log(1+Msgs) ${s(model.coef_amount_spent!)}·log(1+Spend) [elasticity]`
-  }
-  if (model.coef_reach != null && model.coef_messaging != null && model.coef_amount_spent != null) {
-    const suffixMap: Record<string, string> = {
-      ridge_mlr: ' [ridge λ=0.1]',
-      lasso_mlr: ' [lasso λ=0.1]',
-      elastic_net_mlr: ' [elastic net]',
-      wls_mlr: ' [wls 90d decay]',
-      robust_mlr: ' [robust huber]',
-    }
-    const suffix = suffixMap[type] ?? ''
-    return `${model.intercept.toFixed(4)} ${s(model.coef_reach)}·log(1+Reach) ${s(model.coef_messaging)}·log(1+Msgs) ${s(model.coef_amount_spent)}·log(1+Spend)${suffix}`
-  }
-  return `${model.intercept.toFixed(4)} + ${model.coefficient.toFixed(6)} × Amount Spent`
+  return `${model.intercept.toFixed(4)} ${s(model.coef_reach ?? 0)}·Reach ${s(model.coef_messaging ?? 0)}·Msgs ${s(model.coef_amount_spent ?? 0)}·Spend`
 }
 
-// Returns log-space mean/variance (for leverage) and raw-space min/max (for range checks)
 function computeTrainingStats(vals: number[]) {
-  const lv = vals.map(v => Math.log1p(v))
-  const logMean = lv.reduce((s, v) => s + v, 0) / lv.length
-  const logVariance = lv.reduce((s, v) => s + (v - logMean) ** 2, 0) / Math.max(lv.length - 1, 1)
   const rawMin = vals.reduce((m, v) => (v < m ? v : m), Infinity)
   const rawMax = vals.reduce((m, v) => (v > m ? v : m), -Infinity)
-  return { logMean, logVariance, rawMin, rawMax }
+  return { rawMin, rawMax }
 }
 
 export async function runSimulation(
@@ -68,38 +47,36 @@ export async function runSimulation(
     throw new Error('No regression model available. Please upload ad data first so the model can be trained.')
   }
 
-  const projected_purchases = predictFromModel(latestModel, reach, messaging, amountSpent)
+  const basePredict = predictFromModel(latestModel, reach, messaging, amountSpent)
   const rse = latestModel.residual_std_error ?? 1
-  const n = latestModel.n ?? 1
 
-  // ── Training stats (computed once, used for both leverage and range checks) ──
-  const trainN = trainingAds.length
-  const reachStats = trainN > 0 ? computeTrainingStats(trainingAds.map(a => a.reach ?? 0)) : null
-  const msgStats = trainN > 0 ? computeTrainingStats(trainingAds.map(a => a.total_messaging_contacts ?? 0)) : null
-  const spendStats = trainN > 0 ? computeTrainingStats(trainingAds.map(a => a.amount_spent)) : null
+  // Monte Carlo: run N_ITER samples with Gaussian noise from model residuals
+  const samples: number[] = Array.from({ length: N_ITER }, () =>
+    Math.max(0, basePredict + randNormal() * rse)
+  )
+  samples.sort((a, b) => a - b)
 
-  // ── Prediction interval with approximate leverage ──────────────────────────
-  // True prediction interval requires x^T (X^TX)^{-1} x (the hat-matrix diagonal).
-  // We approximate it via standardized squared distance from the training centroid
-  // in log-space: predictions far from familiar inputs automatically get wider intervals.
-  let leverage = 1 / Math.max(n, 1)
-  if (reachStats && reachStats.logVariance > 0)
-    leverage += (Math.log1p(reach) - reachStats.logMean) ** 2 / ((n - 1) * reachStats.logVariance)
-  if (msgStats && msgStats.logVariance > 0)
-    leverage += (Math.log1p(messaging) - msgStats.logMean) ** 2 / ((n - 1) * msgStats.logVariance)
-  if (spendStats && spendStats.logVariance > 0)
-    leverage += (Math.log1p(amountSpent) - spendStats.logMean) ** 2 / ((n - 1) * spendStats.logVariance)
-
-  const predSE = rse * Math.sqrt(1 + leverage)
-  const interval_lower = Math.max(0, projected_purchases - Z_80 * predSE)
-  const interval_upper = projected_purchases + Z_80 * predSE
+  const projected_purchases = samples[Math.floor(N_ITER / 2)]     // median
+  const interval_lower      = samples[Math.floor(0.05 * N_ITER)]  // 5th percentile → 90% interval
+  const interval_upper      = samples[Math.floor(0.95 * N_ITER)]  // 95th percentile
 
   // ── Out-of-range warnings ─────────────────────────────────────────────────
   const warnings: string[] = []
+  const trainN = trainingAds.length
+
+  let reachStats: { rawMin: number; rawMax: number } | null = null
+  let msgStats:   { rawMin: number; rawMax: number } | null = null
+  let spendStats: { rawMin: number; rawMax: number } | null = null
+
+  if (trainN > 0) {
+    reachStats = computeTrainingStats(trainingAds.map(a => a.reach ?? 0))
+    msgStats   = computeTrainingStats(trainingAds.map(a => a.total_messaging_contacts ?? 0))
+    spendStats = computeTrainingStats(trainingAds.map(a => a.amount_spent))
+  }
 
   if (reachStats && reach > 0 && (reach < reachStats.rawMin || reach > reachStats.rawMax)) {
     warnings.push(
-      `Reach (${reach.toLocaleString()}) is outside the model's training range (${reachStats.rawMin.toLocaleString()}–${reachStats.rawMax.toLocaleString()}). The prediction interval is automatically widened to reflect this.`
+      `Reach (${reach.toLocaleString()}) is outside the model's training range (${reachStats.rawMin.toLocaleString()}–${reachStats.rawMax.toLocaleString()}). Treat this result as approximate.`
     )
   }
   if (msgStats && messaging > 0 && (messaging < msgStats.rawMin || messaging > msgStats.rawMax)) {
@@ -109,17 +86,17 @@ export async function runSimulation(
   }
   if (spendStats && (amountSpent < spendStats.rawMin || amountSpent > spendStats.rawMax)) {
     warnings.push(
-      `Ad Spend (₱${amountSpent.toLocaleString()}) is outside the training range (₱${spendStats.rawMin.toLocaleString()}–₱${spendStats.rawMax.toLocaleString()}). Extrapolation beyond observed spend levels reduces accuracy.`
+      `Ad Spend (₱${amountSpent.toLocaleString()}) is outside the training range (₱${spendStats.rawMin.toLocaleString()}–₱${spendStats.rawMax.toLocaleString()}). Extrapolation reduces accuracy.`
     )
   }
   if (latestModel.r_squared < 0.5) {
     warnings.push(
-      `Model fit is low (R² = ${(latestModel.r_squared * 100).toFixed(1)}%). Less than half of purchase variation is explained — uploading more diverse ad data will improve reliability.`
+      `Model fit is low (R² = ${(latestModel.r_squared * 100).toFixed(1)}%). Uploading more diverse ad data will improve reliability.`
     )
   }
-  if (n < 20) {
+  if (latestModel.n < 20) {
     warnings.push(
-      `The model was trained on only ${n} ad record${n === 1 ? '' : 's'}. Predictions become more reliable with 20+ records.`
+      `The model was trained on only ${latestModel.n} ad record${latestModel.n === 1 ? '' : 's'}. Predictions become more reliable with 20+ records.`
     )
   }
 
@@ -152,8 +129,8 @@ export async function runSimulation(
       residual_std_error: latestModel.residual_std_error ?? 0,
       n: latestModel.n,
       equation: buildEquation(latestModel),
-      model_type: latestModel.model_type ?? 'log_mlr',
-      coef_spend_sq: latestModel.coef_spend_sq ?? 0,
+      model_type: latestModel.model_type ?? 'plain_mlr',
+      coef_spend_sq: 0,
     },
     warnings,
     training_ranges: reachStats && msgStats && spendStats
