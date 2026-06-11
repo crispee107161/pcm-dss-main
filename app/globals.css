@@ -226,12 +226,21 @@
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1;
 }
 
-/* prefers-reduced-motion: cut all durations */
+/* Explicit spin keyframe — Tailwind v4 @theme inline can omit @keyframes from the CSS output */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* prefers-reduced-motion: cut all durations except functional loading indicators */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
   }
 }
 
