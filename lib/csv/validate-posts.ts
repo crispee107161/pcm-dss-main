@@ -35,9 +35,7 @@ export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] 
       const description = row['Description']?.trim() || null
       const permalink = (row['Permalink'] ?? row['Post link'] ?? '').trim()
 
-      const reachRaw = row['Reach'] ?? ''
-      const reach = parseInt(reachRaw.replace(/,/g, '').trim(), 10)
-      if (isNaN(reach)) throw new Error(`Invalid Reach value: ${reachRaw}`)
+      const reach = parseIntOrZero(row['Reach'])
 
       const reactions = parseIntOrZero(row['Reactions'] ?? row['Post reactions'])
       const comments = parseIntOrZero(row['Comments'] ?? row['Post comments'])

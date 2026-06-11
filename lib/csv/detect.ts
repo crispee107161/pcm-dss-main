@@ -7,7 +7,8 @@ export type CsvType =
   | 'DEMOGRAPHICS_CSV'
 
 const ADS_REQUIRED_HEADERS    = ['Ad name', 'Reporting starts', 'Amount spent (PHP)', 'Purchases']
-const POSTS_REQUIRED_HEADERS  = ['Post ID', 'Publish time', 'Post type', 'Reach']
+// Older Facebook exports (pre-2025) omit Reach/Views — Post ID + Publish time + Post type is unique enough
+const POSTS_REQUIRED_HEADERS  = ['Post ID', 'Publish time', 'Post type']
 const FOLLOWER_HIST_HEADERS   = ['Date', 'Followers', 'Difference in followers from previous day']
 const VIEWERS_HEADERS         = ['Date', 'Total Viewers', 'New Viewers', 'Returning Viewers']
 const GENDER_HEADERS          = ['Gender', 'Distribution']
