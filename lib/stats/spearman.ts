@@ -64,12 +64,30 @@ function pearsonFiltered(
   return pearsonCorrelation(pairs.map(p => p.xi), pairs.map(p => p.yi))
 }
 
-export async function computePearsonMatrix(): Promise<SpearmanRow[]> {
+function spearmanFiltered(
+  x: (number | null)[],
+  y: (number | null)[]
+): number | null {
+  const xComplete: number[] = []
+  const yComplete: number[] = []
+  for (let i = 0; i < x.length; i++) {
+    if (x[i] !== null && y[i] !== null) {
+      xComplete.push(x[i] as number)
+      yComplete.push(y[i] as number)
+    }
+  }
+  if (xComplete.length < 3) return null
+  const rankedX = rankArray(xComplete) as number[]
+  const rankedY = rankArray(yComplete) as number[]
+  return pearsonCorrelation(rankedX, rankedY)
+}
+
+export async function computeSpearmanMatrix(): Promise<SpearmanRow[]> {
   const ads = await prisma.ad.findMany()
 
   const amount_spent = ads.map((a) => a.amount_spent)
   const reach = ads.map((a) => a.reach)
-  const impressions = ads.map((a) => a.impressions as number)
+  const impressions = ads.map((a) => a.impressions ?? null)
   const link_clicks = ads.map((a) => a.link_clicks)
   const purchases = ads.map((a) => a.purchases)
   const messaging = ads.map((a) => a.total_messaging_contacts)
@@ -83,10 +101,7 @@ export async function computePearsonMatrix(): Promise<SpearmanRow[]> {
 
   return predictors.map(({ name, values }) => ({
     variable: name,
-    vs_purchases: pearsonFiltered(values, purchases),
-    vs_messaging: pearsonFiltered(values, messaging),
+    vs_purchases: spearmanFiltered(values, purchases),
+    vs_messaging: spearmanFiltered(values, messaging),
   }))
 }
-
-// Backward-compat alias so existing imports keep working without touching every caller
-export const computeSpearmanMatrix = computePearsonMatrix

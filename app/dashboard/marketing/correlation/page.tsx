@@ -19,7 +19,7 @@ export default async function CorrelationPage() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Correlation Analysis"
-        description="Pearson correlation between ad metrics and purchase outcomes"
+        description="Spearman rank correlation between ad metrics and purchase outcomes"
       />
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
@@ -31,7 +31,7 @@ export default async function CorrelationPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">Pearson Correlation (Overall)</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Spearman Rank Correlation (Overall)</h2>
         <CorrelationTable rows={spearmanRows} />
       </div>
 
