@@ -13,7 +13,7 @@ const MODEL_TYPE_LABELS: Record<string, string> = {
 
 function modelTypeLabel(modelType: string | null, isMLR: boolean): string {
   if (modelType) return MODEL_TYPE_LABELS[modelType] ?? modelType
-  return isMLR ? 'Log MLR' : 'SLR'
+  return isMLR ? 'Plain MLR' : 'SLR'
 }
 
 function formatDate(date: Date): string {

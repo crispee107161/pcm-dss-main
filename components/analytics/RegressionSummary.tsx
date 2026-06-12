@@ -19,13 +19,13 @@ const MODEL_LABELS: Record<string, { label: string; color: string; description: 
 }
 
 function getModelMeta(model: RegressionModel) {
-  const type = model.model_type ?? (model.coef_reach != null ? 'log_mlr' : 'slr')
+  const type = model.model_type ?? (model.coef_reach != null ? 'plain_mlr' : 'slr')
   return MODEL_LABELS[type] ?? { label: 'Simple Linear Regression', color: 'bg-slate-100 text-slate-700', description: 'Predicts purchases from spend only' }
 }
 
 function buildEquation(model: RegressionModel): string {
   const s = (v: number) => (v >= 0 ? `+${v.toFixed(4)}` : v.toFixed(4))
-  const type = model.model_type ?? (model.coef_reach != null ? 'log_mlr' : 'slr')
+  const type = model.model_type ?? (model.coef_reach != null ? 'plain_mlr' : 'slr')
 
   if (type === 'plain_mlr' && model.coef_reach != null) {
     return `Purchases = ${model.intercept.toFixed(4)} ${s(model.coef_reach)}·Reach ${s(model.coef_messaging!)}·Msgs ${s(model.coef_amount_spent!)}·Spend`

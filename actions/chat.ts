@@ -62,7 +62,7 @@ ${latestModel
       `- R²: ${(latestModel.r_squared * 100).toFixed(2)}% of purchase variance explained`,
       `- Sample size: ${latestModel.n} campaigns`,
       (() => {
-          const type = latestModel.model_type ?? (isMLR ? 'log_mlr' : 'slr')
+          const type = latestModel.model_type ?? (isMLR ? 'plain_mlr' : 'slr')
           const b0 = latestModel.intercept.toFixed(3)
           if (type === 'plain_mlr') {
             return `- Equation: Purchases = ${b0} + ${latestModel.coef_reach?.toFixed(4)}·Reach + ${latestModel.coef_messaging?.toFixed(4)}·Msgs + ${latestModel.coef_amount_spent?.toFixed(4)}·Spend`
