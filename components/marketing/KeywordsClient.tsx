@@ -5,6 +5,9 @@ import {
   addKeyword, deleteKeyword, suggestKeywords, addKeywordsBulk,
   type KeywordSuggestion,
 } from '@/actions/keywords'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface Keyword { id: number; word: string }
 interface Category { id: number; name: string; keywords: Keyword[] }
@@ -122,12 +125,12 @@ export default function KeywordsClient({ categories }: Props) {
 
         {/* Error */}
         {analyzeError && (
-          <div className="animate-fade-slide-up mx-6 mt-5 flex items-start gap-2.5 rounded-lg px-4 py-3 bg-amber-50 border border-amber-200">
-            <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <Alert className="animate-fade-slide-up mx-6 mt-5 bg-amber-50 border-amber-200 text-amber-700">
+            <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
-            <p className="text-xs text-amber-700">{analyzeError}</p>
-          </div>
+            <AlertDescription className="text-xs text-amber-700">{analyzeError}</AlertDescription>
+          </Alert>
         )}
 
         {/* Suggestions */}
@@ -263,23 +266,22 @@ export default function KeywordsClient({ categories }: Props) {
         style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06)' }}>
         <h2 className="text-sm font-bold text-slate-800 mb-4">Add Keyword Manually</h2>
         <form action={addKeyword} className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
+          <Input
             name="word"
             placeholder="Enter keyword..."
             required
-            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+            className="flex-1 border-slate-300 focus-visible:ring-red-500"
           />
-          <select
-            name="categoryId"
-            required
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
-          >
-            <option value="">Select category…</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
+          <Select name="categoryId">
+            <SelectTrigger className="border-slate-300 text-slate-900 focus-visible:ring-red-500 w-auto min-w-[160px]">
+              <SelectValue placeholder="Select category…" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(cat => (
+                <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <button
             type="submit"
             className="bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-[background-color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"

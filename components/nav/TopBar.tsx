@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { NavItem } from './Sidebar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Menu01Icon } from '@animateicons/react/huge'
 
 interface TopBarProps {
   navItems: NavItem[]
@@ -69,9 +71,7 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
           aria-label="Open menu"
           className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 flex-shrink-0"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Menu01Icon size={16} />
         </button>
 
         {/* Desktop sidebar toggle */}
@@ -81,9 +81,7 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
           className="hidden md:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 flex-shrink-0"
         >
           {collapsed ? (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <Menu01Icon size={16} />
           ) : (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={1.5} />
@@ -130,9 +128,9 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
           <p className="text-xs font-semibold text-slate-700 leading-none">{roleLabel}</p>
           <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-[180px]">{email}</p>
         </div>
-        <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ring-2 ring-red-200">
-          {initial}
-        </div>
+        <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-red-200 rounded-full">
+          <AvatarFallback className="bg-red-600 text-white text-xs font-bold">{initial}</AvatarFallback>
+        </Avatar>
       </div>
     </div>
   )

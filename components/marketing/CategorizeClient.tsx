@@ -2,6 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { updatePostCategoryForm, updateAdCategoryForm, autoCategorizeAll } from '@/actions/categorize'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 interface Category {
   id: number
@@ -34,30 +40,26 @@ interface Props {
 
 function TypeBadge({ type }: { type: string }) {
   const colors: Record<string, string> = {
-    Video: 'bg-purple-100 text-purple-700',
-    Reel: 'bg-pink-100 text-pink-700',
-    Photo: 'bg-red-100 text-red-700',
-    Link: 'bg-amber-100 text-amber-700',
+    Video: 'bg-purple-100 text-purple-700 border-purple-200',
+    Reel: 'bg-pink-100 text-pink-700 border-pink-200',
+    Photo: 'bg-red-100 text-red-700 border-red-200',
+    Link: 'bg-amber-100 text-amber-700 border-amber-200',
   }
-  const cls = colors[type] ?? 'bg-slate-100 text-slate-700'
+  const cls = colors[type] ?? 'bg-slate-100 text-slate-700 border-slate-200'
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
-      {type}
-    </span>
+    <Badge className={`rounded-full h-auto py-0.5 px-2 text-xs font-medium ${cls}`}>{type}</Badge>
   )
 }
 
 function CategoryBadge({ name }: { name: string }) {
   const colors: Record<string, string> = {
-    'Product Showcase': 'bg-red-100 text-red-800',
-    Testimonial: 'bg-green-100 text-green-800',
-    'Promotional Offer': 'bg-orange-100 text-orange-800',
+    'Product Showcase': 'bg-red-100 text-red-800 border-red-200',
+    Testimonial: 'bg-green-100 text-green-800 border-green-200',
+    'Promotional Offer': 'bg-orange-100 text-orange-800 border-orange-200',
   }
-  const cls = colors[name] ?? 'bg-slate-100 text-slate-700'
+  const cls = colors[name] ?? 'bg-slate-100 text-slate-700 border-slate-200'
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
-      {name}
-    </span>
+    <Badge className={`rounded-full h-auto py-0.5 px-2 text-xs font-medium ${cls}`}>{name}</Badge>
   )
 }
 
@@ -73,86 +75,86 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-slate-50">
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Post Details</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Current Category</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Update</th>
-          </tr>
-        </thead>
-        <tbody>
-          {posts.map((post) => {
-            const displayCategory = post.category_id ? catMap[post.category_id] : null
-            const suggestedName = post.suggestedCategoryId ? catMap[post.suggestedCategoryId] : null
-            const defaultSelectValue = String(post.category_id ?? post.suggestedCategoryId ?? '')
-            const boundAction = updatePostCategoryForm.bind(null, post.id)
+    <Table>
+      <TableHeader>
+        <TableRow className="bg-slate-50">
+          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Post Details</TableHead>
+          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
+          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Current Category</TableHead>
+          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Update</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {posts.map((post) => {
+          const displayCategory = post.category_id ? catMap[post.category_id] : null
+          const suggestedName = post.suggestedCategoryId ? catMap[post.suggestedCategoryId] : null
+          const defaultSelectValue = String(post.category_id ?? post.suggestedCategoryId ?? '')
+          const boundAction = updatePostCategoryForm.bind(null, post.id)
 
-            return (
-              <tr key={post.id} className="hover:bg-slate-50 border-t border-slate-100">
-                <td className="px-4 py-3 max-w-xs">
-                  {post.title ? (
-                    <div className="font-medium text-slate-800 text-sm truncate" title={post.title}>
-                      {post.title}
-                    </div>
-                  ) : (
-                    <span className="text-slate-400 text-xs italic">No title</span>
-                  )}
-                  <a
-                    href={post.permalink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-red-600 hover:text-red-800 hover:underline text-xs mt-0.5 inline-block"
-                  >
-                    View post ↗
-                  </a>
-                </td>
+          return (
+            <TableRow key={post.id} className="hover:bg-slate-50 border-t border-slate-100">
+              <TableCell className="px-4 py-3 max-w-xs">
+                {post.title ? (
+                  <div className="font-medium text-slate-800 text-sm truncate" title={post.title}>
+                    {post.title}
+                  </div>
+                ) : (
+                  <span className="text-slate-400 text-xs italic">No title</span>
+                )}
+                <a
+                  href={post.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-600 hover:text-red-800 hover:underline text-xs mt-0.5 inline-block"
+                >
+                  View post ↗
+                </a>
+              </TableCell>
 
-                <td className="px-4 py-3">
-                  <TypeBadge type={post.post_type} />
-                </td>
+              <TableCell className="px-4 py-3">
+                <TypeBadge type={post.post_type} />
+              </TableCell>
 
-                <td className="px-4 py-3">
-                  {displayCategory ? (
-                    <CategoryBadge name={displayCategory} />
-                  ) : suggestedName ? (
-                    <span className="flex items-center gap-1.5">
-                      <CategoryBadge name={suggestedName} />
-                      <span className="text-xs text-slate-400">(suggested)</span>
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 text-xs">Uncategorized</span>
-                  )}
-                </td>
+              <TableCell className="px-4 py-3">
+                {displayCategory ? (
+                  <CategoryBadge name={displayCategory} />
+                ) : suggestedName ? (
+                  <span className="flex items-center gap-1.5">
+                    <CategoryBadge name={suggestedName} />
+                    <span className="text-xs text-slate-400">(suggested)</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-xs">Uncategorized</span>
+                )}
+              </TableCell>
 
-                <td className="px-4 py-3">
-                  <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <select
-                      name="categoryId"
-                      defaultValue={defaultSelectValue}
-                      className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-500 min-w-[140px]"
-                    >
-                      <option value="">— None —</option>
+              <TableCell className="px-4 py-3">
+                <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <Select name="categoryId" defaultValue={defaultSelectValue}>
+                    <SelectTrigger className="text-xs border-slate-300 focus-visible:ring-red-500 min-w-[140px] h-7" size="sm">
+                      <SelectValue placeholder="— None —" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— None —</SelectItem>
                       {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                       ))}
-                    </select>
-                    <button
-                      type="submit"
-                      className="bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg px-3 py-1.5 transition-colors font-medium whitespace-nowrap"
-                    >
-                      Save
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="bg-red-600 hover:bg-red-500 text-white text-xs whitespace-nowrap h-7 px-3"
+                  >
+                    Save
+                  </Button>
+                </form>
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -168,77 +170,77 @@ function AdsTable({ ads, categories }: { ads: AdRow[]; categories: Category[] })
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-slate-50">
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Post Details</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Current Category</th>
-            <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Update</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ads.map((ad) => {
-            const displayCategory = ad.category_id ? catMap[ad.category_id] : null
-            const suggestedName = ad.suggestedCategoryId ? catMap[ad.suggestedCategoryId] : null
-            const defaultSelectValue = String(ad.category_id ?? ad.suggestedCategoryId ?? '')
-            const boundAction = updateAdCategoryForm.bind(null, ad.id)
+    <Table>
+      <TableHeader>
+        <TableRow className="bg-slate-50">
+          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Ad Details</TableHead>
+          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
+          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Current Category</TableHead>
+          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Update</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {ads.map((ad) => {
+          const displayCategory = ad.category_id ? catMap[ad.category_id] : null
+          const suggestedName = ad.suggestedCategoryId ? catMap[ad.suggestedCategoryId] : null
+          const defaultSelectValue = String(ad.category_id ?? ad.suggestedCategoryId ?? '')
+          const boundAction = updateAdCategoryForm.bind(null, ad.id)
 
-            return (
-              <tr key={ad.id} className="hover:bg-slate-50 border-t border-slate-100">
-                <td className="px-4 py-3 max-w-xs">
-                  <div className="font-medium text-slate-800 text-sm truncate" title={ad.ad_name}>
-                    {ad.ad_name}
-                  </div>
-                  <div className="text-xs text-slate-400 mt-0.5 truncate" title={ad.ad_set_name}>
-                    {ad.ad_set_name}
-                  </div>
-                </td>
+          return (
+            <TableRow key={ad.id} className="hover:bg-slate-50 border-t border-slate-100">
+              <TableCell className="px-4 py-3 max-w-xs">
+                <div className="font-medium text-slate-800 text-sm truncate" title={ad.ad_name}>
+                  {ad.ad_name}
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5 truncate" title={ad.ad_set_name}>
+                  {ad.ad_set_name}
+                </div>
+              </TableCell>
 
-                <td className="px-4 py-3">
-                  <TypeBadge type={ad.post_type} />
-                </td>
+              <TableCell className="px-4 py-3">
+                <TypeBadge type={ad.post_type} />
+              </TableCell>
 
-                <td className="px-4 py-3">
-                  {displayCategory ? (
-                    <CategoryBadge name={displayCategory} />
-                  ) : suggestedName ? (
-                    <span className="flex items-center gap-1.5">
-                      <CategoryBadge name={suggestedName} />
-                      <span className="text-xs text-slate-400">(suggested)</span>
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 text-xs">Uncategorized</span>
-                  )}
-                </td>
+              <TableCell className="px-4 py-3">
+                {displayCategory ? (
+                  <CategoryBadge name={displayCategory} />
+                ) : suggestedName ? (
+                  <span className="flex items-center gap-1.5">
+                    <CategoryBadge name={suggestedName} />
+                    <span className="text-xs text-slate-400">(suggested)</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400 text-xs">Uncategorized</span>
+                )}
+              </TableCell>
 
-                <td className="px-4 py-3">
-                  <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <select
-                      name="categoryId"
-                      defaultValue={defaultSelectValue}
-                      className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-500 min-w-[140px]"
-                    >
-                      <option value="">— None —</option>
+              <TableCell className="px-4 py-3">
+                <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <Select name="categoryId" defaultValue={defaultSelectValue}>
+                    <SelectTrigger className="text-xs border-slate-300 focus-visible:ring-red-500 min-w-[140px] h-7" size="sm">
+                      <SelectValue placeholder="— None —" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— None —</SelectItem>
                       {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                       ))}
-                    </select>
-                    <button
-                      type="submit"
-                      className="bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg px-3 py-1.5 transition-colors font-medium whitespace-nowrap"
-                    >
-                      Save
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="bg-red-600 hover:bg-red-500 text-white text-xs whitespace-nowrap h-7 px-3"
+                  >
+                    Save
+                  </Button>
+                </form>
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -271,38 +273,30 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
   }
 
   return (
-    <div>
+    <Tabs value={activeTab} onValueChange={(v) => { if (v) setActiveTab(v as 'posts' | 'ads') }}>
       {/* Header row */}
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         {/* Tabs — counts show uncategorized remaining */}
-        <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
-          <button
-            onClick={() => setActiveTab('posts')}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow] ${
-              activeTab === 'posts' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
+        <TabsList className="bg-slate-100 rounded-xl p-1 h-auto gap-1">
+          <TabsTrigger
+            value="posts"
+            className="px-5 py-2 rounded-lg text-sm font-medium data-active:bg-white data-active:text-slate-900 data-active:shadow-sm text-slate-500 hover:text-slate-700"
           >
             Organic Posts
-            <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-              activeTab === 'posts' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-500'
-            }`}>
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-500 data-[state=active]:bg-red-100 data-[state=active]:text-red-700">
               {showAll ? posts.length : uncategorizedPosts.length}
             </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('ads')}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow] ${
-              activeTab === 'ads' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
+          </TabsTrigger>
+          <TabsTrigger
+            value="ads"
+            className="px-5 py-2 rounded-lg text-sm font-medium data-active:bg-white data-active:text-slate-900 data-active:shadow-sm text-slate-500 hover:text-slate-700"
           >
             Ads
-            <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-              activeTab === 'ads' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-500'
-            }`}>
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-500">
               {showAll ? ads.length : uncategorizedAds.length}
             </span>
-          </button>
-        </div>
+          </TabsTrigger>
+        </TabsList>
 
         {/* Right controls */}
         <div className="flex items-center gap-3">
@@ -317,19 +311,13 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
           )}
 
           {/* Show all toggle */}
-          <button
-            onClick={() => setShowAll(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              {showAll ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              )}
-            </svg>
-            {showAll ? 'Hide categorized' : 'Show all'}
-          </button>
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-700 select-none">
+            <span>{showAll ? 'Show all' : 'Uncategorized only'}</span>
+            <Switch
+              checked={showAll}
+              onCheckedChange={setShowAll}
+            />
+          </label>
 
           {/* Auto-Categorize */}
           <button
@@ -375,29 +363,50 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
           <p className="text-sm font-semibold text-slate-700 mb-1">All caught up</p>
           <p className="text-xs text-slate-400 max-w-[240px]">Every post and ad has been categorized. Use <button onClick={() => setShowAll(true)} className="text-red-500 hover:underline">Show all</button> to review or reassign.</p>
         </div>
-      ) : !showAll && currentTabEmpty ? (
-        <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-            <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <p className="text-sm font-semibold text-slate-700 mb-1">
-            All {activeTab === 'posts' ? 'posts' : 'ads'} categorized
-          </p>
-          <p className="text-xs text-slate-400">
-            Switch to the {activeTab === 'posts' ? 'Ads' : 'Organic Posts'} tab, or{' '}
-            <button onClick={() => setShowAll(true)} className="text-red-500 hover:underline">show all</button> to review.
-          </p>
-        </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          {activeTab === 'posts' ? (
-            <PostsTable posts={visiblePosts} categories={categories} />
-          ) : (
-            <AdsTable ads={visibleAds} categories={categories} />
-          )}
-        </div>
+        <>
+          <TabsContent value="posts">
+            {!showAll && visiblePosts.length === 0 ? (
+              <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-slate-700 mb-1">All posts categorized</p>
+                <p className="text-xs text-slate-400">
+                  Switch to the Ads tab, or{' '}
+                  <button onClick={() => setShowAll(true)} className="text-red-500 hover:underline">show all</button> to review.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <PostsTable posts={visiblePosts} categories={categories} />
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="ads">
+            {!showAll && visibleAds.length === 0 ? (
+              <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-slate-700 mb-1">All ads categorized</p>
+                <p className="text-xs text-slate-400">
+                  Switch to the Organic Posts tab, or{' '}
+                  <button onClick={() => setShowAll(true)} className="text-red-500 hover:underline">show all</button> to review.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <AdsTable ads={visibleAds} categories={categories} />
+              </div>
+            )}
+          </TabsContent>
+        </>
       )}
 
       {/* Legend */}
@@ -407,6 +416,6 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
         Keywords configured in{' '}
         <a href="/dashboard/marketing/keywords" className="text-red-500 hover:underline">Manage Keywords</a>.
       </p>
-    </div>
+    </Tabs>
   )
 }

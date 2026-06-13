@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { sendChatMessage, type ChatMessage } from '@/actions/chat'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { MessageCircleIcon } from 'lucide-animated'
 
 const SUGGESTIONS = [
   'Which ad had the best CPA?',
@@ -79,7 +81,8 @@ export default function ChatBot() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <ScrollArea className="flex-1">
+          <div className="p-4 space-y-3">
             {history.length === 0 && (
               <div className="space-y-3">
                 <p className="text-xs text-slate-400 text-center pt-2">
@@ -124,6 +127,7 @@ export default function ChatBot() {
 
             <div ref={bottomRef} />
           </div>
+          </ScrollArea>
 
           {/* Input */}
           <div className="flex-shrink-0 border-t border-slate-100 p-3 flex gap-2">
@@ -161,20 +165,19 @@ export default function ChatBot() {
         }}
         title="AI Assistant"
       >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          style={{ transition: 'transform 0.2s cubic-bezier(0.22,1,0.36,1)', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}
-        >
-          {open ? (
+        {open ? (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            style={{ transition: 'transform 0.2s cubic-bezier(0.22,1,0.36,1)', transform: 'rotate(90deg)' }}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          )}
-        </svg>
+          </svg>
+        ) : (
+          <MessageCircleIcon size={20} className="text-white" />
+        )}
       </button>
     </>
   )

@@ -8,6 +8,8 @@ import { logoutAction } from '@/actions/auth'
 import { changePasswordAction } from '@/actions/profile'
 import TopBar from './TopBar'
 import ChatBot from '@/components/analytics/ChatBot'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export interface NavItem {
   label: string
@@ -171,9 +173,9 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
               {/* Identity */}
               <div className="px-4 py-3 border-b border-zinc-800">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-red-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                    {initial}
-                  </div>
+                  <Avatar className="w-9 h-9 flex-shrink-0">
+                    <AvatarFallback className="bg-red-600 text-white text-sm font-bold">{initial}</AvatarFallback>
+                  </Avatar>
                   <div className="min-w-0">
                     <p className="text-white text-sm font-medium truncate">{email}</p>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-0.5 ${roleBadgeClass}`}>
@@ -212,26 +214,26 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
                       {pwState?.success && (
                         <p className="text-green-400 text-xs bg-green-950/50 border border-green-900 rounded-lg px-2 py-1.5">{pwState.success}</p>
                       )}
-                      <input
+                      <Input
                         name="current_password"
                         type="password"
                         placeholder="Current password"
                         required
-                        className="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-xs placeholder-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-900"
+                        className="w-full bg-zinc-800 border-zinc-700 text-white text-xs placeholder:text-zinc-500 focus-visible:ring-red-500 focus-visible:ring-offset-zinc-900"
                       />
-                      <input
+                      <Input
                         name="new_password"
                         type="password"
                         placeholder="New password"
                         required
-                        className="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-xs placeholder-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-900"
+                        className="w-full bg-zinc-800 border-zinc-700 text-white text-xs placeholder:text-zinc-500 focus-visible:ring-red-500 focus-visible:ring-offset-zinc-900"
                       />
-                      <input
+                      <Input
                         name="confirm_password"
                         type="password"
                         placeholder="Confirm new password"
                         required
-                        className="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-xs placeholder-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-900"
+                        className="w-full bg-zinc-800 border-zinc-700 text-white text-xs placeholder:text-zinc-500 focus-visible:ring-red-500 focus-visible:ring-offset-zinc-900"
                       />
                       <button
                         type="submit"
@@ -267,9 +269,9 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
               collapsed ? 'md:justify-center md:p-3 gap-3 px-4 py-3' : 'gap-3 px-4 py-3'
             }`}
           >
-            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {initial}
-            </div>
+            <Avatar className="w-8 h-8 flex-shrink-0">
+              <AvatarFallback className="bg-red-600 text-white text-xs font-bold">{initial}</AvatarFallback>
+            </Avatar>
             <div className={`min-w-0 flex-1 text-left ${collapsed ? 'md:hidden' : ''}`}>
               <p className="text-zinc-300 text-xs truncate">{email}</p>
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium mt-0.5 ${roleBadgeClass}`}>

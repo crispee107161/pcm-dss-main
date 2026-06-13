@@ -1,7 +1,11 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useUpload } from '@/contexts/UploadContext'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Loading01Icon } from '@animateicons/react/huge'
+import { DatabaseIcon, CircleCheckIcon, type CircleCheckIconHandle } from 'lucide-animated'
 
 const UPLOAD_TYPE_LABELS: Record<string, string> = {
   ADS_CSV: 'Ads CSV',
@@ -14,6 +18,7 @@ const UPLOAD_TYPE_LABELS: Record<string, string> = {
 
 export default function UploadForm() {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const successIconRef = useRef<CircleCheckIconHandle>(null)
   const [isDragging, setIsDragging] = useState(false)
   const { queue, isPending, addFiles, removeFile, clearAll, runBatchUpload } = useUpload()
 
@@ -29,6 +34,12 @@ export default function UploadForm() {
   const totalUpdated  = queue.reduce((s, f) => s + (f.result?.records_updated ?? 0), 0)
   const retrainCount  = queue.filter((f) => f.result?.retrained).length
   const isDone        = queue.length > 0 && pendingCount === 0 && !isPending
+
+  useEffect(() => {
+    if (isDone && failedCount === 0 && successCount > 0) {
+      successIconRef.current?.startAnimation()
+    }
+  }, [isDone, failedCount, successCount])
 
   return (
     <div className="space-y-5">
@@ -50,9 +61,7 @@ export default function UploadForm() {
           addFiles(e.dataTransfer.files)
         }}
       >
-        <svg className="mx-auto h-10 w-10 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
+        <DatabaseIcon size={40} className="mx-auto text-slate-400 mb-3" />
         <p className="text-slate-600 font-medium text-sm">
           Drag & drop CSV files here, or{' '}
           <span className="text-red-700">click to browse</span>
@@ -78,12 +87,14 @@ export default function UploadForm() {
               {queue.length} file{queue.length !== 1 ? 's' : ''} queued
             </p>
             {!isPending && (
-              <button
+              <Button
                 onClick={handleClearAll}
-                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                variant="ghost"
+                size="sm"
+                className="text-xs text-slate-400 hover:text-slate-600 h-auto py-0"
               >
                 Clear all
-              </button>
+              </Button>
             )}
           </div>
 
@@ -96,10 +107,7 @@ export default function UploadForm() {
                     <span className="h-4 w-4 rounded-full border-2 border-slate-300 inline-block" />
                   )}
                   {entry.status === 'uploading' && (
-                    <svg className="animate-spin h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
+                    <Loading01Icon size={16} color="#dc2626" />
                   )}
                   {entry.status === 'success' && (
                     <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,13 +129,13 @@ export default function UploadForm() {
                       <span className="text-xs text-slate-500">
                         +{entry.result.records_inserted} inserted, ~{entry.result.records_updated} updated
                       </span>
-                      <span className="inline-flex items-center px-1.5 rounded text-xs bg-slate-100 text-slate-600">
+                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-slate-200">
                         {UPLOAD_TYPE_LABELS[entry.result.upload_type] ?? entry.result.upload_type}
-                      </span>
+                      </Badge>
                       {entry.result.retrained && (
-                        <span className="inline-flex items-center px-1.5 rounded text-xs bg-red-100 text-red-700 font-medium">
+                        <Badge className="bg-red-100 text-red-700 border-red-200 font-medium">
                           Model retrained
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   )}
@@ -156,17 +164,14 @@ export default function UploadForm() {
 
       {/* Upload button */}
       <div className="flex items-center gap-3">
-        <button
+        <Button
           onClick={runBatchUpload}
           disabled={isPending || pendingCount === 0}
-          className="bg-red-700 hover:bg-red-800 disabled:bg-red-300 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm flex items-center gap-2"
+          className="bg-red-700 hover:bg-red-600 text-white px-4 gap-2"
         >
           {isPending ? (
             <>
-              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+              <Loading01Icon size={16} color="white" />
               Uploading...
             </>
           ) : (
@@ -179,15 +184,17 @@ export default function UploadForm() {
                 : 'Upload CSVs'}
             </>
           )}
-        </button>
+        </Button>
 
         {isDone && failedCount === 0 && (
-          <button
+          <Button
             onClick={handleClearAll}
-            className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+            variant="ghost"
+            size="sm"
+            className="text-slate-500"
           >
             Clear
-          </button>
+          </Button>
         )}
       </div>
 
@@ -206,9 +213,7 @@ export default function UploadForm() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             ) : (
-              <svg className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <CircleCheckIcon ref={successIconRef} size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
             )}
             <div>
               <p className="font-medium text-sm text-slate-800">

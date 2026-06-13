@@ -50,3 +50,8 @@ dev.db
 /pc-merchandise-dss/
 
 .vercel
+
+# Claude Code internal files (plans, reviews, security docs)
+.claude/
+!.claude/settings.json
+!.claude/settings.local.json

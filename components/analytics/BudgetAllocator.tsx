@@ -3,6 +3,9 @@
 import { useActionState } from 'react'
 import { runBudgetAllocation, type AllocateState } from '@/actions/allocate'
 import type { AdSetAllocation } from '@/lib/stats/budget-allocator'
+import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 function formatPHP(v: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(v)
@@ -42,27 +45,27 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
   const upper = Math.round(row.interval_upper)
 
   return (
-    <tr className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
-      <td className="px-4 py-3 text-slate-400 text-xs w-8">{rank}</td>
-      <td className="px-4 py-3">
+    <TableRow className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
+      <TableCell className="px-4 py-3 text-slate-400 text-xs w-8">{rank}</TableCell>
+      <TableCell className="px-4 py-3">
         <div className="font-semibold text-slate-800 text-sm max-w-[180px] truncate" title={row.ad_set_name}>
           {row.ad_set_name}
         </div>
         <div className="text-[11px] text-slate-500 mt-0.5">
           Hist. CPA: {row.historical_cpa !== null ? formatPHP(row.historical_cpa) : '—'} · {row.historical_purchases} past purchases
         </div>
-      </td>
-      <td className="px-4 py-3">
+      </TableCell>
+      <TableCell className="px-4 py-3">
         <PctBar pct={row.pct} />
-      </td>
-      <td className="px-4 py-3 text-right">
+      </TableCell>
+      <TableCell className="px-4 py-3 text-right">
         <span className="font-bold text-slate-800">{formatPHP(row.allocated_spend)}</span>
-      </td>
-      <td className="px-4 py-3 text-right">
+      </TableCell>
+      <TableCell className="px-4 py-3 text-right">
         <span className="font-bold text-red-600 text-base">{point}</span>
         <div className="text-[11px] text-amber-600 mt-0.5 tabular-nums">{lower} – {upper}</div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -85,14 +88,14 @@ export default function BudgetAllocator() {
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-sm">₱</span>
-            <input
+            <Input
               name="budget"
               type="number"
               min="1"
               step="0.01"
               placeholder="10000"
               required
-              className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+              className="w-full pl-8 border-slate-200 focus-visible:ring-red-500 text-slate-900"
             />
           </div>
         </div>
@@ -122,7 +125,9 @@ export default function BudgetAllocator() {
       </form>
 
       {error && (
-        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+        <Alert className="border-red-200 bg-red-50 text-red-700">
+          <AlertDescription className="text-sm">{error}</AlertDescription>
+        </Alert>
       )}
 
       {result && (
@@ -158,23 +163,23 @@ export default function BudgetAllocator() {
           </div>
 
           {/* Allocation table */}
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200">
-                  <th className="text-left px-4 py-3 w-8 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">#</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Ad Set</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Share</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Allocated</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Proj. Purchases</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="rounded-xl border border-slate-200 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/80 border-b border-slate-200">
+                  <TableHead className="px-4 py-3 w-8 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">#</TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Ad Set</TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Share</TableHead>
+                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Allocated</TableHead>
+                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Proj. Purchases</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {result.allocations.map((row, i) => (
                   <AllocationRow key={row.ad_set_name} row={row} rank={i + 1} />
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           <p className="text-[11px] text-slate-400">

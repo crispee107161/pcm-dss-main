@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { ScoredAd } from '@/lib/stats/health-score'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 const GRADE_STYLES: Record<ScoredAd['grade'], { bar: string; badge: string; text: string }> = {
   Excellent: { bar: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'text-emerald-700' },
@@ -134,75 +136,74 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
 
       {/* Table */}
       <div className="rounded-xl border border-slate-200 overflow-hidden">
-        <div className={`overflow-x-auto ${showAll && sorted.length > PAGE_SIZE ? 'max-h-[520px] overflow-y-auto' : ''}`}>
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-slate-50/95 border-b border-slate-200 backdrop-blur-sm">
-                <th className="text-left px-4 py-3 w-8">
+        <div className={showAll && sorted.length > PAGE_SIZE ? 'max-h-[520px] overflow-y-auto' : ''}>
+          <Table className="text-sm">
+            <TableHeader className="sticky top-0 z-10">
+              <TableRow className="bg-slate-50/95 border-b border-slate-200 backdrop-blur-sm hover:bg-slate-50/95">
+                <TableHead className="text-left px-4 py-3 w-8">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">#</span>
-                </th>
-                <th className="text-left px-4 py-3">
+                </TableHead>
+                <TableHead className="text-left px-4 py-3">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Ad Name</span>
-                </th>
-                <th className="px-4 py-3">
+                </TableHead>
+                <TableHead className="px-4 py-3">
                   <SortBtn col="score" label="Health" />
-                </th>
-                <th className="text-right px-4 py-3">
+                </TableHead>
+                <TableHead className="text-right px-4 py-3">
                   <SortBtn col="spend" label="Spend" />
-                </th>
-                <th className="text-right px-4 py-3 hidden sm:table-cell">
+                </TableHead>
+                <TableHead className="text-right px-4 py-3 hidden sm:table-cell">
                   <SortBtn col="cpa" label="CPA" />
-                </th>
-                <th className="text-right px-4 py-3 hidden sm:table-cell">
+                </TableHead>
+                <TableHead className="text-right px-4 py-3 hidden sm:table-cell">
                   <SortBtn col="rate" label="Conv. Rate" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {visible.map((ad, i) => {
                 const style = GRADE_STYLES[ad.grade]
                 const isExpanded = expandedId === ad.id
                 return (
-                  <>
-                    <tr
-                      key={ad.id}
+                  <Fragment key={ad.id}>
+                    <TableRow
                       className="border-t border-slate-100 hover:bg-red-50/40 cursor-pointer transition-[background-color]"
                       onClick={() => setExpandedId(isExpanded ? null : ad.id)}
                     >
-                      <td className="px-4 py-3 text-slate-400 text-xs">{i + 1}</td>
-                      <td className="px-4 py-3">
+                      <TableCell className="px-4 py-3 text-slate-400 text-xs">{i + 1}</TableCell>
+                      <TableCell className="px-4 py-3">
                         <div className="font-semibold text-slate-800 text-sm max-w-[200px] truncate" title={ad.ad_name}>
                           {ad.ad_name}
                         </div>
                         <div className="text-xs text-slate-400 truncate max-w-[200px]">{ad.ad_set_name}</div>
-                      </td>
-                      <td className="px-4 py-3">
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
                         <div className="flex flex-col gap-1.5">
-                          <span className={`self-start text-[10px] font-bold px-2 py-0.5 rounded-full border ${style.badge}`}>
+                          <Badge className={`self-start text-[10px] font-bold ${style.badge}`}>
                             {ad.grade}
-                          </span>
+                          </Badge>
                           <ScoreBar score={ad.score} grade={ad.grade} />
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-700 tabular-nums">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right font-semibold text-slate-700 tabular-nums">
                         {formatPHP(ad.amount_spent)}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">
                         {ad.cpa !== null
                           ? <span className="font-semibold text-slate-700">{formatPHP(ad.cpa)}</span>
                           : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">
                         {ad.purchase_rate !== null
                           ? <span className="font-semibold text-slate-700">{(ad.purchase_rate * 100).toFixed(3)}%</span>
                           : <span className="text-slate-300">—</span>}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
 
                     {isExpanded && (
-                      <tr key={`${ad.id}-detail`} className="border-t border-slate-100 bg-red-50/20">
-                        <td />
-                        <td colSpan={5} className="px-4 py-4">
+                      <TableRow className="border-t border-slate-100 bg-red-50/20 hover:bg-red-50/20">
+                        <TableCell />
+                        <TableCell colSpan={5} className="px-4 py-4">
                           <div className="animate-fade-slide-up grid grid-cols-1 sm:grid-cols-3 gap-4 sm:max-w-lg">
                             <div>
                               <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">CPA Score</p>
@@ -223,14 +224,14 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
                           <p className="text-[10px] text-slate-400 mt-3">
                             Click row to collapse · Scores are relative to all campaigns in this dataset
                           </p>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Footer: show more / show less */}

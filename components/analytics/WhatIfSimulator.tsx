@@ -3,6 +3,8 @@
 import { useActionState } from 'react'
 import { runWhatIfAction } from '@/actions/simulate'
 import type { SimulationOutput } from '@/types/index'
+import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 type SimulationState = SimulationOutput | { error: string } | null
 
@@ -26,7 +28,7 @@ function InputField({
         {prefix && (
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-sm">{prefix}</span>
         )}
-        <input
+        <Input
           id={id}
           name={name}
           type="number"
@@ -34,7 +36,7 @@ function InputField({
           max={max}
           step={prefix === '₱' ? '0.01' : '1'}
           placeholder={placeholder}
-          className={`w-full ${prefix ? 'pl-8' : 'pl-3'} pr-3 py-2 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm`}
+          className={`w-full ${prefix ? 'pl-8' : ''} border-slate-300 focus-visible:ring-red-500 text-slate-900`}
         />
       </div>
     </div>
@@ -82,7 +84,9 @@ export default function WhatIfSimulator() {
       </form>
 
       {error && (
-        <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+        <Alert className="mt-4 border-red-200 bg-red-50 text-red-700">
+          <AlertDescription className="text-sm">{error}</AlertDescription>
+        </Alert>
       )}
 
       {result && point !== null && lower !== null && upper !== null && (

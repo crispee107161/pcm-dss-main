@@ -2,6 +2,12 @@
 
 import { useActionState, useState } from 'react'
 import { createUser, updateUserRole, resetPassword, deleteUser } from '@/actions/admin'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 type Role = 'BUSINESS_OWNER' | 'SALES_DIRECTOR' | 'MARKETING_MANAGER'
 
@@ -23,10 +29,10 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'MARKETING_MANAGER', label: 'Marketing Manager' },
 ]
 
-const ROLE_BADGE: Record<Role, string> = {
-  BUSINESS_OWNER: 'bg-amber-100 text-amber-800',
-  SALES_DIRECTOR: 'bg-red-100 text-red-800',
-  MARKETING_MANAGER: 'bg-purple-100 text-purple-800',
+const ROLE_BADGE_CLASS: Record<Role, string> = {
+  BUSINESS_OWNER: 'bg-amber-100 text-amber-800 border-amber-200',
+  SALES_DIRECTOR: 'bg-red-100 text-red-800 border-red-200',
+  MARKETING_MANAGER: 'bg-purple-100 text-purple-800 border-purple-200',
 }
 
 function formatDate(date: Date) {
@@ -35,12 +41,12 @@ function formatDate(date: Date) {
   }).format(new Date(date))
 }
 
-function Alert({ state }: { state: { error?: string; success?: string } | null }) {
+function FormAlert({ state }: { state: { error?: string; success?: string } | null }) {
   if (!state?.error && !state?.success) return null
   return (
-    <p className={`text-sm px-4 py-2 rounded-lg mt-2 ${state.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-      {state.error ?? state.success}
-    </p>
+    <Alert className={`mt-2 ${state.error ? 'border-red-200 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-700'}`}>
+      <AlertDescription className="text-sm">{state.error ?? state.success}</AlertDescription>
+    </Alert>
   )
 }
 
@@ -56,12 +62,12 @@ function CreateUserForm() {
           <h2 className="font-semibold text-slate-800">All Users</h2>
           <p className="text-xs text-slate-500 mt-0.5">Manage roles, passwords, and access</p>
         </div>
-        <button
+        <Button
           onClick={() => setOpen(v => !v)}
-          className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="bg-red-600 hover:bg-red-500 text-white px-4"
         >
           {open ? 'Cancel' : '+ Add User'}
-        </button>
+        </Button>
       </div>
 
       {open && (
@@ -70,51 +76,52 @@ function CreateUserForm() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
-              <input
+              <Input
                 name="email"
                 type="email"
                 required
                 placeholder="user@example.com"
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full border-slate-300 focus-visible:ring-red-500"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Password</label>
-              <input
+              <Input
                 name="password"
                 type="password"
                 required
-                minLength={6}
-                placeholder="Min. 6 characters"
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                minLength={8}
+                placeholder="Min. 8 characters"
+                className="w-full border-slate-300 focus-visible:ring-red-500"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Role</label>
-              <select
-                name="role"
-                required
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                {ROLE_OPTIONS.map(r => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
+              <Select name="role" defaultValue={ROLE_OPTIONS[0].value}>
+                <SelectTrigger className="w-full border-slate-300 focus-visible:ring-red-500">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_OPTIONS.map(r => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex items-center gap-3 mt-4">
-            <button
+            <Button
               type="submit"
               disabled={pending}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="bg-red-600 hover:bg-red-500 text-white px-4"
             >
               {pending ? 'Creating…' : 'Create User'}
-            </button>
-            <button type="button" onClick={() => setOpen(false)} className="text-sm text-slate-500 hover:text-slate-700">
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)} className="text-slate-500">
               Cancel
-            </button>
+            </Button>
           </div>
-          <Alert state={state} />
+          <FormAlert state={state} />
         </form>
       )}
     </div>
@@ -134,42 +141,44 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
 
   return (
     <>
-      <tr className="border-t border-slate-100 align-top">
-        <td className="px-4 py-3 text-slate-500 text-xs hidden sm:table-cell">#{user.id}</td>
-        <td className="px-4 py-3">
+      <TableRow className="border-t border-slate-100 align-top">
+        <TableCell className="px-4 py-3 text-slate-500 text-xs hidden sm:table-cell">#{user.id}</TableCell>
+        <TableCell className="px-4 py-3">
           <div className="font-medium text-slate-800 text-sm">{user.email}</div>
           {isSelf && <span className="text-xs text-red-500">(you)</span>}
-        </td>
-        <td className="px-4 py-3">
+        </TableCell>
+        <TableCell className="px-4 py-3">
           {isSelf ? (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ROLE_BADGE[user.role]}`}>
+            <Badge className={`${ROLE_BADGE_CLASS[user.role]} rounded-full text-xs font-medium h-auto py-0.5 px-2.5`}>
               {ROLE_OPTIONS.find(r => r.value === user.role)?.label}
-            </span>
+            </Badge>
           ) : (
             <form action={roleAction} className="flex items-center gap-2">
               <input type="hidden" name="userId" value={user.id} />
-              <select
-                name="role"
-                defaultValue={user.role}
-                className="border border-slate-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                {ROLE_OPTIONS.map(r => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-              <button
+              <Select name="role" defaultValue={user.role}>
+                <SelectTrigger className="border-slate-300 focus-visible:ring-red-500 h-7 text-xs min-w-[140px]" size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_OPTIONS.map(r => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
                 type="submit"
                 disabled={rolePending}
-                className="bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white text-xs px-2 py-1 rounded-lg transition-colors"
+                size="xs"
+                className="bg-slate-800 hover:bg-slate-700 text-white"
               >
                 {rolePending ? '…' : 'Save'}
-              </button>
+              </Button>
             </form>
           )}
-          {!isSelf && <Alert state={roleState} />}
-        </td>
-        <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap hidden md:table-cell">{formatDate(user.created_at)}</td>
-        <td className="px-4 py-3">
+          {!isSelf && <FormAlert state={roleState} />}
+        </TableCell>
+        <TableCell className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap hidden md:table-cell">{formatDate(user.created_at)}</TableCell>
+        <TableCell className="px-4 py-3">
           {!isSelf && (
             <div className="flex items-center gap-2">
               <button
@@ -187,67 +196,67 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
               </button>
             </div>
           )}
-        </td>
-      </tr>
+        </TableCell>
+      </TableRow>
 
       {/* Inline reset password form */}
       {showPwForm && !isSelf && (
-        <tr className="border-t-0">
-          <td colSpan={5} className="px-4 pb-3">
+        <TableRow className="border-t-0">
+          <TableCell colSpan={5} className="px-4 pb-3">
             <form action={async (fd) => { await pwAction(fd); setShowPwForm(false) }}
               className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-wrap items-end gap-3">
               <input type="hidden" name="userId" value={user.id} />
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">New Password for {user.email}</label>
-                <input
+                <Input
                   name="password"
                   type="password"
                   required
-                  minLength={6}
-                  placeholder="Min. 6 characters"
-                  className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  minLength={8}
+                  placeholder="Min. 8 characters"
+                  className="border-slate-300 focus-visible:ring-red-500"
                 />
               </div>
-              <button
+              <Button
                 type="submit"
                 disabled={pwPending}
-                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                className="bg-red-600 hover:bg-red-500 text-white"
               >
                 {pwPending ? 'Saving…' : 'Set Password'}
-              </button>
-              <button type="button" onClick={() => setShowPwForm(false)} className="text-sm text-slate-500 hover:text-slate-700">
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowPwForm(false)} className="text-slate-500">
                 Cancel
-              </button>
-              <Alert state={pwState} />
+              </Button>
+              <FormAlert state={pwState} />
             </form>
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       )}
 
       {/* Inline delete confirmation */}
       {showDelConfirm && !isSelf && (
-        <tr className="border-t-0">
-          <td colSpan={5} className="px-4 pb-3">
+        <TableRow className="border-t-0">
+          <TableCell colSpan={5} className="px-4 pb-3">
             <form action={async (fd) => { await delAction(fd); setShowDelConfirm(false) }}
               className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-wrap items-center gap-3">
               <input type="hidden" name="userId" value={user.id} />
               <p className="text-sm text-red-700">
                 Are you sure you want to delete <strong>{user.email}</strong>? This cannot be undone.
               </p>
-              <button
+              <Button
                 type="submit"
                 disabled={delPending}
-                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                className="bg-red-600 hover:bg-red-500 text-white"
               >
                 {delPending ? 'Deleting…' : 'Yes, Delete'}
-              </button>
-              <button type="button" onClick={() => setShowDelConfirm(false)} className="text-sm text-slate-500 hover:text-slate-700">
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowDelConfirm(false)} className="text-slate-500">
                 Cancel
-              </button>
-              <Alert state={delState} />
+              </Button>
+              <FormAlert state={delState} />
             </form>
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       )}
     </>
   )
@@ -260,24 +269,22 @@ export default function UserManagement({ users, currentUserId }: Props) {
       <CreateUserForm />
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50">
-                <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">ID</th>
-                <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Email</th>
-                <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Role</th>
-                <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Created</th>
-                <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(user => (
-                <UserRow key={user.id} user={user} currentUserId={currentUserId} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50">
+              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">ID</TableHead>
+              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Email</TableHead>
+              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Role</TableHead>
+              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Created</TableHead>
+              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map(user => (
+              <UserRow key={user.id} user={user} currentUserId={currentUserId} />
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </div>
   )
