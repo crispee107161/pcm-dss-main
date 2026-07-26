@@ -18,22 +18,22 @@ function formatDate(date: Date): string {
 
 function StatusBadge({ status }: { status: UploadStatus }) {
   if (status === 'SUCCESS') {
-    return <Badge className="bg-green-500/10 text-green-300 border-green-500/30">Success</Badge>
+    return <Badge className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/30">Success</Badge>
   }
-  return <Badge className="bg-red-500/10 text-red-300 border-red-500/30">Failed</Badge>
+  return <Badge className="bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30">Failed</Badge>
 }
 
 const TYPE_LABELS: Record<UploadType, { label: string; cls: string }> = {
-  ADS_CSV:              { label: 'Ads CSV',         cls: 'bg-violet-500/10 text-violet-300 border-violet-500/30' },
-  POSTS_CSV:            { label: 'Posts CSV',       cls: 'bg-blue-500/10   text-blue-300   border-blue-500/30'   },
-  PAGE_METRIC_CSV:      { label: 'Page Metric',     cls: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30' },
-  FOLLOWER_HISTORY_CSV: { label: 'Follower History',cls: 'bg-orange-500/10 text-orange-300 border-orange-500/30' },
-  PAGE_VIEWERS_CSV:     { label: 'Page Viewers',    cls: 'bg-green-500/10  text-green-300  border-green-500/30'  },
-  DEMOGRAPHICS_CSV:     { label: 'Demographics',    cls: 'bg-red-500/10    text-red-300    border-red-500/30'    },
+  ADS_CSV:              { label: 'Ads CSV',         cls: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30' },
+  POSTS_CSV:            { label: 'Posts CSV',       cls: 'bg-blue-500/10   text-blue-700 dark:text-blue-300   border-blue-500/30'   },
+  PAGE_METRIC_CSV:      { label: 'Page Metric',     cls: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30' },
+  FOLLOWER_HISTORY_CSV: { label: 'Follower History',cls: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30' },
+  PAGE_VIEWERS_CSV:     { label: 'Page Viewers',    cls: 'bg-green-500/10  text-green-700 dark:text-green-300  border-green-500/30'  },
+  DEMOGRAPHICS_CSV:     { label: 'Demographics',    cls: 'bg-red-500/10    text-red-700 dark:text-red-300    border-red-500/30'    },
 }
 
 function TypeBadge({ type }: { type: UploadType }) {
-  const { label, cls } = TYPE_LABELS[type] ?? { label: type, cls: 'bg-gray-100 text-gray-400 border-gray-200' }
+  const { label, cls } = TYPE_LABELS[type] ?? { label: type, cls: 'bg-gray-100 text-gray-600 dark:text-gray-400 border-gray-200' }
   return <Badge className={cls}>{label}</Badge>
 }
 

@@ -111,7 +111,7 @@ export default async function CategoryPerformancePage() {
               })() },
           ].map(({ label, value, sub }) => (
             <div key={label} className="bg-card rounded-2xl card-shadow p-5"
-              style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+              style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] mb-2">{label}</p>
               <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
               {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
@@ -123,13 +123,13 @@ export default async function CategoryPerformancePage() {
       {/* Main table */}
       {sorted.length === 0 ? (
         <div className="bg-card rounded-2xl card-shadow p-10 text-center"
-          style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+          style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
           <p className="text-gray-500 text-sm">No categories assigned yet.</p>
           <p className="text-gray-400 text-xs mt-1">Go to <strong>Categorize Content</strong> to assign categories to your ads and posts.</p>
         </div>
       ) : (
         <div className="bg-card rounded-2xl card-shadow overflow-hidden"
-          style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+          style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
 
           {/* Paid ads section */}
           <div className="px-5 py-4 border-b border-gray-100">
@@ -235,10 +235,10 @@ export default async function CategoryPerformancePage() {
       {/* Uncategorized warning */}
       {(uncategorized_ads > 0 || uncategorized_posts > 0) && (
         <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 flex items-start gap-3">
-          <svg className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4 text-yellow-700 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-sm text-yellow-300">
+          <p className="text-sm text-yellow-700 dark:text-yellow-300">
             <strong>{uncategorized_ads} ad{uncategorized_ads !== 1 ? 's' : ''}</strong> and{' '}
             <strong>{uncategorized_posts} post{uncategorized_posts !== 1 ? 's' : ''}</strong> are uncategorized and excluded from this report.
             Assign them in <strong>Categorize Content</strong> for a complete picture.

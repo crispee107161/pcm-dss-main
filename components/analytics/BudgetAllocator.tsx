@@ -32,7 +32,7 @@ function PctBar({ pct }: { pct: number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-red-500 rounded-full" style={{ width: `${Math.round(pct * 100)}%` }} />
+        <div className="h-full bg-primary rounded-full" style={{ width: `${Math.round(pct * 100)}%` }} />
       </div>
       <span className="text-xs font-semibold text-gray-600 tabular-nums">{(pct * 100).toFixed(1)}%</span>
     </div>
@@ -62,7 +62,7 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
         <span className="sensitive font-bold text-gray-800">{formatPHP(row.allocated_spend)}</span>
       </TableCell>
       <TableCell className="px-4 py-3 text-right">
-        <span className="sensitive font-bold text-red-600 text-base">{point}</span>
+        <span className="sensitive font-bold text-green-600 text-base">{point}</span>
         <div className="sensitive text-[11px] text-amber-600 mt-0.5 tabular-nums">{lower} – {upper}</div>
       </TableCell>
     </TableRow>
@@ -95,7 +95,7 @@ export default function BudgetAllocator() {
               step="0.01"
               placeholder="10000"
               required
-              className="w-full pl-8 border-gray-200 focus-visible:ring-red-500 text-gray-900"
+              className="w-full pl-8 border-gray-200 focus-visible:ring-ring text-gray-900"
             />
           </div>
         </div>
@@ -103,7 +103,7 @@ export default function BudgetAllocator() {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-red-300 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+          className="bg-primary hover:bg-green-600 active:bg-green-700 disabled:bg-green-300 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
         >
           {isPending ? (
             <>
@@ -133,19 +133,18 @@ export default function BudgetAllocator() {
       {result && (
         <div className="space-y-4">
           {/* Summary banner */}
-          <div className="rounded-2xl p-5 flex flex-wrap gap-6"
-            style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-red-900) 22%, var(--card)) 0%, var(--card) 60%, var(--background) 100%)' }}>
+          <div className="rounded-2xl p-5 flex flex-wrap gap-6 bg-card card-shadow border-t-2 border-primary">
             <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Total Budget</p>
-              <p className="sensitive text-2xl font-bold text-white">{formatPHP(result.total_budget)}</p>
+              <p className="sensitive text-2xl font-bold text-foreground">{formatPHP(result.total_budget)}</p>
             </div>
             <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Purchases</p>
-              <p className="sensitive text-2xl font-bold text-red-400">{Math.round(result.total_projected_purchases)}</p>
+              <p className="sensitive text-2xl font-bold text-green-700 dark:text-green-400">{Math.round(result.total_projected_purchases)}</p>
             </div>
             <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected CPA</p>
-              <p className="sensitive text-2xl font-bold text-white">
+              <p className="sensitive text-2xl font-bold text-foreground">
                 {result.total_projected_purchases > 0
                   ? formatPHP(result.total_budget / result.total_projected_purchases)
                   : '—'}
@@ -153,7 +152,7 @@ export default function BudgetAllocator() {
             </div>
             <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Ad Sets</p>
-              <p className="text-2xl font-bold text-gray-200">{result.allocations.length}</p>
+              <p className="text-2xl font-bold text-foreground">{result.allocations.length}</p>
             </div>
             <div className="self-end ml-auto hidden sm:block">
               <p className="text-[11px] text-gray-400">

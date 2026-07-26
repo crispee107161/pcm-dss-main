@@ -35,7 +35,7 @@ function KpiCard({ label, value, sub, valueClass = 'text-gray-900', icon, accent
 }) {
   return (
     <div className="bg-card rounded-2xl card-shadow p-5 flex flex-col gap-3"
-      style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+      style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">{label}</p>
         <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accentStyles[accent]}`}>
@@ -43,7 +43,7 @@ function KpiCard({ label, value, sub, valueClass = 'text-gray-900', icon, accent
         </span>
       </div>
       <div>
-        <p className={`text-3xl font-bold tracking-tight tabular ${sensitive ? 'sensitive' : ''} ${valueClass}`}>{value}</p>
+        <p className={`text-kpi-value font-bold tracking-tight tabular ${sensitive ? 'sensitive' : ''} ${valueClass}`}>{value}</p>
         {sub && (
           <span className="inline-block mt-2 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
             {sub}
@@ -120,7 +120,7 @@ export default async function MarketingDashboard() {
   const topCategory = categoriesWithStats[0] ?? null
 
   return (
-    <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-5">
+    <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-4">
 
       {/* Welcome */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
@@ -135,13 +135,13 @@ export default async function MarketingDashboard() {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
           label="Total Ads" value={adCount} accent="slate"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
         />
         <KpiCard
-          label="With Purchases" value={adsWithPurchases} valueClass="text-red-600" accent="red"
+          label="With Purchases" value={adsWithPurchases} valueClass="text-green-600 dark:text-green-400" accent="green"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
         />
         <KpiCard
@@ -165,7 +165,7 @@ export default async function MarketingDashboard() {
       {/* Data coverage strip */}
       {coverageMin && coverageMax && (
         <div className="bg-card rounded-2xl card-shadow px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-2"
-          style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+          style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
           <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] border-l-2 border-red-300/60 pl-2">
             Data Coverage
           </p>
@@ -185,11 +185,11 @@ export default async function MarketingDashboard() {
 
       {/* Top Category + Post Engagement */}
       {(topCategory || postCount > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
           {topCategory && (
             <div className="bg-card rounded-2xl card-shadow p-5"
-              style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+              style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
               <SectionLabel>Top Category by Purchases</SectionLabel>
               <div className="flex items-start justify-between gap-3 mb-4">
                 <p className="text-sm font-bold text-gray-800">{topCategory.name}</p>
@@ -235,7 +235,7 @@ export default async function MarketingDashboard() {
 
           {postCount > 0 && avgEngagement !== null && (
             <div className="bg-card rounded-2xl card-shadow p-5"
-              style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+              style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
               <SectionLabel>Post Engagement Summary</SectionLabel>
               <div className="flex items-end gap-3 mb-4">
                 <p className="sensitive text-4xl font-bold tracking-tight text-yellow-400">
@@ -269,11 +269,11 @@ export default async function MarketingDashboard() {
 
       {/* Quick actions */}
       <div className="bg-card rounded-2xl card-shadow p-5"
-        style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+        style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
         <SectionLabel>Quick Actions</SectionLabel>
         <div className="flex flex-wrap gap-2">
           <Link href="/dashboard/marketing/upload"
-            className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-full px-4 py-1.5 text-sm font-semibold transition-colors">
+            className="bg-primary hover:bg-green-600 active:bg-green-700 text-white rounded-full px-4 py-1.5 text-sm font-semibold transition-colors">
             Upload Data
           </Link>
           {[
@@ -290,14 +290,14 @@ export default async function MarketingDashboard() {
 
       {/* Current model */}
       <div className="bg-card rounded-2xl card-shadow p-5"
-        style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+        style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
         <SectionLabel>Current Model</SectionLabel>
         <RegressionSummary model={latestModel} />
       </div>
 
       {/* Recent uploads */}
       <div className="bg-card rounded-2xl card-shadow p-5"
-        style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+        style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
         <SectionLabel>Recent Uploads</SectionLabel>
         <UploadHistory logs={recentUploads} />
       </div>

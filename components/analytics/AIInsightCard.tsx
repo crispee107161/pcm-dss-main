@@ -89,7 +89,7 @@ export default function AIInsightCard({ data, variant = 'dark' }: AIInsightCardP
         {!insight && !loading && (
           <Button
             onClick={handleGenerate}
-            className="bg-red-600 hover:bg-red-500 active:bg-red-700 text-white whitespace-nowrap px-4"
+            className="bg-primary hover:bg-green-600 active:bg-green-700 text-white whitespace-nowrap px-4"
           >
             Generate Insights
           </Button>

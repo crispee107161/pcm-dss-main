@@ -36,7 +36,7 @@ function InputField({
           max={max}
           step={prefix === '₱' ? '0.01' : '1'}
           placeholder={placeholder}
-          className={`w-full ${prefix ? 'pl-8' : ''} border-gray-300 focus-visible:ring-red-500 text-gray-900`}
+          className={`w-full ${prefix ? 'pl-8' : ''} border-gray-300 focus-visible:ring-ring text-gray-900`}
         />
       </div>
     </div>
@@ -68,7 +68,7 @@ export default function WhatIfSimulator() {
           <button
             type="submit"
             disabled={isPending}
-            className="bg-red-700 hover:bg-red-800 disabled:bg-red-400 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm flex items-center gap-2 h-[38px]"
+            className="bg-primary hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm flex items-center gap-2 h-[38px]"
           >
             {isPending ? (
               <>
@@ -91,7 +91,7 @@ export default function WhatIfSimulator() {
 
       {result && point !== null && lower !== null && upper !== null && (
         <div className="mt-4 p-5 rounded-xl bg-gray-25 border border-gray-100">
-          <p className="text-red-500 text-xs font-medium uppercase tracking-wider mb-3">Simulation Result</p>
+          <p className="text-primary text-xs font-medium uppercase tracking-wider mb-3">Simulation Result</p>
 
           <div className="flex flex-col sm:flex-row sm:items-start gap-6">
             <div>
@@ -105,7 +105,7 @@ export default function WhatIfSimulator() {
 
             <div>
               <p className="text-gray-400 text-xs mb-1">Predicted Purchases</p>
-              <p className="sensitive text-4xl font-bold text-red-500">
+              <p className="sensitive text-4xl font-bold text-green-400">
                 {point}
                 <span className="text-base font-normal text-gray-400 ml-1">purchases</span>
               </p>

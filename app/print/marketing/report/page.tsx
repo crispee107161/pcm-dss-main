@@ -164,7 +164,7 @@ export default async function MarketingPrintReportPage() {
                       <tr key={i}>
                         <td className={reportTd}>{i + 1}</td>
                         <td className={`${reportTd} font-medium max-w-[200px] truncate`}>{ad.ad_name}</td>
-                        <td className={`${reportTd} text-gray-300 whitespace-nowrap hidden sm:table-cell`}>
+                        <td className={`${reportTd} text-neutral-500 whitespace-nowrap hidden sm:table-cell`}>
                           {formatDate(ad.reporting_starts)}
                         </td>
                         <td className={reportTdRight}>{formatPHP(ad.amount_spent)}</td>
@@ -238,10 +238,10 @@ export default async function MarketingPrintReportPage() {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-gray-300 mb-2">Regression Equation</p>
-                <p className="font-mono text-sm text-gray-100 border border-gray-700 rounded-lg px-4 py-3 break-all">{equation}</p>
+                <p className="text-sm text-neutral-500 mb-2">Regression Equation</p>
+                <p className="font-mono text-sm text-neutral-700 border border-neutral-200 rounded-lg px-4 py-3 break-all">{equation}</p>
                 {isMLR && (
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-xs text-neutral-400 mt-2">
                     Log(1+x) transformation applied to all predictors to model diminishing returns.
                   </p>
                 )}
@@ -258,10 +258,10 @@ export default async function MarketingPrintReportPage() {
 
         {dailyMetrics.length >= 7 && (
           <ReportSection title="7-Day Page Views Forecast">
-            <p className="text-sm text-gray-300 mb-1">
-              Holt-Winters level: <strong className="text-gray-25">{viewsForecast.lastLevel.toLocaleString()} views/day</strong>. Next 7 days shown as orange dots.
+            <p className="text-sm text-neutral-500 mb-1">
+              Holt-Winters level: <strong className="text-neutral-900">{viewsForecast.lastLevel.toLocaleString()} views/day</strong>. Next 7 days shown as orange dots.
             </p>
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-neutral-400 mb-4">
               {viewsForecast.method === 'holt-winters'
                 ? 'Triple exponential smoothing (α=0.3, β=0.1, γ=0.3, period=7) — captures trend and weekly seasonality.'
                 : 'Double exponential smoothing (Holt linear) — upload more data to enable seasonal model.'}
@@ -278,7 +278,7 @@ export default async function MarketingPrintReportPage() {
               { label: 'Avg Engagement Rate', value: `${avgEngagement.toFixed(2)}%` },
               { label: 'Total Reactions',     value: allPosts.reduce((s, p) => s + p.reactions, 0).toLocaleString() },
             ]} />
-            <p className="text-xs text-gray-400 mt-4">
+            <p className="text-xs text-neutral-400 mt-4">
               Limitation: Organic post analysis is restricted to engagement metrics. No daily POS data is available to correlate posts with sales.
             </p>
           </ReportSection>
@@ -310,24 +310,24 @@ export default async function MarketingPrintReportPage() {
         />
 
         <ReportSection title="Key Insights">
-          <ul className="space-y-2 text-sm text-gray-100">
+          <ul className="space-y-2 text-sm text-neutral-700">
             {cpa && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                Average cost per purchase across all campaigns: <strong className="text-gray-25">{formatPHP(cpa)}</strong>
+                <span className="text-neutral-400 mt-0.5">—</span>
+                Average cost per purchase across all campaigns: <strong className="text-neutral-900">{formatPHP(cpa)}</strong>
               </li>
             )}
             {lagData.best_r !== null && lagData.best_metric && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                Purchases peak <strong className="text-gray-25">{lagData.best_lag} day{lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics are recorded.
+                <span className="text-neutral-400 mt-0.5">—</span>
+                Purchases peak <strong className="text-neutral-900">{lagData.best_lag} day{lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics are recorded.
                 Strongest predictor: {lagData.best_metric} (r = {lagData.best_r.toFixed(4)}).
               </li>
             )}
             {latestModel && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                The {isMLR ? 'MLR' : 'regression'} model explains <strong className="text-gray-25">{(latestModel.r_squared * 100).toFixed(1)}%</strong> of variance in purchases
+                <span className="text-neutral-400 mt-0.5">—</span>
+                The {isMLR ? 'MLR' : 'regression'} model explains <strong className="text-neutral-900">{(latestModel.r_squared * 100).toFixed(1)}%</strong> of variance in purchases
                 {isMLR && latestModel.residual_std_error != null
                   ? ` with ±${(latestModel.residual_std_error * 1.2816).toFixed(1)}-purchase 80% prediction interval.`
                   : '.'}
@@ -335,20 +335,20 @@ export default async function MarketingPrintReportPage() {
             )}
             {allPosts.length > 0 && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                Organic posts achieved an average engagement rate of <strong className="text-gray-25">{avgEngagement.toFixed(2)}%</strong> across {allPosts.length} posts.
+                <span className="text-neutral-400 mt-0.5">—</span>
+                Organic posts achieved an average engagement rate of <strong className="text-neutral-900">{avgEngagement.toFixed(2)}%</strong> across {allPosts.length} posts.
               </li>
             )}
             {totalImpressions > 0 && totalLinkClicks > 0 && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                Overall link click-through rate: <strong className="text-gray-25">{((totalLinkClicks / totalImpressions) * 100).toFixed(2)}%</strong>
+                <span className="text-neutral-400 mt-0.5">—</span>
+                Overall link click-through rate: <strong className="text-neutral-900">{((totalLinkClicks / totalImpressions) * 100).toFixed(2)}%</strong>
               </li>
             )}
             {viewsForecast.forecast.length > 0 && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                7-day page views forecast baseline: <strong className="text-gray-25">{viewsForecast.lastLevel.toLocaleString()} views/day</strong> (Holt-Winters level).
+                <span className="text-neutral-400 mt-0.5">—</span>
+                7-day page views forecast baseline: <strong className="text-neutral-900">{viewsForecast.lastLevel.toLocaleString()} views/day</strong> (Holt-Winters level).
               </li>
             )}
           </ul>

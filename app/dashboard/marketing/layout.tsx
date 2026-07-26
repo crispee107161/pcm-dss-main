@@ -13,7 +13,7 @@ const navItems: NavItem[] = [
   { section: 'Data', label: 'Upload Data', href: '/dashboard/marketing/upload', icon: <IconUpload /> },
   { label: 'Categorize Content', href: '/dashboard/marketing/categorize', icon: <IconTag /> },
   { label: 'Manage Keywords', href: '/dashboard/marketing/keywords', icon: <IconKey /> },
-  { section: 'Analytics', label: 'Correlation', href: '/dashboard/marketing/correlation', icon: <IconChart /> },
+  { section: 'Analytics', collapsible: true, label: 'Correlation', href: '/dashboard/marketing/correlation', icon: <IconChart /> },
   { label: 'Regression', href: '/dashboard/marketing/regression', icon: <IconRegression /> },
   { label: 'What-If Simulation', href: '/dashboard/marketing/simulation', icon: <IconPlay /> },
   { label: 'Campaign Rankings', href: '/dashboard/marketing/campaign-rankings', icon: <IconRanking /> },
@@ -34,7 +34,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
         navItems={navItems}
         email={session.user.email ?? ''}
         roleLabel="Marketing Manager"
-        roleBadgeClass="bg-red-950 text-red-300 border border-red-900"
+        roleBadgeClass="bg-gray-50 text-gray-500 border border-gray-100"
       >
         {children}
       </Sidebar>

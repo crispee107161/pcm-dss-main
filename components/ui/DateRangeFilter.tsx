@@ -36,7 +36,7 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
           type="date"
           defaultValue={from ?? ''}
           onChange={e => update('from', e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 bg-card"
+          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary bg-card"
           aria-label="From date"
         />
         <span className="text-gray-400 text-xs">to</span>
@@ -44,14 +44,14 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
           type="date"
           defaultValue={to ?? ''}
           onChange={e => update('to', e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 bg-card"
+          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary bg-card"
           aria-label="To date"
         />
       </div>
       {(from || to) && (
         <button
           onClick={clear}
-          className="text-xs text-red-600 hover:text-red-800 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
+          className="text-xs text-primary hover:text-green-700 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
         >
           Clear
         </button>

@@ -121,7 +121,7 @@ function RankBadge({ rank }: { rank: number }) {
 }
 
 const cardStyle = {
-  boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 1px 3px rgba(255,255,255,0.08), 0 4px 16px rgba(255,255,255,0.06), 0 0 40px rgba(220,38,38,0.02)',
+  boxShadow: 'var(--card-elevate-shadow-ring)',
 }
 const cardClass = 'bg-card rounded-2xl card-shadow'
 
@@ -159,7 +159,7 @@ export default function SalesDashboardTabs({
   const topTerritory = [...territoryData].sort((a, b) => b.distribution - a.distribution)[0]
 
   return (
-    <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-5">
+    <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-4">
 
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
@@ -174,13 +174,13 @@ export default function SalesDashboardTabs({
       </div>
 
       {/* Tab bar */}
-      <Tabs value={activeTab} onValueChange={(v) => { if (v) setActiveTab(v as TabId) }} className="space-y-5">
+      <Tabs value={activeTab} onValueChange={(v) => { if (v) setActiveTab(v as TabId) }} className="space-y-4">
         <TabsList className="flex gap-1 bg-gray-100/70 rounded-xl p-1 h-auto w-full">
           {TABS.map(tab => (
             <TabsTrigger
               key={tab.id}
               value={tab.id}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold data-active:bg-white data-active:text-black data-active:shadow-sm text-gray-500 hover:text-gray-700 hover:bg-white/50 focus-visible:ring-red-500"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold data-active:bg-white data-active:text-black data-active:shadow-sm text-gray-500 hover:text-gray-700 hover:bg-white/50 focus-visible:ring-ring"
             >
               <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={tab.icon} />
@@ -191,7 +191,7 @@ export default function SalesDashboardTabs({
         </TabsList>
 
         {/* ── Overview ── */}
-        <TabsContent value="overview" className="animate-fade-slide-up space-y-5">
+        <TabsContent value="overview" className="animate-fade-slide-up space-y-4">
           <div>
             <div className="flex items-center gap-3 mb-4">
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">Monthly KPI Summary</p>
@@ -208,7 +208,7 @@ export default function SalesDashboardTabs({
           )}
 
           {adTrends.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div className={`${cardClass} p-5`} style={cardStyle}>
                 <SLabel>Ad Spend vs. Purchases</SLabel>
                 <p className="text-xs text-gray-400 -mt-2 mb-4">Total spend (PHP) and resulting purchases per period</p>
@@ -224,8 +224,8 @@ export default function SalesDashboardTabs({
         </TabsContent>
 
         {/* ── Campaigns ── */}
-        <TabsContent value="campaigns" className="animate-fade-slide-up space-y-5">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <TabsContent value="campaigns" className="animate-fade-slide-up space-y-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             <div className={`${cardClass} overflow-hidden`} style={cardStyle}>
               <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
                 <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top Campaigns by Spend</p>
@@ -313,9 +313,9 @@ export default function SalesDashboardTabs({
         </TabsContent>
 
         {/* ── Analytics ── */}
-        <TabsContent value="analytics" className="animate-fade-slide-up space-y-5">
+        <TabsContent value="analytics" className="animate-fade-slide-up space-y-4">
           {(genderData.length > 0 || territoryData.length > 0) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {genderData.length > 0 && (
                 <div className={`${cardClass} p-5`} style={cardStyle}>
                   <SLabel>Gender Distribution</SLabel>
@@ -353,7 +353,7 @@ export default function SalesDashboardTabs({
         </TabsContent>
 
         {/* ── Simulator ── */}
-        <TabsContent value="simulator" className="animate-fade-slide-up space-y-5">
+        <TabsContent value="simulator" className="animate-fade-slide-up space-y-4">
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>What-If Simulator</SLabel>
             <p className="text-xs text-gray-400 -mt-2 mb-4">Enter hypothetical inputs to predict how many purchases they may generate.</p>

@@ -53,13 +53,13 @@ export default function LaggedCorrelationPanel({ data }: { data: LaggedCorrelati
     <div className="space-y-4">
       {data.best_r !== null && bestMetricLabel && (
         <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3">
-          <span className="text-yellow-400 text-lg flex-shrink-0">⏱</span>
+          <span className="text-yellow-700 dark:text-yellow-400 text-lg flex-shrink-0">⏱</span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-yellow-300">
+            <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
               Best lag: <strong>{data.best_lag} day{data.best_lag !== 1 ? 's' : ''}</strong>
               {' '}— purchases peak {data.best_lag} day{data.best_lag !== 1 ? 's' : ''} after ad metrics are recorded
             </p>
-            <p className="text-xs text-yellow-300/80">
+            <p className="text-xs text-yellow-700/90 dark:text-yellow-300/80">
               Strongest predictor: <strong>{bestMetricLabel}</strong> (r = {fmtR(data.best_r)}, p = {fmtP(data.best_p)})
               {data.best_p !== null && data.best_p < 0.05 ? ' — statistically significant' : ' — not significant at α=0.05'}
             </p>
@@ -93,7 +93,7 @@ export default function LaggedCorrelationPanel({ data }: { data: LaggedCorrelati
                 <td className="px-3 py-2.5 font-semibold text-gray-800 border-t border-gray-100">
                   {row.lag} day{row.lag !== 1 ? 's' : ''}
                   {row.lag === data.best_lag && (
-                    <span className="ml-1.5 text-xs bg-yellow-500/10 text-yellow-300 rounded px-1">best</span>
+                    <span className="ml-1.5 text-xs bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 rounded px-1">best</span>
                   )}
                 </td>
                 <td className="px-3 py-2.5 text-gray-500 border-t border-gray-100 hidden sm:table-cell">{row.n}</td>

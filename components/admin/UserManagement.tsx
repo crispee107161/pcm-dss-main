@@ -30,9 +30,9 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
 ]
 
 const ROLE_BADGE_CLASS: Record<Role, string> = {
-  BUSINESS_OWNER: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
-  SALES_DIRECTOR: 'bg-red-500/10 text-red-400 border-red-500/30',
-  MARKETING_MANAGER: 'bg-violet-500/10 text-violet-300 border-violet-500/30',
+  BUSINESS_OWNER: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30',
+  SALES_DIRECTOR: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
+  MARKETING_MANAGER: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30',
 }
 
 function formatDate(date: Date) {
@@ -64,7 +64,7 @@ function CreateUserForm() {
         </div>
         <Button
           onClick={() => setOpen(v => !v)}
-          className="bg-red-600 hover:bg-red-500 text-white px-4"
+          className="bg-primary hover:bg-green-600 text-white px-4"
         >
           {open ? 'Cancel' : '+ Add User'}
         </Button>
@@ -81,7 +81,7 @@ function CreateUserForm() {
                 type="email"
                 required
                 placeholder="user@example.com"
-                className="w-full border-gray-300 focus-visible:ring-red-500"
+                className="w-full border-gray-300 focus-visible:ring-ring"
               />
             </div>
             <div>
@@ -92,13 +92,13 @@ function CreateUserForm() {
                 required
                 minLength={8}
                 placeholder="Min. 8 characters"
-                className="w-full border-gray-300 focus-visible:ring-red-500"
+                className="w-full border-gray-300 focus-visible:ring-ring"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
               <Select name="role" defaultValue={ROLE_OPTIONS[0].value}>
-                <SelectTrigger className="w-full border-gray-300 focus-visible:ring-red-500">
+                <SelectTrigger className="w-full border-gray-300 focus-visible:ring-ring">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -113,7 +113,7 @@ function CreateUserForm() {
             <Button
               type="submit"
               disabled={pending}
-              className="bg-red-600 hover:bg-red-500 text-white px-4"
+              className="bg-primary hover:bg-green-600 text-white px-4"
             >
               {pending ? 'Creating…' : 'Create User'}
             </Button>
@@ -156,7 +156,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
             <form action={roleAction} className="flex items-center gap-2">
               <input type="hidden" name="userId" value={user.id} />
               <Select name="role" defaultValue={user.role}>
-                <SelectTrigger className="border-gray-300 focus-visible:ring-red-500 h-7 text-xs min-w-[140px]" size="sm">
+                <SelectTrigger className="border-gray-300 focus-visible:ring-ring h-7 text-xs min-w-[140px]" size="sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -183,7 +183,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { setShowPwForm(v => !v); setShowDelConfirm(false) }}
-                className="text-xs text-gray-600 hover:text-red-600 underline underline-offset-2 transition-colors"
+                className="text-xs text-gray-600 hover:text-yellow-600 underline underline-offset-2 transition-colors"
               >
                 Reset PW
               </button>
@@ -204,7 +204,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
         <TableRow className="border-t-0">
           <TableCell colSpan={5} className="px-4 pb-3">
             <form action={async (fd) => { await pwAction(fd); setShowPwForm(false) }}
-              className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-wrap items-end gap-3">
+              className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex flex-wrap items-end gap-3">
               <input type="hidden" name="userId" value={user.id} />
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">New Password for {user.email}</label>
@@ -214,13 +214,13 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
                   required
                   minLength={8}
                   placeholder="Min. 8 characters"
-                  className="border-gray-300 focus-visible:ring-red-500"
+                  className="border-gray-300 focus-visible:ring-ring"
                 />
               </div>
               <Button
                 type="submit"
                 disabled={pwPending}
-                className="bg-red-600 hover:bg-red-500 text-white"
+                className="bg-yellow-600 hover:bg-yellow-500 text-white"
               >
                 {pwPending ? 'Saving…' : 'Set Password'}
               </Button>

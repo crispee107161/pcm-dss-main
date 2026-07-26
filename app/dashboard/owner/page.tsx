@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
 import FollowerSparkline from '@/components/analytics/FollowerSparkline'
+import { IconRanking, IconTrendUp, IconMetrics, IconPlay, IconCategory, IconReport } from '@/components/nav/icons'
 
 function formatPhp(amount: number): string {
   return new Intl.NumberFormat('en-PH', {
@@ -74,7 +75,7 @@ function KpiCard({ label, value, sub, delta, valueClass = 'text-gray-900', icon,
 }) {
   return (
     <div className="bg-card rounded-2xl card-shadow p-5 flex flex-col gap-3"
-      style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+      style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">{label}</p>
         <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accentStyles[accent]}`}>
@@ -82,7 +83,7 @@ function KpiCard({ label, value, sub, delta, valueClass = 'text-gray-900', icon,
         </span>
       </div>
       <div>
-        <p className={`sensitive text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
+        <p className={`sensitive text-kpi-value font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
         <div className="flex items-center mt-2 flex-wrap gap-1">
           {sub && (
             <span className="inline-block text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
@@ -102,7 +103,7 @@ function KpiCard({ label, value, sub, delta, valueClass = 'text-gray-900', icon,
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 mb-4">
-      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">{children}</p>
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap">{children}</p>
       <div className="flex-1 h-px bg-gradient-to-r from-red-100/70 to-transparent" />
     </div>
   )
@@ -195,7 +196,7 @@ export default async function OwnerDashboard() {
     : null
 
   return (
-    <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-5">
+    <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-4">
 
       {/* Welcome */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
@@ -210,7 +211,7 @@ export default async function OwnerDashboard() {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
           label="Total Ad Spend" value={formatPhp(totalSpend)} sub="all time"
           delta={spendDelta}
@@ -220,7 +221,7 @@ export default async function OwnerDashboard() {
         <KpiCard
           label="Total Purchases" value={formatNumber(totalPurchases)} sub="from ads"
           delta={purchasesDelta}
-          valueClass="text-red-600" accent="red"
+          valueClass="text-green-600 dark:text-green-400" accent="green"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
         />
         <KpiCard
@@ -237,27 +238,26 @@ export default async function OwnerDashboard() {
 
       {/* ROI summary */}
       {totalPurchases > 0 && (
-        <div className="rounded-2xl p-6"
-          style={{ background: 'linear-gradient(135deg, #1c0808 0%, #111111 60%, #0d0d0d 100%)', boxShadow: '0 4px 24px rgba(255,255,255,0.12)' }}>
+        <div className="rounded-2xl p-6 bg-card card-shadow">
           <div className="flex items-center justify-between mb-6">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.12em]">ROI Summary</p>
-            <span className="text-xs text-gray-500 bg-white/5 rounded-full px-3 py-1 border border-white/8">All time</span>
+            <span className="text-xs text-gray-500 bg-secondary rounded-full px-3 py-1 border border-gray-100">All time</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/8">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
             <div className="pb-5 md:pb-0 md:pr-6">
               <p className="text-[11px] text-gray-500 mb-2">Avg. Cost Per Purchase</p>
-              <p className="sensitive text-3xl font-bold tracking-tight text-white">{formatPhp(totalSpend / totalPurchases)}</p>
+              <p className="sensitive text-3xl font-bold tracking-tight text-foreground">{formatPhp(totalSpend / totalPurchases)}</p>
             </div>
             <div className="py-5 md:py-0 md:px-6">
               <p className="text-[11px] text-gray-500 mb-2">Purchase Rate</p>
-              <p className="sensitive text-3xl font-bold tracking-tight text-white">
+              <p className="sensitive text-3xl font-bold tracking-tight text-foreground">
                 {totalReach > 0 ? ((totalPurchases / totalReach) * 100).toFixed(3) : '0'}%
               </p>
               <p className="text-[11px] text-gray-600 mt-1.5">of reached audience</p>
             </div>
             <div className="pt-5 md:pt-0 md:pl-6">
               <p className="text-[11px] text-gray-500 mb-2">Ads with Purchases</p>
-              <p className="sensitive text-3xl font-bold tracking-tight text-red-400">{adsWithPurchases}</p>
+              <p className="sensitive text-3xl font-bold tracking-tight text-green-600 dark:text-green-400">{adsWithPurchases}</p>
               <p className="text-[11px] text-gray-600 mt-1.5">of {adCount} total ads</p>
             </div>
           </div>
@@ -265,33 +265,41 @@ export default async function OwnerDashboard() {
       )}
 
       {/* Quick navigation + Follower sparkline */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 bg-card rounded-2xl card-shadow p-5"
-          style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="md:col-span-2 bg-card rounded-2xl card-shadow p-5 flex flex-col"
+          style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
           <SectionLabel>Quick Navigation</SectionLabel>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/dashboard/owner/campaign-rankings"
-              className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-full px-4 py-1.5 text-sm font-semibold transition-colors">
-              Campaign Rankings
-            </Link>
-            {[
-              { label: 'Trend Analysis',        href: '/dashboard/owner/trend-analysis' },
-              { label: 'Page Metrics',          href: '/dashboard/owner/page-metrics' },
-              { label: 'Budget Simulator',      href: '/dashboard/owner/simulation' },
-              { label: 'Category Performance',  href: '/dashboard/owner/category-performance' },
-              { label: 'Generate Report',       href: '/dashboard/owner/report' },
-            ].map(({ label, href }) => (
-              <Link key={href} href={href}
-                className="bg-card hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-red-200 hover:text-red-400 rounded-full px-4 py-1.5 text-sm font-medium transition-colors">
-                {label}
+          {/* This card sits next to the taller Follower Sparkline card in the
+              same row and gets stretched to match its height by the grid —
+              centering the button grid in the remaining space spreads that
+              extra height evenly instead of leaving it as dead space below. */}
+          <div className="flex-1 flex items-center">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
+              <Link href="/dashboard/owner/campaign-rankings"
+                className="inline-flex items-center justify-center gap-1.5 bg-primary hover:bg-green-600 active:bg-green-700 text-white rounded-full px-3 py-1.5 text-sm font-semibold text-center transition-colors">
+                <IconRanking className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">Campaign Rankings</span>
               </Link>
-            ))}
+              {[
+                { label: 'Trend Analysis',        href: '/dashboard/owner/trend-analysis',      icon: IconTrendUp },
+                { label: 'Page Metrics',          href: '/dashboard/owner/page-metrics',        icon: IconMetrics },
+                { label: 'Budget Simulator',      href: '/dashboard/owner/simulation',           icon: IconPlay },
+                { label: 'Category Performance',  href: '/dashboard/owner/category-performance', icon: IconCategory },
+                { label: 'Generate Report',       href: '/dashboard/owner/report',               icon: IconReport },
+              ].map(({ label, href, icon: Icon }) => (
+                <Link key={href} href={href}
+                  className="inline-flex items-center justify-center gap-1.5 bg-card hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-red-200 hover:text-red-400 rounded-full px-3 py-1.5 text-sm font-medium text-center transition-colors">
+                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
         {latestFollower && (
           <div className="bg-card rounded-2xl card-shadow p-5"
-            style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+            style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
             <FollowerSparkline
               data={sparklineData}
               currentCount={latestFollower.followers}
@@ -303,11 +311,11 @@ export default async function OwnerDashboard() {
       </div>
 
       {/* Top Campaign + Last Upload */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
         {topCampaign && (
           <div className="bg-card rounded-2xl card-shadow p-5"
-            style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+            style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
             <SectionLabel>Top Performing Campaign</SectionLabel>
             <div className="flex items-start justify-between gap-3 mb-4">
               <p className="text-sm font-bold text-gray-800 leading-snug line-clamp-2">
@@ -343,7 +351,7 @@ export default async function OwnerDashboard() {
 
         {lastUpload && (
           <div className="bg-card rounded-2xl card-shadow p-5"
-            style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+            style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
             <SectionLabel>Last Data Upload</SectionLabel>
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
@@ -384,7 +392,7 @@ export default async function OwnerDashboard() {
 
       {/* Model summary */}
       <div className="bg-card rounded-2xl card-shadow p-5"
-        style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+        style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
         <SectionLabel>Predictive Model Summary</SectionLabel>
         <RegressionSummary model={latestModel} />
       </div>

@@ -1,7 +1,8 @@
 'use client'
 
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
+import { AreaChart, Area, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { chartTooltipStyle, chartTooltipLabelStyle } from '@/lib/chart-tooltip'
+import { CHART_COLORS } from '@/lib/chart-axis'
 
 interface SparkPoint {
   date: string
@@ -17,13 +18,25 @@ interface Props {
 
 export default function FollowerSparkline({ data, currentCount, netChange7d, asOfDate }: Props) {
   const isPositive = netChange7d >= 0
-  const strokeColor = isPositive ? '#10b981' : '#ef4444'
+  const strokeColor = isPositive ? CHART_COLORS.green : CHART_COLORS.red
+
+  // Recharts defaults an Area's y-domain to [0, dataMax] — against a follower
+  // count in the tens of thousands, a week's worth of single/double-digit
+  // daily change is invisible, pinned flat against the top of the chart.
+  // Zooming into the actual min/max (with a little padding) makes the real
+  // week's shape visible instead of a flat line.
+  const followerValues = data.map(d => d.followers)
+  const minFollowers = Math.min(...followerValues)
+  const maxFollowers = Math.max(...followerValues)
+  const range = maxFollowers - minFollowers
+  const yPadding = Math.max(1, Math.round(range * 0.2) || Math.round(maxFollowers * 0.002))
+  const yDomain: [number, number] = [minFollowers - yPadding, maxFollowers + yPadding]
 
   return (
     <div className="flex flex-col h-full justify-between gap-3">
       <div>
         <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Page Followers</p>
-        <p className="sensitive text-3xl font-bold tracking-tight text-red-600 mt-3">
+        <p className="sensitive text-3xl font-bold tracking-tight text-primary mt-3">
           {new Intl.NumberFormat('en-PH').format(currentCount)}
         </p>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -46,6 +59,7 @@ export default function FollowerSparkline({ data, currentCount, netChange7d, asO
         <div className="h-14 -mx-1">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 0 }}>
+              <YAxis domain={yDomain} hide />
               <defs>
                 <linearGradient id="followerGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={strokeColor} stopOpacity={0.2} />

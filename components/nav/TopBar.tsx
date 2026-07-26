@@ -6,6 +6,7 @@ import type { NavItem } from './Sidebar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Menu01Icon } from '@animateicons/react/huge'
 import { useBlur } from '@/contexts/BlurContext'
+import ThemeToggle from '@/components/nav/ThemeToggle'
 
 interface TopBarProps {
   navItems: NavItem[]
@@ -55,11 +56,13 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
 
   return (
     <div
+      // Follows the app theme like the sidebar rail — built on the same
+      // sidebar surface tokens so both stay a matching light/dark chrome.
       className="h-14 flex items-center justify-between px-4 sticky top-0 z-40 print:hidden flex-shrink-0"
       style={{
-        background: 'rgba(11,11,11,0.9)',
+        background: 'color-mix(in srgb, var(--sidebar) 90%, transparent)',
         backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        borderBottom: '1px solid var(--sidebar-border)',
       }}
     >
       {/* Left */}
@@ -68,7 +71,7 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
         <button
           onClick={onMobileMenuOpen}
           aria-label="Open menu"
-          className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 flex-shrink-0"
+          className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
         >
           <Menu01Icon size={16} />
         </button>
@@ -77,7 +80,7 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
         <nav className="flex items-center gap-1.5 text-sm min-w-0">
           <Link
             href={homeItem?.href ?? '#'}
-            className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+            className="text-gray-400 hover:text-primary transition-colors flex-shrink-0"
             aria-label="Dashboard home"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -87,7 +90,7 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
 
           <Link
             href={homeItem?.href ?? '#'}
-            className="text-gray-400 hover:text-gray-600 font-medium transition-[color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+            className="text-gray-400 hover:text-gray-600 font-medium transition-[color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
           >
             Home
           </Link>
@@ -104,12 +107,13 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
 
       {/* Right */}
       <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+        <ThemeToggle />
         <button
           onClick={toggleBlur}
           aria-pressed={blurred}
           aria-label={blurred ? 'Show sensitive data' : 'Blur sensitive data'}
           title={blurred ? 'Show sensitive data' : 'Blur sensitive data'}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 flex-shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
         >
           {blurred ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -127,7 +131,7 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
           <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[180px]">{email}</p>
         </div>
         <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-red-200 rounded-full">
-          <AvatarFallback className="bg-red-600 text-white text-xs font-bold">{initial}</AvatarFallback>
+          <AvatarFallback className="bg-red-400 text-white text-xs font-bold">{initial}</AvatarFallback>
         </Avatar>
       </div>
     </div>

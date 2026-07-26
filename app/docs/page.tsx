@@ -34,7 +34,7 @@ export default function DocsPage() {
           </div>
           <Link
             href="/login"
-            className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-colors shrink-0"
+            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-colors shrink-0"
           >
             Open App
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

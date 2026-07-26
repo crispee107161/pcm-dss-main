@@ -35,28 +35,6 @@
  * this codebase picks up Sure's warmer, flatter palette automatically.
  */
 @theme {
-  /*
-   * PCM DSS is dark-only (no light/dark toggle exists), so this scale is
-   * defined directly in dark-appropriate order rather than mirroring Sure's
-   * light-mode ramp: gray-900 is near-white (max contrast against the black
-   * canvas, used for headings/primary text via existing `text-gray-900`
-   * call sites) down to gray-25 (near-black, subtle fills). Sure itself
-   * keeps one raw scale and flips *semantic* tokens per-mode instead — that
-   * wasn't practical here since this codebase calls raw `gray-N` utilities
-   * directly at ~90 call sites rather than semantic classes.
-   */
-  --color-gray-25: #171717;
-  --color-gray-50: #242424;
-  --color-gray-100: #363636;
-  --color-gray-200: #5C5C5C;
-  --color-gray-300: #737373;
-  --color-gray-400: #9E9E9E;
-  --color-gray-500: #CFCFCF;
-  --color-gray-600: #E7E7E7;
-  --color-gray-700: #F0F0F0;
-  --color-gray-800: #F7F7F7;
-  --color-gray-900: #FAFAFA;
-
   --color-red-25: #FFFBFB;
   --color-red-50: #FFF1F0;
   --color-red-100: #FFDEDB;
@@ -154,6 +132,27 @@
 
 @theme inline {
   /*
+   * gray-* is a dual ramp, not a fixed palette: PCM DSS calls raw `gray-N`
+   * utilities directly at ~1,300 call sites rather than semantic classes, so
+   * un-inverting the scale for light mode would mean rewriting all of them.
+   * Instead each step points at a --g-* variable that's re-defined per theme
+   * below (:root = light, .dark = today's inverted dark values), so every
+   * existing call site keeps its meaning — higher N = more contrast against
+   * the canvas — in both themes, with zero .tsx changes.
+   */
+  --color-gray-25: var(--g-25);
+  --color-gray-50: var(--g-50);
+  --color-gray-100: var(--g-100);
+  --color-gray-200: var(--g-200);
+  --color-gray-300: var(--g-300);
+  --color-gray-400: var(--g-400);
+  --color-gray-500: var(--g-500);
+  --color-gray-600: var(--g-600);
+  --color-gray-700: var(--g-700);
+  --color-gray-800: var(--g-800);
+  --color-gray-900: var(--g-900);
+
+  /*
    * Sure uses a single typeface (Geist) for everything — no separate
    * display/heading family. `font-heading` call sites stay as-is but now
    * resolve to the same Geist stack as `font-sans`.
@@ -206,53 +205,87 @@
 }
 
 /*
- * Shadcn semantic tokens — dark-only, matching app.sure.am's actual
- * dashboard: near-black canvas, green as the primary/positive accent
- * (Sure's own logo + gain color), red reserved for destructive/negative.
- * `.dark` is kept as an identical duplicate of `:root` as a no-op safety
- * net — nothing currently applies a `.dark` class, `:root` is the only
- * value that matters, but any future `dark:` variant usage resolves the
- * same way either way.
+ * Shadcn semantic tokens. `:root` = light theme, `.dark` = dark theme
+ * (today's original, unchanged values — matching app.sure.am's actual
+ * dashboard: near-black canvas, green as the primary/positive accent,
+ * red reserved for destructive/negative). `next-themes` toggles which one
+ * is active by adding/removing the `.dark` class on `<html>`.
  */
 :root {
-  --background: #0B0B0B;
-  --foreground: #FAFAFA;
-  --card: #171717;
-  --card-foreground: #FAFAFA;
-  --popover: #171717;
-  --popover-foreground: #FAFAFA;
+  color-scheme: light;
+
+  /* gray-* dual ramp — light: low N = near-white, high N = near-black */
+  --g-25: #FAFAFA;
+  --g-50: #F7F7F7;
+  --g-100: #F0F0F0;
+  --g-200: #E7E7E7;
+  --g-300: #CFCFCF;
+  --g-400: #9E9E9E;
+  --g-500: #737373;
+  --g-600: #5C5C5C;
+  --g-700: #363636;
+  --g-800: #242424;
+  --g-900: #171717;
+
+  --background: #F7F7F7;
+  --foreground: #171717;
+  --card: #FFFFFF;
+  --card-foreground: #171717;
+  --popover: #FFFFFF;
+  --popover-foreground: #171717;
   --primary: #12B76A;
-  --primary-foreground: #0B0B0B;
-  --secondary: #242424;
-  --secondary-foreground: #FAFAFA;
-  --muted: #171717;
-  --muted-foreground: #9E9E9E;
-  --accent: #242424;
-  --accent-foreground: #FAFAFA;
-  --destructive: #ED4E4E;
-  --border: var(--color-alpha-white-200);
-  --input: var(--color-alpha-white-300);
-  --ring: var(--color-alpha-white-700);
-  --chart-1: #12B76A;
-  --chart-2: #53B1FD;
-  --chart-3: #ED4E4E;
-  --chart-4: #A48AFB;
-  --chart-5: #FDB022;
+  --primary-foreground: #FAFAFA;
+  --secondary: #F0F0F0;
+  --secondary-foreground: #171717;
+  --muted: #F0F0F0;
+  --muted-foreground: #5C5C5C;
+  --accent: #F0F0F0;
+  --accent-foreground: #171717;
+  --destructive: #C91313;
+  --border: var(--color-alpha-black-200);
+  --input: var(--color-alpha-black-300);
+  --ring: var(--color-alpha-black-700);
+  --chart-1: #078C52;
+  --chart-2: #175CD3;
+  --chart-3: #C91313;
+  --chart-4: #6927DA;
+  --chart-5: #B54708;
   --radius: 0.625rem;
-  --status-positive: #32D583;
-  --status-warning: #FDB022;
-  --status-negative: #ED4E4E;
-  --sidebar: #0B0B0B;
-  --sidebar-foreground: #FAFAFA;
+  --status-positive: #078C52;
+  --status-warning: #B54708;
+  --status-negative: #C91313;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #171717;
   --sidebar-primary: #12B76A;
-  --sidebar-primary-foreground: #0B0B0B;
-  --sidebar-accent: #171717;
-  --sidebar-accent-foreground: #FAFAFA;
-  --sidebar-border: var(--color-alpha-white-200);
-  --sidebar-ring: var(--color-alpha-white-500);
+  --sidebar-primary-foreground: #FAFAFA;
+  --sidebar-accent: #F0F0F0;
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: var(--color-alpha-black-200);
+  --sidebar-ring: var(--color-alpha-black-500);
+
+  /* Shared "card elevate" ambient shadows — inline style={{ boxShadow }} sites
+     use these instead of hardcoding a white-tinted glow that only reads
+     correctly on a dark canvas. */
+  --card-elevate-shadow: 0 1px 3px rgba(11,11,11,0.06), 0 4px 16px rgba(11,11,11,0.04);
+  --card-elevate-shadow-ring: 0 0 0 1px rgba(11,11,11,0.04), 0 1px 3px rgba(11,11,11,0.08), 0 4px 16px rgba(11,11,11,0.06);
 }
 
 .dark {
+  color-scheme: dark;
+
+  /* gray-* dual ramp — dark: low N = near-black, high N = near-white */
+  --g-25: #171717;
+  --g-50: #242424;
+  --g-100: #363636;
+  --g-200: #5C5C5C;
+  --g-300: #737373;
+  --g-400: #9E9E9E;
+  --g-500: #CFCFCF;
+  --g-600: #E7E7E7;
+  --g-700: #F0F0F0;
+  --g-800: #F7F7F7;
+  --g-900: #FAFAFA;
+
   --background: #0B0B0B;
   --foreground: #FAFAFA;
   --card: #171717;
@@ -287,6 +320,10 @@
   --sidebar-accent-foreground: #FAFAFA;
   --sidebar-border: var(--color-alpha-white-200);
   --sidebar-ring: var(--color-alpha-white-500);
+
+  /* Today's original recipes — a faint light-glow rim, kept unchanged. */
+  --card-elevate-shadow: 0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04);
+  --card-elevate-shadow-ring: 0 0 0 1px rgba(255,255,255,0.04), 0 1px 3px rgba(255,255,255,0.08), 0 4px 16px rgba(255,255,255,0.06);
 }
 
 @layer base {
@@ -309,21 +346,43 @@
 ::-webkit-scrollbar-thumb:hover { background: var(--color-gray-600); }
 
 /* Selection */
-::selection { background: rgba(18,183,106,0.25); color: #FAFAFA; }
+::selection { background: rgba(18,183,106,0.25); color: var(--foreground); }
 
 /*
  * Sure's actual dashboard widgets (Cashflow / Net Worth / Outflows on
  * app.sure.am) carry no border or shadow at all — grouping comes purely
  * from the `bg-card` shade sitting a notch lighter than the page canvas.
- * `card-shadow` is kept as a class (rather than deleted) so the ~40 call
- * sites don't need touching again, but it's intentionally a no-op now.
+ * That works in dark mode where `--card` is visibly lighter than
+ * `--background`, but in light mode `--card` (#FFFFFF) sits close enough to
+ * `--background` (#F7F7F7) that cards need a real hairline to stay legible
+ * as distinct surfaces — `.dark` keeps the original no-op.
  * `card-shadow-floating` keeps the real ring+shadow recipe — Sure *does*
  * shadow actually-floating surfaces (dropdowns, popovers, modals).
  */
+/*
+ * KPI card values are bold text-3xl numbers (e.g. "₱543,096") sitting in a
+ * grid-cols-2 mobile layout — on narrow phones a fixed 1.875rem size is wider
+ * than the ~90-130px of content width the card actually has, so digits
+ * overflow past the card edge. This scales continuously with viewport width
+ * instead of jumping at a breakpoint, and caps at the original 1.875rem once
+ * there's enough room (roughly where the grid also grows past 2 columns).
+ */
+.text-kpi-value {
+  font-size: clamp(1.125rem, calc(4vw + 0.2rem), 1.875rem);
+}
+
 .card-shadow {
+  box-shadow: 0 0 0 1px var(--color-alpha-black-100), var(--shadow-xs);
+}
+.dark .card-shadow {
   box-shadow: none;
 }
 .card-shadow-floating {
+  box-shadow:
+    0 0 0 1px var(--color-alpha-black-100),
+    var(--shadow-lg);
+}
+.dark .card-shadow-floating {
   box-shadow:
     0 0 0 1px var(--color-alpha-white-50),
     var(--shadow-lg);
@@ -537,9 +596,13 @@
     inset: 0;
     pointer-events: none;
     z-index: 9998;
-    opacity: 0.025;
+    /* Noise reads harsher against a light canvas than a dark one at the same opacity */
+    opacity: 0.015;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size: 200px 200px;
     background-repeat: repeat;
+  }
+  .dark body::after {
+    opacity: 0.025;
   }
 }

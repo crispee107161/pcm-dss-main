@@ -76,10 +76,10 @@ function PaginationBar({
 
 function TypeBadge({ type }: { type: string }) {
   const colors: Record<string, string> = {
-    Video: 'bg-violet-500/10 text-violet-300 border-violet-500/30',
-    Reel: 'bg-blue-500/10 text-blue-300 border-blue-500/30',
-    Photo: 'bg-red-500/10 text-red-400 border-red-500/30',
-    Link: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
+    Video: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30',
+    Reel: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    Photo: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
+    Link: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30',
   }
   const cls = colors[type] ?? 'bg-gray-100 text-gray-700 border-gray-200'
   return (
@@ -89,9 +89,9 @@ function TypeBadge({ type }: { type: string }) {
 
 function CategoryBadge({ name }: { name: string }) {
   const colors: Record<string, string> = {
-    'Product Showcase': 'bg-red-500/10 text-red-400 border-red-500/30',
-    Testimonial: 'bg-green-500/10 text-green-400 border-green-500/30',
-    'Promotional Offer': 'bg-orange-500/10 text-orange-400 border-orange-500/30',
+    'Product Showcase': 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
+    Testimonial: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30',
+    'Promotional Offer': 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30',
   }
   const cls = colors[name] ?? 'bg-gray-100 text-gray-700 border-gray-200'
   return (
@@ -141,7 +141,7 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
                   href={post.permalink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-red-600 hover:text-red-800 hover:underline text-xs mt-0.5 inline-block"
+                  className="text-primary hover:text-green-700 hover:underline text-xs mt-0.5 inline-block"
                 >
                   View post ↗
                 </a>
@@ -167,7 +167,7 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
               <TableCell className="px-4 py-3">
                 <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <Select name="categoryId" defaultValue={defaultSelectValue}>
-                    <SelectTrigger className="text-xs border-gray-300 focus-visible:ring-red-500 min-w-[140px] h-7" size="sm">
+                    <SelectTrigger className="text-xs border-gray-300 focus-visible:ring-ring min-w-[140px] h-7" size="sm">
                       <SelectValue placeholder="— None —" />
                     </SelectTrigger>
                     <SelectContent>
@@ -180,7 +180,7 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
                   <Button
                     type="submit"
                     size="sm"
-                    className="bg-red-600 hover:bg-red-500 text-white text-xs whitespace-nowrap h-7 px-3"
+                    className="bg-primary hover:bg-green-600 text-white text-xs whitespace-nowrap h-7 px-3"
                   >
                     Save
                   </Button>
@@ -253,7 +253,7 @@ function AdsTable({ ads, categories }: { ads: AdRow[]; categories: Category[] })
               <TableCell className="px-4 py-3">
                 <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <Select name="categoryId" defaultValue={defaultSelectValue}>
-                    <SelectTrigger className="text-xs border-gray-300 focus-visible:ring-red-500 min-w-[140px] h-7" size="sm">
+                    <SelectTrigger className="text-xs border-gray-300 focus-visible:ring-ring min-w-[140px] h-7" size="sm">
                       <SelectValue placeholder="— None —" />
                     </SelectTrigger>
                     <SelectContent>
@@ -266,7 +266,7 @@ function AdsTable({ ads, categories }: { ads: AdRow[]; categories: Category[] })
                   <Button
                     type="submit"
                     size="sm"
-                    className="bg-red-600 hover:bg-red-500 text-white text-xs whitespace-nowrap h-7 px-3"
+                    className="bg-primary hover:bg-green-600 text-white text-xs whitespace-nowrap h-7 px-3"
                   >
                     Save
                   </Button>
@@ -374,8 +374,8 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
           <button
             onClick={handleAutoCategorize}
             disabled={isPending || totalUncategorized === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-500 active:bg-red-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
-            style={{ boxShadow: totalUncategorized > 0 && !isPending ? '0 4px 14px rgba(220,38,38,0.25)' : undefined }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-green-600 active:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            style={{ boxShadow: totalUncategorized > 0 && !isPending ? '0 4px 14px rgba(18,183,106,0.25)' : undefined }}
           >
             {isPending ? (
               <>
@@ -412,7 +412,7 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
             </svg>
           </div>
           <p className="text-sm font-semibold text-gray-700 mb-1">All caught up</p>
-          <p className="text-xs text-gray-400 max-w-[240px]">Every post and ad has been categorized. Use <button onClick={() => handleShowAllChange(true)} className="text-red-500 hover:underline">Show all</button> to review or reassign.</p>
+          <p className="text-xs text-gray-400 max-w-[240px]">Every post and ad has been categorized. Use <button onClick={() => handleShowAllChange(true)} className="text-primary hover:underline">Show all</button> to review or reassign.</p>
         </div>
       ) : (
         <>
@@ -427,7 +427,7 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
                 <p className="text-sm font-semibold text-gray-700 mb-1">All posts categorized</p>
                 <p className="text-xs text-gray-400">
                   Switch to the Ads tab, or{' '}
-                  <button onClick={() => handleShowAllChange(true)} className="text-red-500 hover:underline">show all</button> to review.
+                  <button onClick={() => handleShowAllChange(true)} className="text-primary hover:underline">show all</button> to review.
                 </p>
               </div>
             ) : (
@@ -449,7 +449,7 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
                 <p className="text-sm font-semibold text-gray-700 mb-1">All ads categorized</p>
                 <p className="text-xs text-gray-400">
                   Switch to the Organic Posts tab, or{' '}
-                  <button onClick={() => handleShowAllChange(true)} className="text-red-500 hover:underline">show all</button> to review.
+                  <button onClick={() => handleShowAllChange(true)} className="text-primary hover:underline">show all</button> to review.
                 </p>
               </div>
             ) : (
@@ -467,7 +467,7 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
         Showing <span className="font-medium text-gray-500">{showAll ? 'all items' : 'uncategorized only'}</span> —
         use <span className="font-medium text-gray-500">Show all</span> to review or reassign existing categories.
         Keywords configured in{' '}
-        <a href="/dashboard/marketing/keywords" className="text-red-500 hover:underline">Manage Keywords</a>.
+        <a href="/dashboard/marketing/keywords" className="text-primary hover:underline">Manage Keywords</a>.
       </p>
     </Tabs>
   )

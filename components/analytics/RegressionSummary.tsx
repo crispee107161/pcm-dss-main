@@ -17,15 +17,15 @@ function formatDate(date: Date): string {
 }
 
 const MODEL_LABELS: Record<string, { label: string; color: string; description: string }> = {
-  log_mlr:   { label: 'Log-Linear MLR',   color: 'bg-blue-500/10 text-blue-300',     description: 'Log-transformed predictors capture diminishing returns' },
-  plain_mlr: { label: 'Plain MLR',         color: 'bg-gray-100 text-gray-400',   description: 'Linear relationship between raw metrics and purchases' },
-  poly_mlr:  { label: 'Polynomial MLR',    color: 'bg-violet-500/10 text-violet-300', description: 'Quadratic spend term captures non-linear ad response curves' },
-  ridge_mlr: { label: 'Ridge MLR',         color: 'bg-yellow-500/10 text-yellow-300',   description: 'Regularized to reduce overfitting from correlated predictors' },
+  log_mlr:   { label: 'Log-Linear MLR',   color: 'bg-blue-500/10 text-blue-700 dark:text-blue-300',     description: 'Log-transformed predictors capture diminishing returns' },
+  plain_mlr: { label: 'Plain MLR',         color: 'bg-gray-100 text-gray-600 dark:text-gray-400',   description: 'Linear relationship between raw metrics and purchases' },
+  poly_mlr:  { label: 'Polynomial MLR',    color: 'bg-violet-500/10 text-violet-700 dark:text-violet-300', description: 'Quadratic spend term captures non-linear ad response curves' },
+  ridge_mlr: { label: 'Ridge MLR',         color: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300',   description: 'Regularized to reduce overfitting from correlated predictors' },
 }
 
 function getModelMeta(model: RegressionModel) {
   const type = model.model_type ?? (model.coef_reach != null ? 'plain_mlr' : 'slr')
-  return MODEL_LABELS[type] ?? { label: 'Simple Linear Regression', color: 'bg-gray-100 text-gray-400', description: 'Predicts purchases from spend only' }
+  return MODEL_LABELS[type] ?? { label: 'Simple Linear Regression', color: 'bg-gray-100 text-gray-600 dark:text-gray-400', description: 'Predicts purchases from spend only' }
 }
 
 function buildEquation(model: RegressionModel): string {
@@ -161,18 +161,18 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
         </div>
 
         {isMLR && (
-          <Collapsible open={open} onOpenChange={setOpen} className="bg-blue-500/10 border border-blue-500/30 rounded-xl text-sm text-blue-300">
+          <Collapsible open={open} onOpenChange={setOpen} className="bg-blue-500/10 border border-blue-500/30 rounded-xl text-sm text-blue-700 dark:text-blue-300">
             <CollapsibleTrigger className="w-full px-4 py-3 font-semibold flex items-center justify-between cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-inset rounded-xl">
               <span>How to read the {meta.label} coefficients</span>
               <svg
-                className={`w-4 h-4 text-blue-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 text-blue-700 dark:text-blue-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <ul className="space-y-2 text-xs text-blue-300/80 px-4 pb-4">
+              <ul className="space-y-2 text-xs text-blue-700/90 dark:text-blue-300/80 px-4 pb-4">
                 {model.model_type === 'plain_mlr' ? (
                   <li>Each coefficient reflects the direct change in purchases per unit increase in the raw metric.</li>
                 ) : (

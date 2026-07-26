@@ -1,22 +1,23 @@
 /**
- * Shared Recharts axis/grid/series styling for this app's dark-only canvas.
+ * Shared Recharts axis/grid/series styling, theme-aware via CSS variables.
  * Mirrors `chart-tooltip.ts` — centralizes the values so every chart stays
- * in sync instead of hardcoding light-theme hex per chart function.
+ * in sync instead of hardcoding hex per chart function. Resolved by the
+ * browser from the active `:root`/`.dark` block in globals.css, so charts
+ * repaint automatically when the theme toggles.
  */
 
-// Matches `.border-hairline`'s dark-mode value (--color-alpha-white-200) —
-// a barely-visible line against the near-black chart background.
-export const CHART_GRID_STROKE = 'rgba(255,255,255,0.10)'
+// Same hairline used by `.border-hairline` — barely-visible against the chart background.
+export const CHART_GRID_STROKE = 'var(--border)'
 
-// Matches --color-gray-400 / --muted-foreground — legible but muted axis labels.
-export const CHART_TICK_FILL = '#9E9E9E'
+// Matches --muted-foreground — legible but muted axis labels.
+export const CHART_TICK_FILL = 'var(--muted-foreground)'
 export const chartTick = (fontSize: number) => ({ fontSize, fill: CHART_TICK_FILL })
 
 // Matches --chart-1 through --chart-5 in globals.css.
 export const CHART_COLORS = {
-  green:  '#12B76A',
-  blue:   '#53B1FD',
-  red:    '#ED4E4E',
-  violet: '#A48AFB',
-  orange: '#FDB022',
+  green:  'var(--chart-1)',
+  blue:   'var(--chart-2)',
+  red:    'var(--chart-3)',
+  violet: 'var(--chart-4)',
+  orange: 'var(--chart-5)',
 } as const

@@ -12,7 +12,7 @@ function fmtP(p: number | null): string {
 }
 
 function corrClass(r: number | null): string {
-  if (r === null) return 'text-gray-300'
+  if (r === null) return 'text-neutral-500'
   return r >= 0 ? 'text-green-600' : 'text-red-600'
 }
 
@@ -26,7 +26,7 @@ const METRIC_LABELS: Record<string, string> = {
 export function PrintLaggedCorrelation({ data }: { data: LaggedCorrelationOutput }) {
   if (!data.has_data) {
     return (
-      <p className="text-sm text-gray-300">
+      <p className="text-sm text-neutral-500">
         No ad data available. Upload Ads CSV files to compute time-lagged correlations.
       </p>
     )
@@ -37,10 +37,10 @@ export function PrintLaggedCorrelation({ data }: { data: LaggedCorrelationOutput
   return (
     <div className="space-y-4">
       {data.best_r !== null && bestMetricLabel && (
-        <p className="text-sm text-gray-100">
-          Best lag: <strong className="text-gray-25">{data.best_lag} day{data.best_lag !== 1 ? 's' : ''}</strong>
+        <p className="text-sm text-neutral-700">
+          Best lag: <strong className="text-neutral-900">{data.best_lag} day{data.best_lag !== 1 ? 's' : ''}</strong>
           {' '}— purchases peak {data.best_lag} day{data.best_lag !== 1 ? 's' : ''} after ad metrics are recorded.
-          Strongest predictor: <strong className="text-gray-25">{bestMetricLabel}</strong> (r = {fmtR(data.best_r)}, p = {fmtP(data.best_p)})
+          Strongest predictor: <strong className="text-neutral-900">{bestMetricLabel}</strong> (r = {fmtR(data.best_r)}, p = {fmtP(data.best_p)})
           {data.best_p !== null && data.best_p < 0.05 ? ' — statistically significant.' : ' — not significant at α=0.05.'}
         </p>
       )}
@@ -65,15 +65,15 @@ export function PrintLaggedCorrelation({ data }: { data: LaggedCorrelationOutput
                 <td className={`${reportTdRight} hidden sm:table-cell`}>{row.n}</td>
                 <td className={reportTdRight}>
                   <span className={corrClass(row.reach_r)}>{fmtR(row.reach_r)}</span>
-                  <span className="text-gray-400 text-xs ml-1">p={fmtP(row.reach_p)}</span>
+                  <span className="text-neutral-400 text-xs ml-1">p={fmtP(row.reach_p)}</span>
                 </td>
                 <td className={reportTdRight}>
                   <span className={corrClass(row.messaging_r)}>{fmtR(row.messaging_r)}</span>
-                  <span className="text-gray-400 text-xs ml-1">p={fmtP(row.messaging_p)}</span>
+                  <span className="text-neutral-400 text-xs ml-1">p={fmtP(row.messaging_p)}</span>
                 </td>
                 <td className={reportTdRight}>
                   <span className={corrClass(row.spend_r)}>{fmtR(row.spend_r)}</span>
-                  <span className="text-gray-400 text-xs ml-1">p={fmtP(row.spend_p)}</span>
+                  <span className="text-neutral-400 text-xs ml-1">p={fmtP(row.spend_p)}</span>
                 </td>
               </tr>
             ))}
@@ -81,7 +81,7 @@ export function PrintLaggedCorrelation({ data }: { data: LaggedCorrelationOutput
         </table>
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-neutral-400">
         A lag of N days means: &ldquo;do today&rsquo;s ad metrics predict purchases N days from now?&rdquo; Green = positive relationship, red = negative.
       </p>
     </div>

@@ -5,29 +5,28 @@ import type { ReactNode } from 'react'
  * Styled after Sure's plain print report: white page, black hairlines, uppercase
  * micro-labels, and color reserved for positive/negative polarity only.
  *
- * IMPORTANT: this app's `gray-*` scale is inverted (gray-25 = near-black,
- * gray-900 = near-white) so it reads correctly on the app's dark dashboard.
- * These components render on a WHITE page, so they deliberately use the LOW
- * end of the scale (gray-25/100/200/300) for text and the HIGH end
- * (gray-600/700) for hairlines — the opposite of how the rest of the app
- * (dark background) uses these same tokens.
+ * These always render on a WHITE page regardless of the app's active theme
+ * (print output shouldn't change with the viewer's light/dark preference), so
+ * they deliberately use Tailwind's untouched default `neutral-*` scale
+ * instead of this app's theme-dependent `gray-*` dual ramp — the same
+ * approach `app/docs/page.tsx` uses for its own standalone light page.
  */
 
 export function ReportHeader({
   title, periodLabel, generatedLabel,
 }: { title: string; periodLabel: string; generatedLabel: string }) {
   return (
-    <div className="pb-4 border-b-2 border-gray-25">
-      <h1 className="text-2xl font-bold text-gray-25 tracking-tight">{title}</h1>
-      <p className="text-sm text-gray-200 mt-1">{periodLabel}</p>
-      <p className="text-xs text-gray-400 mt-1">{generatedLabel}</p>
+    <div className="pb-4 border-b-2 border-neutral-900">
+      <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">{title}</h1>
+      <p className="text-sm text-neutral-600 mt-1">{periodLabel}</p>
+      <p className="text-xs text-neutral-400 mt-1">{generatedLabel}</p>
     </div>
   )
 }
 
 export function FrTag({ code }: { code: string }) {
   return (
-    <span className="ml-2 align-middle text-[10px] font-medium text-gray-400 border border-gray-600 rounded px-1.5 py-0.5 uppercase tracking-wide">
+    <span className="ml-2 align-middle text-[10px] font-medium text-neutral-400 border border-neutral-300 rounded px-1.5 py-0.5 uppercase tracking-wide">
       {code}
     </span>
   )
@@ -38,7 +37,7 @@ export function ReportSection({
 }: { title: string; frCode?: string; children: ReactNode; noBreak?: boolean }) {
   return (
     <section className={noBreak ? 'print-no-break' : undefined}>
-      <h2 className="text-xs font-bold text-gray-25 uppercase tracking-wider pb-2 border-b border-gray-700">
+      <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider pb-2 border-b border-neutral-100">
         {title}{frCode && <FrTag code={frCode} />}
       </h2>
       <div className="pt-4">{children}</div>
@@ -51,13 +50,13 @@ export type MetricTone = 'positive' | 'negative' | 'neutral'
 const toneValueClass: Record<MetricTone, string> = {
   positive: 'text-green-600',
   negative: 'text-red-600',
-  neutral: 'text-gray-25',
+  neutral: 'text-neutral-900',
 }
 
 const toneSubClass: Record<MetricTone, string> = {
   positive: 'text-green-600',
   negative: 'text-red-600',
-  neutral: 'text-gray-400',
+  neutral: 'text-neutral-400',
 }
 
 export function MetricStat({
@@ -65,7 +64,7 @@ export function MetricStat({
 }: { label: string; value: string; sub?: string; tone?: MetricTone }) {
   return (
     <div>
-      <p className="text-[11px] text-gray-200 uppercase tracking-wider">{label}</p>
+      <p className="text-[11px] text-neutral-600 uppercase tracking-wider">{label}</p>
       <p className={`text-xl font-bold mt-1 ${toneValueClass[tone]}`}>{value}</p>
       {sub && <p className={`text-xs mt-0.5 ${toneSubClass[tone]}`}>{sub}</p>}
     </div>
@@ -83,21 +82,21 @@ export function ReportMetricRow({
 }
 
 // Plain table cell styles — bold hairline under the header, thin dividers between rows.
-export const reportTh = 'text-left text-[11px] font-semibold text-gray-200 uppercase tracking-wider px-3 py-2 border-b-2 border-gray-25'
+export const reportTh = 'text-left text-[11px] font-semibold text-neutral-600 uppercase tracking-wider px-3 py-2 border-b-2 border-neutral-900'
 export const reportThRight = `${reportTh} text-right`
-export const reportTd = 'px-3 py-2.5 border-t border-gray-700 text-gray-100'
+export const reportTd = 'px-3 py-2.5 border-t border-neutral-100 text-neutral-700'
 export const reportTdRight = `${reportTd} text-right`
-export const reportTotalRow = 'border-t-2 border-gray-25 font-semibold'
+export const reportTotalRow = 'border-t-2 border-neutral-900 font-semibold'
 
 export function ReportKeyValueList({
   items,
 }: { items: Array<{ label: string; value: ReactNode }> }) {
   return (
-    <div className="divide-y divide-gray-700">
+    <div className="divide-y divide-neutral-100">
       {items.map(({ label, value }) => (
         <div key={label} className="flex justify-between items-center py-2 text-sm">
-          <span className="text-gray-200">{label}</span>
-          <span className="font-medium text-gray-25">{value}</span>
+          <span className="text-neutral-600">{label}</span>
+          <span className="font-medium text-neutral-900">{value}</span>
         </div>
       ))}
     </div>
@@ -105,5 +104,5 @@ export function ReportKeyValueList({
 }
 
 export function ReportFooter({ children }: { children: ReactNode }) {
-  return <p className="text-center text-xs text-gray-400 pt-6 pb-2">{children}</p>
+  return <p className="text-center text-xs text-neutral-400 pt-6 pb-2">{children}</p>
 }

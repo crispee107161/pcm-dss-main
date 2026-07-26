@@ -162,7 +162,7 @@ export default async function OwnerPrintReportPage() {
                       <tr key={i}>
                         <td className={reportTd}>{i + 1}</td>
                         <td className={`${reportTd} font-medium max-w-[200px] truncate`}>{ad.ad_name}</td>
-                        <td className={`${reportTd} text-gray-300 whitespace-nowrap hidden sm:table-cell`}>{formatDate(ad.reporting_starts)}</td>
+                        <td className={`${reportTd} text-neutral-500 whitespace-nowrap hidden sm:table-cell`}>{formatDate(ad.reporting_starts)}</td>
                         <td className={reportTdRight}>{formatPHP(ad.amount_spent)}</td>
                         <td className={`${reportTdRight} text-green-600 font-semibold`}>{pur}</td>
                         <td className={`${reportTdRight} hidden sm:table-cell`}>{pur > 0 ? formatPHP(ad.amount_spent / pur) : '—'}</td>
@@ -226,7 +226,7 @@ export default async function OwnerPrintReportPage() {
 
         {latestModel && equation && (
           <ReportSection title="Predictive Model">
-            <p className="font-mono text-sm text-gray-100 border border-gray-700 rounded-lg px-4 py-3 mb-4 break-all">{equation}</p>
+            <p className="font-mono text-sm text-neutral-700 border border-neutral-200 rounded-lg px-4 py-3 mb-4 break-all">{equation}</p>
             <ReportMetricRow items={[
               { label: 'R²', value: `${(latestModel.r_squared * 100).toFixed(1)}%` },
               { label: 'RSE', value: latestModel.residual_std_error?.toFixed(4) ?? '—' },
@@ -238,7 +238,7 @@ export default async function OwnerPrintReportPage() {
 
         {dailyMetrics.length >= 7 && (
           <ReportSection title="7-Day Page Views Forecast">
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-neutral-400 mb-4">
               H-W level: {viewsForecast.lastLevel.toLocaleString()} views/day{viewsForecast.method === 'holt-winters' ? ' · Triple exp. smoothing' : ' · Double exp. smoothing'}
             </p>
             <MovingAverageForecastChart data={forecastChartData} />
@@ -276,42 +276,42 @@ export default async function OwnerPrintReportPage() {
         />
 
         <ReportSection title="Key Insights">
-          <ul className="space-y-2 text-sm text-gray-100">
+          <ul className="space-y-2 text-sm text-neutral-700">
             {cpa && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                Average cost per purchase: <strong className="text-gray-25">{formatPHP(cpa)}</strong>
+                <span className="text-neutral-400 mt-0.5">—</span>
+                Average cost per purchase: <strong className="text-neutral-900">{formatPHP(cpa)}</strong>
               </li>
             )}
             {lagData.best_r !== null && lagData.best_metric && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                Purchases peak <strong className="text-gray-25">{lagData.best_lag} day{lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics (strongest: {lagData.best_metric}, r = {lagData.best_r.toFixed(4)}).
+                <span className="text-neutral-400 mt-0.5">—</span>
+                Purchases peak <strong className="text-neutral-900">{lagData.best_lag} day{lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics (strongest: {lagData.best_metric}, r = {lagData.best_r.toFixed(4)}).
               </li>
             )}
             {latestModel && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                {isMLR ? 'MLR' : 'Regression'} model explains <strong className="text-gray-25">{(latestModel.r_squared * 100).toFixed(1)}%</strong> of purchase variance
+                <span className="text-neutral-400 mt-0.5">—</span>
+                {isMLR ? 'MLR' : 'Regression'} model explains <strong className="text-neutral-900">{(latestModel.r_squared * 100).toFixed(1)}%</strong> of purchase variance
                 {isMLR && latestModel.residual_std_error != null ? ` with ±${(latestModel.residual_std_error * 1.2816).toFixed(1)}-purchase 80% PI.` : '.'}
               </li>
             )}
             {allPosts.length > 0 && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                Organic posts avg engagement: <strong className="text-gray-25">{avgEngagement.toFixed(2)}%</strong> ({allPosts.length} posts).
+                <span className="text-neutral-400 mt-0.5">—</span>
+                Organic posts avg engagement: <strong className="text-neutral-900">{avgEngagement.toFixed(2)}%</strong> ({allPosts.length} posts).
               </li>
             )}
             {totalImpressions > 0 && totalLinkClicks > 0 && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                Link CTR: <strong className="text-gray-25">{((totalLinkClicks / totalImpressions) * 100).toFixed(2)}%</strong>
+                <span className="text-neutral-400 mt-0.5">—</span>
+                Link CTR: <strong className="text-neutral-900">{((totalLinkClicks / totalImpressions) * 100).toFixed(2)}%</strong>
               </li>
             )}
             {viewsForecast.forecast.length > 0 && (
               <li className="flex gap-2">
-                <span className="text-gray-400 mt-0.5">—</span>
-                7-day page views forecast baseline: <strong className="text-gray-25">{viewsForecast.lastLevel.toLocaleString()}/day</strong> (Holt-Winters level).
+                <span className="text-neutral-400 mt-0.5">—</span>
+                7-day page views forecast baseline: <strong className="text-neutral-900">{viewsForecast.lastLevel.toLocaleString()}/day</strong> (Holt-Winters level).
               </li>
             )}
           </ul>

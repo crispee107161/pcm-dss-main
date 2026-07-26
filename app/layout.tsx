@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { ThemeProvider } from "next-themes";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
@@ -18,9 +19,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn("h-full", "font-sans", geist.variable, geistMono.variable)}>
+    <html lang="en" className={cn("h-full", "font-sans", geist.variable, geistMono.variable)} suppressHydrationWarning>
       <body className="min-h-full bg-background antialiased" suppressHydrationWarning>
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

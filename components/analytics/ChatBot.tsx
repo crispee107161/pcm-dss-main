@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { sendChatMessage, type ChatMessage } from '@/actions/chat'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { MessageCircleIcon } from 'lucide-animated'
+import { MessageCircleMoreIcon, type MessageCircleMoreIconHandle } from '@/components/icons/message-circle-more-icon'
 
 const SUGGESTIONS = [
   'Which ad had the best CPA?',
@@ -19,12 +19,44 @@ export default function ChatBot() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const iconRef = useRef<MessageCircleMoreIconHandle>(null)
+  const [scrollHidden, setScrollHidden] = useState(false)
 
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [open])
+
+  // Hide the floating launcher while actively scrolling down so it doesn't sit
+  // on top of card content mid-scroll — it reappears on scroll-up or once idle.
+  useEffect(() => {
+    let lastY = window.scrollY
+    let ticking = false
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        const y = window.scrollY
+        const delta = y - lastY
+        if (Math.abs(delta) > 4) {
+          setScrollHidden(delta > 0 && y > 80)
+          lastY = y
+        }
+        ticking = false
+      })
+      if (idleTimer) clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => setScrollHidden(false), 600)
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (idleTimer) clearTimeout(idleTimer)
+    }
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -60,7 +92,7 @@ export default function ChatBot() {
 
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-black flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center flex-shrink-0">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15M14.25 3.104c.251.023.501.05.75.082M19.8 15l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.607L5 14.5m14.8.5l1.196 4.783a1 1 0 01-.985 1.217H3.99a1 1 0 01-.985-1.217L4.2 15m10.6 0H9.2" />
@@ -68,7 +100,6 @@ export default function ChatBot() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-semibold">PCM Assistant</p>
-              <p className="text-gray-400 text-xs">Powered by Groq · Llama 3</p>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -93,7 +124,7 @@ export default function ChatBot() {
                     <button
                       key={s}
                       onClick={() => handleSend(s)}
-                      className="animate-fade-slide-up text-left text-xs text-gray-600 bg-gray-50 hover:bg-red-500/10 hover:text-gray-800 border border-gray-200 hover:border-red-500/30 rounded-xl px-3 py-2 transition-[background-color,border-color,color]"
+                      className="animate-fade-slide-up text-left text-xs text-gray-600 bg-gray-50 hover:bg-neutral-500/10 hover:text-gray-800 border border-gray-200 hover:border-neutral-400/40 rounded-xl px-3 py-2 transition-[background-color,border-color,color]"
                       style={{ animationDelay: `${i * 60}ms` }}
                     >
                       {s}
@@ -107,7 +138,7 @@ export default function ChatBot() {
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-red-600 text-white rounded-br-sm'
+                    ? 'bg-secondary text-secondary-foreground rounded-br-sm'
                     : 'bg-gray-100 text-gray-800 rounded-bl-sm'
                 }`}>
                   {msg.text}
@@ -138,12 +169,12 @@ export default function ChatBot() {
               onKeyDown={handleKeyDown}
               placeholder="Ask about your data..."
               disabled={loading}
-              className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 focus-visible:border-transparent disabled:opacity-50 placeholder-gray-400 transition-[border-color]"
+              className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:border-transparent disabled:opacity-50 placeholder-gray-400 transition-[border-color]"
             />
             <button
               onClick={() => handleSend()}
               disabled={!input.trim() || loading}
-              className="w-9 h-9 flex items-center justify-center bg-red-600 hover:bg-red-500 active:bg-red-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl transition-[background-color] flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+              className="w-9 h-9 flex items-center justify-center bg-neutral-700 hover:bg-neutral-600 active:bg-neutral-800 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl transition-[background-color] flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -153,31 +184,24 @@ export default function ChatBot() {
         </div>
       )}
 
-      {/* Floating button */}
+      {/* Floating button — just the icon, no button-shaped background */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="fixed bottom-4 right-4 z-[60] flex items-center justify-center bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 print:hidden"
+        onMouseEnter={() => iconRef.current?.startAnimation()}
+        onMouseLeave={() => iconRef.current?.stopAnimation()}
+        className="fixed bottom-5 right-5 z-[60] flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 print:hidden
+          fill-neutral-400 hover:fill-neutral-300 active:fill-neutral-500 stroke-neutral-700
+          dark:fill-neutral-700 dark:hover:fill-neutral-600 dark:active:fill-neutral-800 dark:stroke-white"
         style={{
-          width: 52,
-          height: 52,
-          boxShadow: '0 4px 16px rgba(220,38,38,0.4), 0 1px 4px rgba(255,255,255,0.1)',
-          transition: 'background-color 0.15s, box-shadow 0.15s, transform 0.15s',
+          filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.3)) drop-shadow(0 0 1px rgba(0,0,0,0.25))',
+          transition: 'fill 0.15s, filter 0.15s, transform 0.2s, opacity 0.2s',
+          transform: scrollHidden && !open ? 'translateY(80px)' : 'translateY(0)',
+          opacity: scrollHidden && !open ? 0 : 1,
+          pointerEvents: scrollHidden && !open ? 'none' : 'auto',
         }}
         title="AI Assistant"
       >
-        {open ? (
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            style={{ transition: 'transform 0.2s cubic-bezier(0.22,1,0.36,1)', transform: 'rotate(90deg)' }}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <MessageCircleIcon size={20} className="text-white" />
-        )}
+        <MessageCircleMoreIcon ref={iconRef} size={40} />
       </button>
     </>
   )

@@ -49,8 +49,8 @@ export default function UploadForm() {
       <div
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
           isDragging
-            ? 'border-red-500 bg-red-500/10'
-            : 'border-gray-300 hover:border-red-400 hover:bg-gray-50'
+            ? 'border-primary bg-green-500/10'
+            : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
         }`}
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
@@ -66,7 +66,7 @@ export default function UploadForm() {
         </div>
         <p className="text-gray-600 font-medium text-sm">
           Drag & drop CSV files here, or{' '}
-          <span className="text-red-400">click to browse</span>
+          <span className="text-primary">click to browse</span>
         </p>
         <p className="text-gray-400 text-xs mt-1">
           Select multiple files at once — Ads, Posts, Page Metrics, and more
@@ -135,7 +135,7 @@ export default function UploadForm() {
                         {UPLOAD_TYPE_LABELS[entry.result.upload_type] ?? entry.result.upload_type}
                       </Badge>
                       {entry.result.retrained && (
-                        <Badge className="bg-red-500/10 text-red-400 border-red-500/30 font-medium">
+                        <Badge className="bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30 font-medium">
                           Model retrained
                         </Badge>
                       )}
@@ -169,7 +169,7 @@ export default function UploadForm() {
         <Button
           onClick={runBatchUpload}
           disabled={isPending || pendingCount === 0}
-          className="bg-red-700 hover:bg-red-600 text-white px-4 gap-2"
+          className="bg-primary hover:bg-green-600 text-white px-4 gap-2"
         >
           {isPending ? (
             <>
@@ -228,7 +228,7 @@ export default function UploadForm() {
                 </p>
               )}
               {retrainCount > 0 && (
-                <p className="text-xs text-red-400 font-medium mt-1">
+                <p className="text-xs text-violet-700 dark:text-violet-400 font-medium mt-1">
                   Regression model retrained {retrainCount} time{retrainCount !== 1 ? 's' : ''}
                 </p>
               )}
