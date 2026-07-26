@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-26T00:00:00Z",
+  "title": "Design System: PC Merchandise DSS",
+  "extensions": {
+    "colorMeta": {
+      "background": { "role": "neutral", "displayName": "Canvas Black", "canonical": "oklch(0% 0 0)", "tonalRamp": ["#0B0B0B", "#171717", "#242424", "#363636", "#5C5C5C", "#737373", "#9E9E9E", "#CFCFCF"] },
+      "card": { "role": "neutral", "displayName": "Card Charcoal", "canonical": "oklch(15% 0 0)", "tonalRamp": ["#0B0B0B", "#171717", "#242424", "#363636", "#5C5C5C", "#737373", "#9E9E9E", "#CFCFCF"] },
+      "primary-gain": { "role": "primary", "displayName": "Gain Green", "canonical": "oklch(68% 0.17 155)", "tonalRamp": ["#054F31", "#05603A", "#078C52", "#10A861", "#12B76A", "#32D583", "#6CE9A6", "#A6F4C5"] },
+      "destructive-red": { "role": "secondary", "displayName": "Destructive / Identity Red", "canonical": "oklch(63% 0.21 25)", "tonalRamp": ["#7E0707", "#A40E0E", "#C91313", "#EC2222", "#F13636", "#ED4E4E", "#F88C86", "#FEB9B3"] },
+      "chart-blue": { "role": "chart", "displayName": "Chart Blue (legend-only)", "canonical": "oklch(72% 0.14 240)", "tonalRamp": ["#194185", "#1849A9", "#175CD3", "#1570EF", "#2E90FA", "#53B1FD", "#84CAFF", "#B2DDFF"] },
+      "chart-violet": { "role": "chart", "displayName": "Chart Violet (legend-only)", "canonical": "oklch(63% 0.19 300)", "tonalRamp": ["#6927DA", "#7839EE", "#875BF7", "#A48AFB", "#C3B5FD", "#DDD6FE", "#ECE9FE", "#F5F3FF"] },
+      "chart-amber": { "role": "chart", "displayName": "Chart Amber (legend-only)", "canonical": "oklch(80% 0.15 75)", "tonalRamp": ["#7A2E0E", "#93370D", "#B54708", "#DC6803", "#F79009", "#FDB022", "#FEC84B", "#FEDF89"] },
+      "foreground": { "role": "neutral", "displayName": "Foreground White", "canonical": "oklch(98% 0 0)", "tonalRamp": ["#FAFAFA"] },
+      "muted-foreground": { "role": "neutral", "displayName": "Muted Gray", "canonical": "oklch(66% 0 0)", "tonalRamp": ["#9E9E9E"] },
+      "border-hairline": { "role": "neutral", "displayName": "Hairline White", "canonical": "rgba(255,255,255,0.10)", "tonalRamp": ["rgba(255,255,255,0.03)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.08)", "rgba(255,255,255,0.10)", "rgba(255,255,255,0.15)", "rgba(255,255,255,0.20)", "rgba(255,255,255,0.30)", "rgba(255,255,255,0.50)"] }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body", "purpose": "Default UI text, table cells, form labels." },
+      "label": { "displayName": "Label", "purpose": "Section headers, role badges, chips — uppercase, tracked." },
+      "mono": { "displayName": "Mono", "purpose": "Numeric/data values where column alignment matters." }
+    },
+    "shadows": [
+      { "name": "card-shadow", "value": "none", "purpose": "Resting cards — intentionally a no-op; grouping comes from fill color." },
+      { "name": "card-shadow-floating", "value": "0 0 0 1px rgba(255,255,255,0.05), 0px 20px 24px -4px rgba(11,11,11,0.06)", "purpose": "Dropdowns, popovers, the sidebar user-menu card — genuinely floating surfaces." },
+      { "name": "shadow-border-md", "value": "0px 4px 8px -2px rgba(11,11,11,0.06), 0px 0px 0px 1px rgba(255,255,255,0.05)", "purpose": "Hairline ring + soft drop-shadow for elements needing a defined edge without looking shadow-decorated." }
+    ],
+    "motion": [
+      { "name": "sidebar-transition", "value": "cubic-bezier(0.4, 0, 0.2, 1), 350ms", "purpose": "Sidebar width + main-content marginLeft, moved in lockstep." },
+      { "name": "text-fade-transition", "value": "ease-in-out, 200ms", "purpose": "Nav label / section header / user-menu text opacity, synced to the sidebar width animation." },
+      { "name": "duration-standard", "value": "200ms", "purpose": "Default hover/focus color and transform transitions." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action button — the only place solid green fills a control.",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary { background: #12B76A; color: #0B0B0B; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; border: none; transition: background-color 0.2s; } .ds-btn-primary:hover { background: #0FA05C; } .ds-btn-primary:focus-visible { outline: 2px solid #12B76A; outline-offset: 2px; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Sign out / delete actions.",
+      "html": "<button class=\"ds-btn-destructive\">Sign out</button>",
+      "css": ".ds-btn-destructive { background: #ED4E4E; color: #FAFAFA; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; border: none; transition: background-color 0.2s; } .ds-btn-destructive:hover { background: #C91313; } .ds-btn-destructive:focus-visible { outline: 2px solid #ED4E4E; outline-offset: 2px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat resting card — separates from canvas via fill, not shadow.",
+      "html": "<div class=\"ds-card\">Card content</div>",
+      "css": ".ds-card { background: #171717; color: #FAFAFA; border-radius: 10px; padding: 16px; box-shadow: none; }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Active nav link — filled background plus a 2px red identity-accent left bar.",
+      "html": "<a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><span class=\"ds-nav-bar\"></span>Dashboard</a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #d4d4d8; text-decoration: none; position: relative; transition: background-color 0.15s, color 0.15s; } .ds-nav-item:hover { background: #18181b; color: #fff; } .ds-nav-item-active { background: #27272A; color: #fff; } .ds-nav-bar { position: absolute; left: -12px; top: 4px; bottom: 4px; width: 2px; border-radius: 0 4px 4px 0; background: #F13636; }"
+    },
+    {
+      "name": "Collapsible Sidebar Rail",
+      "kind": "custom",
+      "refersTo": "sidebar-rail",
+      "description": "Signature component: hover-to-expand icon rail (80px to 240px) with text fading in lockstep, border-r crossing the TopBar's border-b at the shared corner.",
+      "html": "<div class=\"ds-sidebar-rail\"><div class=\"ds-sidebar-logo\">◆ <span class=\"ds-sidebar-label\">PC Merchandise</span></div></div>",
+      "css": ".ds-sidebar-rail { width: 80px; height: 100%; background: #0B0B0B; border-right: 1px solid rgba(255,255,255,0.10); transition: width 0.35s cubic-bezier(0.4,0,0.2,1); } .ds-sidebar-rail:hover { width: 240px; } .ds-sidebar-logo { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 16px; color: #FAFAFA; font-weight: 700; font-size: 14px; overflow: hidden; } .ds-sidebar-label { opacity: 0; transition: opacity 0.2s ease-in-out; } .ds-sidebar-rail:hover .ds-sidebar-label { opacity: 1; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Trading Terminal",
+    "overview": "This is a near-black canvas built for someone reading numbers all day, not a first-touch marketing surface. Every screen exists to answer one question fast: what's driving ad and page performance, and what should a Marketing Manager, Sales Director, or Business Owner do next. Green (#12B76A) reads as gain, red (#ED4E4E) as loss or danger, exactly like a terminal's up/down semantics, with the flat #0B0B0B canvas and #171717 card layer doing all the depth work instead of shadows. This system explicitly rejects the generic SaaS/AI-slop dashboard playbook: no purple/indigo gradients, no default Tailwind blue as a primary, no hero-metric stat-card clichés, no side-stripe colored borders, no gradient text, no glassmorphism. It is a direct, hand-ported adaptation of Sure's (app.sure.am) production design system, not a fresh invention — consistency with that source wins over novelty.",
+    "keyCharacteristics": [
+      "Dark-only canvas (#0B0B0B), no light mode exists or is planned.",
+      "Green (#12B76A) is the only positive/primary action color; red is reserved for destructive actions and one deliberate identity-accent use (avatars, active-nav indicator).",
+      "Flat by default: cards separate from the canvas via a lighter fill (#171717), not shadows or borders.",
+      "Single typeface (Geist + Geist Mono) throughout; no display/body pairing.",
+      "Hairline borders (rgba(255,255,255,0.10)) instead of visible strokes for structural separation."
+    ],
+    "rules": [
+      { "name": "The Terminal Semantics Rule", "body": "Green means gain/go/primary. Red means loss/destructive, with the one confined exception of sidebar identity chrome (avatars, active indicator). Never introduce a third color as a competing primary.", "section": "colors" },
+      { "name": "The No-Blue-No-Purple Rule", "body": "Tailwind's default blue-*/indigo-*/violet-* scale is never used as a primary or accent. Chart blue and violet exist only inside multi-series chart legends, never as UI chrome.", "section": "colors" },
+      { "name": "The One Typeface Rule", "body": "Geist for everything, including headings. Do not introduce a second sans-serif for hierarchy — use weight/size instead.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. A shadow only appears as a response to the surface floating above the page (dropdown, popover, modal, drawer) — never as ambient decoration on a resting card.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use #12B76A green as the only primary/positive action color.",
+      "Do keep cards flat (box-shadow: none) at rest; reserve shadow for genuinely floating surfaces.",
+      "Do use hairline borders (rgba(255,255,255,0.10)) for structural separation instead of visible strokes.",
+      "Do give every interactive element explicit hover, focus-visible, and active states.",
+      "Do animate state changes (sidebar width, text opacity, dropdown open) together, not independently.",
+      "Do keep red confined to destructive actions plus the sidebar's identity chrome — its two roles, and no more."
+    ],
+    "donts": [
+      "Don't use Tailwind's default blue-*/indigo-*/violet-* as a primary or accent color.",
+      "Don't use a colored border-left/border-right greater than 1px as a decorative accent stripe.",
+      "Don't use gradient text.",
+      "Don't use flat shadow-md as ambient decoration on a resting card.",
+      "Don't use transition-all.",
+      "Don't introduce a second sans-serif for hierarchy.",
+      "Don't ship generic SaaS/AI-slop patterns: hero-metric stat cards, identical repeated card grids, glassmorphism as decoration, tiny uppercase tracked eyebrows above every section."
+    ]
+  }
+}

@@ -87,7 +87,7 @@ function formatDate(d: string | null) {
 function SLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 mb-4">
-      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">{children}</p>
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">{children}</p>
       <div className="flex-1 h-px bg-gradient-to-r from-red-100/70 to-transparent" />
     </div>
   )
@@ -96,14 +96,14 @@ function SLabel({ children }: { children: React.ReactNode }) {
 function DeltaBadge({ value, label }: { value: number | null; label: string }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] mb-2">{label}</p>
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] mb-2">{label}</p>
       {value === null
-        ? <span className="text-slate-400 text-xs">—</span>
+        ? <span className="text-gray-400 text-xs">—</span>
         : (
           <span className={`inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2.5 py-0.5 border ${
             value >= 0
-              ? 'bg-emerald-50 text-[var(--status-positive)] border-emerald-100'
-              : 'bg-red-50 text-[var(--status-negative)] border-red-100'
+              ? 'bg-green-500/10 text-[var(--status-positive)] border-green-500/30'
+              : 'bg-red-500/10 text-[var(--status-negative)] border-red-500/30'
           }`}>
             {value >= 0 ? '▲' : '▼'} {Math.abs(value).toFixed(1)}% vs prev period
           </span>
@@ -114,16 +114,16 @@ function DeltaBadge({ value, label }: { value: number | null; label: string }) {
 
 function RankBadge({ rank }: { rank: number }) {
   const base = 'inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold'
-  if (rank === 1) return <span className={`${base} bg-amber-400 text-white`}>1</span>
-  if (rank === 2) return <span className={`${base} bg-slate-300 text-slate-800`}>2</span>
-  if (rank === 3) return <span className={`${base} bg-orange-300 text-white`}>3</span>
-  return <span className={`${base} bg-slate-100 text-slate-500`}>{rank}</span>
+  if (rank === 1) return <span className={`${base} bg-yellow-400 text-white`}>1</span>
+  if (rank === 2) return <span className={`${base} bg-gray-300 text-gray-800`}>2</span>
+  if (rank === 3) return <span className={`${base} bg-orange-600 text-white`}>3</span>
+  return <span className={`${base} bg-gray-100 text-gray-500`}>{rank}</span>
 }
 
 const cardStyle = {
-  boxShadow: '0 0 0 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06), 0 0 40px rgba(220,38,38,0.02)',
+  boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 1px 3px rgba(255,255,255,0.08), 0 4px 16px rgba(255,255,255,0.06), 0 0 40px rgba(220,38,38,0.02)',
 }
-const cardClass = 'bg-white rounded-2xl border border-slate-200/70'
+const cardClass = 'bg-card rounded-2xl card-shadow'
 
 // ── Tab definitions ──────────────────────────────────────────────────────────
 
@@ -162,25 +162,25 @@ export default function SalesDashboardTabs({
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-5">
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200/60">
+      <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
         <div>
-          <h1 className="text-xl font-extrabold font-heading text-slate-900 tracking-tight">Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Campaign performance and What-If scenarios</p>
+          <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="text-gray-400 text-sm mt-0.5">Campaign performance and What-If scenarios</p>
         </div>
         <div className="text-right hidden sm:block">
-          <p className="text-xs text-slate-400">Welcome back</p>
-          <p className="text-sm font-bold text-slate-800">{displayName}</p>
+          <p className="text-xs text-gray-400">Welcome back</p>
+          <p className="text-sm font-bold text-gray-800">{displayName}</p>
         </div>
       </div>
 
       {/* Tab bar */}
       <Tabs value={activeTab} onValueChange={(v) => { if (v) setActiveTab(v as TabId) }} className="space-y-5">
-        <TabsList className="flex gap-1 bg-slate-100/70 rounded-xl p-1 h-auto w-full">
+        <TabsList className="flex gap-1 bg-gray-100/70 rounded-xl p-1 h-auto w-full">
           {TABS.map(tab => (
             <TabsTrigger
               key={tab.id}
               value={tab.id}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold data-active:bg-white data-active:text-slate-900 data-active:shadow-sm text-slate-500 hover:text-slate-700 hover:bg-white/50 focus-visible:ring-red-500"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold data-active:bg-white data-active:text-black data-active:shadow-sm text-gray-500 hover:text-gray-700 hover:bg-white/50 focus-visible:ring-red-500"
             >
               <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={tab.icon} />
@@ -194,7 +194,7 @@ export default function SalesDashboardTabs({
         <TabsContent value="overview" className="animate-fade-slide-up space-y-5">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">Monthly KPI Summary</p>
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">Monthly KPI Summary</p>
               <div className="flex-1 h-px bg-gradient-to-r from-red-100/70 to-transparent" />
             </div>
             <MonthlyKpiCards data={monthlyKpis} />
@@ -211,12 +211,12 @@ export default function SalesDashboardTabs({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className={`${cardClass} p-5`} style={cardStyle}>
                 <SLabel>Ad Spend vs. Purchases</SLabel>
-                <p className="text-xs text-slate-400 -mt-2 mb-4">Total spend (PHP) and resulting purchases per period</p>
+                <p className="text-xs text-gray-400 -mt-2 mb-4">Total spend (PHP) and resulting purchases per period</p>
                 <SpendPurchasesChart data={adTrends} />
               </div>
               <div className={`${cardClass} p-5`} style={cardStyle}>
                 <SLabel>Ad Reach by Month</SLabel>
-                <p className="text-xs text-slate-400 -mt-2 mb-4">Total unique reach from paid ads</p>
+                <p className="text-xs text-gray-400 -mt-2 mb-4">Total unique reach from paid ads</p>
                 <ReachTrendChart data={adTrends} />
               </div>
             </div>
@@ -227,36 +227,36 @@ export default function SalesDashboardTabs({
         <TabsContent value="campaigns" className="animate-fade-slide-up space-y-5">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className={`${cardClass} overflow-hidden`} style={cardStyle}>
-              <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">Top Campaigns by Spend</p>
-                <div className="flex-1 h-px bg-slate-100" />
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+                <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top Campaigns by Spend</p>
+                <div className="flex-1 h-px bg-gray-100" />
               </div>
               {topSpend.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                  <svg className="w-8 h-8 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-8 h-8 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-sm font-semibold text-slate-500 mb-0.5">No spend data</p>
-                  <p className="text-xs text-slate-400">Upload an Ads CSV to see top campaigns.</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-0.5">No spend data</p>
+                  <p className="text-xs text-gray-400">Upload an Ads CSV to see top campaigns.</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50/70">
-                      <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.1em] px-4 py-3 w-10">#</TableHead>
-                      <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.1em] px-4 py-3">Ad Name</TableHead>
-                      <TableHead className="text-right text-[11px] font-semibold text-slate-500 uppercase tracking-[0.1em] px-4 py-3">Spend</TableHead>
+                    <TableRow className="bg-gray-50/70">
+                      <TableHead className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3 w-10">#</TableHead>
+                      <TableHead className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3">Ad Name</TableHead>
+                      <TableHead className="text-right text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3">Spend</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {topSpend.map((ad, i) => (
-                      <TableRow key={i} className="hover:bg-red-50/40 border-t border-slate-100 transition-[background-color]">
+                      <TableRow key={i} className="hover:bg-red-500/10 border-t border-gray-100 transition-[background-color]">
                         <TableCell className="px-4 py-3"><RankBadge rank={i + 1} /></TableCell>
                         <TableCell className="px-4 py-3">
-                          <div className="font-semibold text-slate-800 text-sm max-w-xs truncate" title={ad.ad_name}>{ad.ad_name}</div>
-                          <div className="text-xs text-slate-400 hidden sm:block">{formatDate(ad.reporting_starts)} – {formatDate(ad.reporting_ends)}</div>
+                          <div className="font-semibold text-gray-800 text-sm max-w-xs truncate" title={ad.ad_name}>{ad.ad_name}</div>
+                          <div className="text-xs text-gray-400 hidden sm:block">{formatDate(ad.reporting_starts)} – {formatDate(ad.reporting_ends)}</div>
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-right font-bold text-slate-800">{formatPHP(ad.amount_spent)}</TableCell>
+                        <TableCell className="px-4 py-3 text-right font-bold text-gray-800">{formatPHP(ad.amount_spent)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -265,36 +265,36 @@ export default function SalesDashboardTabs({
             </div>
 
             <div className={`${cardClass} overflow-hidden`} style={cardStyle}>
-              <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">Top Campaigns by Purchases</p>
-                <div className="flex-1 h-px bg-slate-100" />
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+                <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top Campaigns by Purchases</p>
+                <div className="flex-1 h-px bg-gray-100" />
               </div>
               {topPurchases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                  <svg className="w-8 h-8 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-8 h-8 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <p className="text-sm font-semibold text-slate-500 mb-0.5">No purchase data</p>
-                  <p className="text-xs text-slate-400">Purchase conversions will appear here once uploaded.</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-0.5">No purchase data</p>
+                  <p className="text-xs text-gray-400">Purchase conversions will appear here once uploaded.</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50/70">
-                      <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.1em] px-4 py-3 w-10">#</TableHead>
-                      <TableHead className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.1em] px-4 py-3">Ad Name</TableHead>
-                      <TableHead className="text-right text-[11px] font-semibold text-slate-500 uppercase tracking-[0.1em] px-4 py-3">Purchases</TableHead>
+                    <TableRow className="bg-gray-50/70">
+                      <TableHead className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3 w-10">#</TableHead>
+                      <TableHead className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3">Ad Name</TableHead>
+                      <TableHead className="text-right text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3">Purchases</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {topPurchases.map((ad, i) => (
-                      <TableRow key={i} className="hover:bg-red-50/40 border-t border-slate-100 transition-[background-color]">
+                      <TableRow key={i} className="hover:bg-red-500/10 border-t border-gray-100 transition-[background-color]">
                         <TableCell className="px-4 py-3"><RankBadge rank={i + 1} /></TableCell>
                         <TableCell className="px-4 py-3">
-                          <div className="font-semibold text-slate-800 text-sm max-w-xs truncate" title={ad.ad_name}>{ad.ad_name}</div>
-                          <div className="text-xs text-slate-400 hidden sm:block">{formatDate(ad.reporting_starts)} – {formatDate(ad.reporting_ends)}</div>
+                          <div className="font-semibold text-gray-800 text-sm max-w-xs truncate" title={ad.ad_name}>{ad.ad_name}</div>
+                          <div className="text-xs text-gray-400 hidden sm:block">{formatDate(ad.reporting_starts)} – {formatDate(ad.reporting_ends)}</div>
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-right font-bold text-emerald-600">{(ad.purchases ?? 0).toLocaleString()}</TableCell>
+                        <TableCell className="px-4 py-3 text-right font-bold text-green-400">{(ad.purchases ?? 0).toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -305,7 +305,7 @@ export default function SalesDashboardTabs({
 
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>Campaign Health Scores</SLabel>
-            <p className="text-xs text-slate-400 -mt-2 mb-4">
+            <p className="text-xs text-gray-400 -mt-2 mb-4">
               Composite 0–100 score per ad: CPA efficiency (50%), conversion rate (35%), reach (15%). Click a row for the breakdown.
             </p>
             <CampaignHealthTable ads={scoredAds} />
@@ -319,17 +319,17 @@ export default function SalesDashboardTabs({
               {genderData.length > 0 && (
                 <div className={`${cardClass} p-5`} style={cardStyle}>
                   <SLabel>Gender Distribution</SLabel>
-                  <p className="text-xs text-slate-400 -mt-2 mb-4">Breakdown of followers by gender</p>
+                  <p className="text-xs text-gray-400 -mt-2 mb-4">Breakdown of followers by gender</p>
                   <GenderPieChart data={genderData} />
                 </div>
               )}
               {territoryData.length > 0 && (
                 <div className={`${cardClass} p-5`} style={cardStyle}>
                   <SLabel>Top Territories</SLabel>
-                  <p className="text-xs text-slate-400 -mt-2 mb-4">
+                  <p className="text-xs text-gray-400 -mt-2 mb-4">
                     Audience reach by region
                     {topTerritory && (
-                      <> — top: <strong className="text-slate-600">{topTerritory.territory}</strong> ({(topTerritory.distribution * 100).toFixed(1)}%)</>
+                      <> — top: <strong className="text-gray-600">{topTerritory.territory}</strong> ({(topTerritory.distribution * 100).toFixed(1)}%)</>
                     )}
                   </p>
                   <TerritoryChart data={territoryData} />
@@ -340,7 +340,7 @@ export default function SalesDashboardTabs({
 
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>Spearman Correlation Analysis</SLabel>
-            <p className="text-xs text-slate-400 -mt-2 mb-4">
+            <p className="text-xs text-gray-400 -mt-2 mb-4">
               Rank-order correlation between ad metrics and outcomes (–1 to +1).
             </p>
             <CorrelationTable rows={spearmanRows} />
@@ -356,13 +356,13 @@ export default function SalesDashboardTabs({
         <TabsContent value="simulator" className="animate-fade-slide-up space-y-5">
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>What-If Simulator</SLabel>
-            <p className="text-xs text-slate-400 -mt-2 mb-4">Enter hypothetical inputs to predict how many purchases they may generate.</p>
+            <p className="text-xs text-gray-400 -mt-2 mb-4">Enter hypothetical inputs to predict how many purchases they may generate.</p>
             <WhatIfSimulator />
           </div>
 
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>Budget Allocation Recommender</SLabel>
-            <p className="text-xs text-slate-400 -mt-2 mb-4">
+            <p className="text-xs text-gray-400 -mt-2 mb-4">
               Distribute a total budget across your best-performing ad sets, weighted by historical purchase efficiency.
             </p>
             <BudgetAllocator />

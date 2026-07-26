@@ -1,0 +1,363 @@
+import type { Metadata } from 'next'
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { PrintLaggedCorrelation } from '@/components/reports/PrintLaggedCorrelation'
+import { computeLaggedCorrelations } from '@/lib/stats/laggedCorrelation'
+import { computeHoltWintersForecast } from '@/lib/stats/forecast'
+import { MovingAverageForecastChart } from '@/components/marketing/PageMetricsCharts'
+import AIInsightCard from '@/components/analytics/AIInsightCard'
+import { AutoPrint } from '@/components/reports/AutoPrint'
+import {
+  ReportHeader, ReportSection, ReportMetricRow, ReportKeyValueList, ReportFooter,
+  reportTh, reportThRight, reportTd, reportTdRight, reportTotalRow,
+} from '@/components/reports/ReportPrimitives'
+
+function formatPHP(value: number) {
+  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 2 }).format(value)
+}
+
+function formatDate(date: Date | string) {
+  return new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(date))
+}
+
+const TARGET_PERIODS = [
+  { label: 'September 2025', year: 2025, month: 9 },
+  { label: 'December 2025', year: 2025, month: 12 },
+  { label: 'January 2026',  year: 2026, month: 1  },
+]
+
+export const metadata: Metadata = { robots: { index: false, follow: false } }
+
+export default async function MarketingPrintReportPage() {
+  const session = await auth()
+  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') redirect('/login')
+
+  const [allAds, allPosts, latestModel, categories, dailyMetrics, lagData] = await Promise.all([
+    prisma.ad.findMany({
+      select: {
+        ad_name: true,
+        reporting_starts: true, reporting_ends: true,
+        amount_spent: true, purchases: true,
+        reach: true, impressions: true, link_clicks: true, category_id: true,
+      },
+    }),
+    prisma.facebookPost.findMany({
+      select: {
+        publish_time: true, engagement_rate: true, reach: true,
+        reactions: true, comments: true, shares: true, post_type: true, category_id: true,
+      },
+    }),
+    prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
+    prisma.category.findMany(),
+    prisma.pageMetricDaily.findMany({ orderBy: { date: 'asc' } }),
+    computeLaggedCorrelations(),
+  ])
+
+  const catMap = Object.fromEntries(categories.map(c => [c.id, c.name]))
+
+  const totalSpend     = allAds.reduce((s, a) => s + a.amount_spent, 0)
+  const totalPurchases = allAds.reduce((s, a) => s + (a.purchases ?? 0), 0)
+  const totalReach     = allAds.reduce((s, a) => s + (a.reach ?? 0), 0)
+  const totalImpressions  = allAds.reduce((s, a) => s + a.impressions, 0)
+  const totalLinkClicks   = allAds.reduce((s, a) => s + (a.link_clicks ?? 0), 0)
+  const cpa = totalPurchases > 0 ? totalSpend / totalPurchases : null
+
+  const top5Ads = [...allAds]
+    .filter(a => (a.purchases ?? 0) > 0)
+    .sort((a, b) => (b.purchases ?? 0) - (a.purchases ?? 0))
+    .slice(0, 5)
+
+  const monthlyData = TARGET_PERIODS.map(({ label, year, month }) => {
+    const start = new Date(year, month - 1, 1)
+    const end   = new Date(year, month, 0, 23, 59, 59)
+    const ads   = allAds.filter(a => {
+      const d = new Date(a.reporting_starts)
+      return d >= start && d <= end
+    })
+    return {
+      period: label,
+      spend:     ads.reduce((s, a) => s + a.amount_spent, 0),
+      purchases: ads.reduce((s, a) => s + (a.purchases ?? 0), 0),
+      reach:     ads.reduce((s, a) => s + (a.reach ?? 0), 0),
+      ad_count:  ads.length,
+    }
+  })
+
+  const avgEngagement  = allPosts.length > 0
+    ? allPosts.reduce((s, p) => s + p.engagement_rate, 0) / allPosts.length
+    : 0
+  const totalPostReach = allPosts.reduce((s, p) => s + p.reach, 0)
+
+  const adCatCounts: Record<string, number> = {}
+  for (const ad of allAds) {
+    const name = ad.category_id ? (catMap[ad.category_id] ?? 'Uncategorized') : 'Uncategorized'
+    adCatCounts[name] = (adCatCounts[name] ?? 0) + 1
+  }
+
+  const viewsForecast = computeHoltWintersForecast(
+    dailyMetrics.map(d => ({ date: d.date, value: d.views })),
+    7, 7
+  )
+  const forecastChartData = [
+    ...viewsForecast.history.slice(-21).map(h => ({
+      date: h.date.slice(5), value: h.value, ma: h.ma,
+      forecast: undefined as number | undefined,
+    })),
+    ...viewsForecast.forecast.map(f => ({
+      date: f.date.slice(5),
+      value: undefined as number | undefined,
+      ma: undefined as number | undefined,
+      forecast: f.forecastValue,
+    })),
+  ]
+
+  const isMLR = latestModel?.coef_reach != null
+  const s = (v: number) => (v >= 0 ? `+${v.toFixed(4)}` : v.toFixed(4))
+  const equation = latestModel
+    ? isMLR
+      ? `Purchases = ${latestModel.intercept.toFixed(4)} ${s(latestModel.coef_reach!)}·log(1+Reach) ${s(latestModel.coef_messaging!)}·log(1+Msgs) ${s(latestModel.coef_amount_spent!)}·log(1+Spend)`
+      : `Purchases = ${latestModel.intercept.toFixed(4)} + ${latestModel.coefficient.toFixed(6)} × Amount Spent`
+    : null
+
+  const generatedAt = new Date()
+
+  return (
+    <div className="bg-white min-h-screen">
+      <AutoPrint />
+      <div className="max-w-3xl mx-auto p-8 md:p-12 space-y-8">
+
+        <ReportHeader
+          title="PC Merchandise — Marketing Performance Report"
+          periodLabel="Data Period: Sep 2025 – Jan 2026"
+          generatedLabel={`Generated ${formatDate(generatedAt)}`}
+        />
+
+        <ReportSection title="Executive Summary">
+          <ReportMetricRow items={[
+            { label: 'Total Ad Spend',    value: formatPHP(totalSpend),          sub: '3-month period', tone: 'negative' },
+            { label: 'Total Purchases',   value: totalPurchases.toLocaleString(), sub: 'from ads',       tone: 'positive' },
+            { label: 'Total Ad Reach',    value: totalReach.toLocaleString(),     sub: 'unique people',  tone: 'neutral' },
+            { label: 'Cost per Purchase', value: cpa ? formatPHP(cpa) : '—',     sub: 'avg CPA',        tone: 'neutral' },
+          ]} />
+        </ReportSection>
+
+        {top5Ads.length > 0 && (
+          <ReportSection title="Top 5 Ads by Purchases">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={reportTh}>#</th>
+                    <th className={reportTh}>Ad Name</th>
+                    <th className={`${reportTh} hidden sm:table-cell`}>Period</th>
+                    <th className={reportThRight}>Spend</th>
+                    <th className={reportThRight}>Purchases</th>
+                    <th className={`${reportThRight} hidden sm:table-cell`}>CPA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {top5Ads.map((ad, i) => {
+                    const pur = ad.purchases ?? 0
+                    const adCpa = pur > 0 ? ad.amount_spent / pur : null
+                    return (
+                      <tr key={i}>
+                        <td className={reportTd}>{i + 1}</td>
+                        <td className={`${reportTd} font-medium max-w-[200px] truncate`}>{ad.ad_name}</td>
+                        <td className={`${reportTd} text-gray-300 whitespace-nowrap hidden sm:table-cell`}>
+                          {formatDate(ad.reporting_starts)}
+                        </td>
+                        <td className={reportTdRight}>{formatPHP(ad.amount_spent)}</td>
+                        <td className={`${reportTdRight} text-green-600 font-semibold`}>{pur}</td>
+                        <td className={`${reportTdRight} hidden sm:table-cell`}>{adCpa ? formatPHP(adCpa) : '—'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </ReportSection>
+        )}
+
+        <ReportSection title="Time-Lagged Correlation">
+          <PrintLaggedCorrelation data={lagData} />
+        </ReportSection>
+
+        <ReportSection title="Monthly Ad Performance">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  <th className={reportTh}>Period</th>
+                  <th className={`${reportThRight} hidden sm:table-cell`}>Ads Run</th>
+                  <th className={reportThRight}>Total Spend</th>
+                  <th className={reportThRight}>Purchases</th>
+                  <th className={`${reportThRight} hidden sm:table-cell`}>Reach</th>
+                  <th className={`${reportThRight} hidden sm:table-cell`}>CPA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyData.map(row => (
+                  <tr key={row.period}>
+                    <td className={`${reportTd} font-medium`}>{row.period}</td>
+                    <td className={`${reportTdRight} hidden sm:table-cell`}>{row.ad_count}</td>
+                    <td className={`${reportTdRight} font-medium`}>{formatPHP(row.spend)}</td>
+                    <td className={`${reportTdRight} text-green-600 font-semibold`}>{row.purchases}</td>
+                    <td className={`${reportTdRight} hidden sm:table-cell`}>{row.reach.toLocaleString()}</td>
+                    <td className={`${reportTdRight} hidden sm:table-cell`}>
+                      {row.purchases > 0 ? formatPHP(row.spend / row.purchases) : '—'}
+                    </td>
+                  </tr>
+                ))}
+                {(() => {
+                  const mSpend = monthlyData.reduce((s, r) => s + r.spend, 0)
+                  const mPurchases = monthlyData.reduce((s, r) => s + r.purchases, 0)
+                  const mReach = monthlyData.reduce((s, r) => s + r.reach, 0)
+                  const mCount = monthlyData.reduce((s, r) => s + r.ad_count, 0)
+                  return (
+                    <tr className={reportTotalRow}>
+                      <td className={reportTd}>Total</td>
+                      <td className={`${reportTdRight} hidden sm:table-cell`}>{mCount}</td>
+                      <td className={`${reportTdRight} text-red-600`}>{formatPHP(mSpend)}</td>
+                      <td className={`${reportTdRight} text-green-600`}>{mPurchases}</td>
+                      <td className={`${reportTdRight} hidden sm:table-cell`}>{mReach.toLocaleString()}</td>
+                      <td className={`${reportTdRight} hidden sm:table-cell`}>
+                        {mPurchases > 0 ? formatPHP(mSpend / mPurchases) : '—'}
+                      </td>
+                    </tr>
+                  )
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </ReportSection>
+
+        {latestModel && equation && (
+          <ReportSection
+            title={`Predictive Model (${isMLR ? 'Multiple Linear Regression, log-transformed' : 'Simple Linear Regression'})`}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-gray-300 mb-2">Regression Equation</p>
+                <p className="font-mono text-sm text-gray-100 border border-gray-700 rounded-lg px-4 py-3 break-all">{equation}</p>
+                {isMLR && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Log(1+x) transformation applied to all predictors to model diminishing returns.
+                  </p>
+                )}
+              </div>
+              <ReportKeyValueList items={[
+                { label: 'R² (Explained Variance)', value: `${(latestModel.r_squared * 100).toFixed(2)}%` },
+                { label: 'Residual Std Error (RSE)', value: latestModel.residual_std_error != null ? latestModel.residual_std_error.toFixed(4) : '—' },
+                { label: '80% Prediction Interval width', value: latestModel.residual_std_error != null ? `±${(latestModel.residual_std_error * 1.2816).toFixed(2)} purchases` : '—' },
+                { label: 'Sample Size (n)', value: latestModel.n.toString() },
+              ]} />
+            </div>
+          </ReportSection>
+        )}
+
+        {dailyMetrics.length >= 7 && (
+          <ReportSection title="7-Day Page Views Forecast">
+            <p className="text-sm text-gray-300 mb-1">
+              Holt-Winters level: <strong className="text-gray-25">{viewsForecast.lastLevel.toLocaleString()} views/day</strong>. Next 7 days shown as orange dots.
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              {viewsForecast.method === 'holt-winters'
+                ? 'Triple exponential smoothing (α=0.3, β=0.1, γ=0.3, period=7) — captures trend and weekly seasonality.'
+                : 'Double exponential smoothing (Holt linear) — upload more data to enable seasonal model.'}
+            </p>
+            <MovingAverageForecastChart data={forecastChartData} />
+          </ReportSection>
+        )}
+
+        {allPosts.length > 0 && (
+          <ReportSection title="Organic Post Engagement">
+            <ReportMetricRow items={[
+              { label: 'Total Posts',         value: allPosts.length.toLocaleString() },
+              { label: 'Total Reach',         value: totalPostReach.toLocaleString() },
+              { label: 'Avg Engagement Rate', value: `${avgEngagement.toFixed(2)}%` },
+              { label: 'Total Reactions',     value: allPosts.reduce((s, p) => s + p.reactions, 0).toLocaleString() },
+            ]} />
+            <p className="text-xs text-gray-400 mt-4">
+              Limitation: Organic post analysis is restricted to engagement metrics. No daily POS data is available to correlate posts with sales.
+            </p>
+          </ReportSection>
+        )}
+
+        {Object.keys(adCatCounts).length > 0 && (
+          <ReportSection title="Ad Content Category Distribution">
+            <ReportKeyValueList items={Object.entries(adCatCounts).map(([cat, count]) => ({ label: cat, value: count }))} />
+          </ReportSection>
+        )}
+
+        <AIInsightCard
+          variant="print"
+          data={{
+            totalSpend,
+            totalPurchases,
+            totalReach,
+            cpa,
+            bestLag: lagData.best_lag,
+            bestMetric: lagData.best_metric,
+            bestR: lagData.best_r,
+            rSquared: latestModel?.r_squared ?? null,
+            isMLR,
+            rse: latestModel?.residual_std_error ?? null,
+            n: latestModel?.n ?? null,
+            forecastBaseline: dailyMetrics.length >= 7 ? viewsForecast.lastLevel : null,
+            avgEngagement: allPosts.length > 0 ? avgEngagement : null,
+          }}
+        />
+
+        <ReportSection title="Key Insights">
+          <ul className="space-y-2 text-sm text-gray-100">
+            {cpa && (
+              <li className="flex gap-2">
+                <span className="text-gray-400 mt-0.5">—</span>
+                Average cost per purchase across all campaigns: <strong className="text-gray-25">{formatPHP(cpa)}</strong>
+              </li>
+            )}
+            {lagData.best_r !== null && lagData.best_metric && (
+              <li className="flex gap-2">
+                <span className="text-gray-400 mt-0.5">—</span>
+                Purchases peak <strong className="text-gray-25">{lagData.best_lag} day{lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics are recorded.
+                Strongest predictor: {lagData.best_metric} (r = {lagData.best_r.toFixed(4)}).
+              </li>
+            )}
+            {latestModel && (
+              <li className="flex gap-2">
+                <span className="text-gray-400 mt-0.5">—</span>
+                The {isMLR ? 'MLR' : 'regression'} model explains <strong className="text-gray-25">{(latestModel.r_squared * 100).toFixed(1)}%</strong> of variance in purchases
+                {isMLR && latestModel.residual_std_error != null
+                  ? ` with ±${(latestModel.residual_std_error * 1.2816).toFixed(1)}-purchase 80% prediction interval.`
+                  : '.'}
+              </li>
+            )}
+            {allPosts.length > 0 && (
+              <li className="flex gap-2">
+                <span className="text-gray-400 mt-0.5">—</span>
+                Organic posts achieved an average engagement rate of <strong className="text-gray-25">{avgEngagement.toFixed(2)}%</strong> across {allPosts.length} posts.
+              </li>
+            )}
+            {totalImpressions > 0 && totalLinkClicks > 0 && (
+              <li className="flex gap-2">
+                <span className="text-gray-400 mt-0.5">—</span>
+                Overall link click-through rate: <strong className="text-gray-25">{((totalLinkClicks / totalImpressions) * 100).toFixed(2)}%</strong>
+              </li>
+            )}
+            {viewsForecast.forecast.length > 0 && (
+              <li className="flex gap-2">
+                <span className="text-gray-400 mt-0.5">—</span>
+                7-day page views forecast baseline: <strong className="text-gray-25">{viewsForecast.lastLevel.toLocaleString()} views/day</strong> (Holt-Winters level).
+              </li>
+            )}
+          </ul>
+        </ReportSection>
+
+        <ReportFooter>
+          PC Merchandise DSS · Report generated {formatDate(generatedAt)} · Marketing Manager Dashboard
+        </ReportFooter>
+      </div>
+    </div>
+  )
+}

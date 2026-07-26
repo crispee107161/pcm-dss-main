@@ -45,10 +45,10 @@ const UPLOAD_TYPE_LABELS: Record<string, string> = {
 
 type Accent = 'red' | 'green' | 'amber' | 'slate'
 const accentStyles: Record<Accent, string> = {
-  red:   'bg-red-50 text-red-500',
-  green: 'bg-emerald-50 text-emerald-500',
-  amber: 'bg-amber-50 text-amber-500',
-  slate: 'bg-slate-100 text-slate-400',
+  red:   'bg-red-500/10 text-red-400',
+  green: 'bg-green-500/10 text-green-400',
+  amber: 'bg-yellow-500/10 text-yellow-400',
+  slate: 'bg-gray-100 text-gray-400',
 }
 
 function DeltaBadge({ delta }: { delta: number | null }) {
@@ -56,14 +56,14 @@ function DeltaBadge({ delta }: { delta: number | null }) {
   const up = delta >= 0
   return (
     <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold rounded-full px-2 py-0.5 border ml-1 ${
-      up ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-red-50 border-red-100 text-red-500'
+      up ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
     }`}>
       {up ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
     </span>
   )
 }
 
-function KpiCard({ label, value, sub, delta, valueClass = 'text-slate-900', icon, accent = 'slate' }: {
+function KpiCard({ label, value, sub, delta, valueClass = 'text-gray-900', icon, accent = 'slate' }: {
   label: string
   value: React.ReactNode
   sub?: string
@@ -73,10 +73,10 @@ function KpiCard({ label, value, sub, delta, valueClass = 'text-slate-900', icon
   accent?: Accent
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/70 p-5 flex flex-col gap-3"
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+    <div className="bg-card rounded-2xl card-shadow p-5 flex flex-col gap-3"
+      style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">{label}</p>
+        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">{label}</p>
         <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accentStyles[accent]}`}>
           {icon}
         </span>
@@ -85,13 +85,13 @@ function KpiCard({ label, value, sub, delta, valueClass = 'text-slate-900', icon
         <p className={`text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
         <div className="flex items-center mt-2 flex-wrap gap-1">
           {sub && (
-            <span className="inline-block text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+            <span className="inline-block text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
               {sub}
             </span>
           )}
           {delta !== undefined && <DeltaBadge delta={delta} />}
           {delta !== undefined && delta !== null && (
-            <span className="text-[10px] text-slate-400">vs last wk</span>
+            <span className="text-[10px] text-gray-400">vs last wk</span>
           )}
         </div>
       </div>
@@ -102,7 +102,7 @@ function KpiCard({ label, value, sub, delta, valueClass = 'text-slate-900', icon
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 mb-4">
-      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">{children}</p>
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">{children}</p>
       <div className="flex-1 h-px bg-gradient-to-r from-red-100/70 to-transparent" />
     </div>
   )
@@ -198,14 +198,14 @@ export default async function OwnerDashboard() {
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-5">
 
       {/* Welcome */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200/60">
+      <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
         <div>
-          <h1 className="text-xl font-extrabold font-heading text-slate-900 tracking-tight">Executive Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Facebook marketing performance &amp; ROI overview</p>
+          <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">Executive Dashboard</h1>
+          <p className="text-gray-400 text-sm mt-0.5">Facebook marketing performance &amp; ROI overview</p>
         </div>
         <div className="text-right hidden sm:block">
-          <p className="text-xs text-slate-400">Welcome back</p>
-          <p className="text-sm font-bold text-slate-800">{displayName}</p>
+          <p className="text-xs text-gray-400">Welcome back</p>
+          <p className="text-sm font-bold text-gray-800">{displayName}</p>
         </div>
       </div>
 
@@ -214,7 +214,7 @@ export default async function OwnerDashboard() {
         <KpiCard
           label="Total Ad Spend" value={formatPhp(totalSpend)} sub="all time"
           delta={spendDelta}
-          valueClass="text-slate-900" accent="red"
+          valueClass="text-gray-900" accent="red"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
         />
         <KpiCard
@@ -238,27 +238,27 @@ export default async function OwnerDashboard() {
       {/* ROI summary */}
       {totalPurchases > 0 && (
         <div className="rounded-2xl p-6"
-          style={{ background: 'linear-gradient(135deg, #1c0808 0%, #111111 60%, #0d0d0d 100%)', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+          style={{ background: 'linear-gradient(135deg, #1c0808 0%, #111111 60%, #0d0d0d 100%)', boxShadow: '0 4px 24px rgba(255,255,255,0.12)' }}>
           <div className="flex items-center justify-between mb-6">
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.12em]">ROI Summary</p>
-            <span className="text-xs text-slate-500 bg-white/5 rounded-full px-3 py-1 border border-white/8">All time</span>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.12em]">ROI Summary</p>
+            <span className="text-xs text-gray-500 bg-white/5 rounded-full px-3 py-1 border border-white/8">All time</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/8">
             <div className="pb-5 md:pb-0 md:pr-6">
-              <p className="text-[11px] text-slate-500 mb-2">Avg. Cost Per Purchase</p>
+              <p className="text-[11px] text-gray-500 mb-2">Avg. Cost Per Purchase</p>
               <p className="text-3xl font-bold tracking-tight text-white">{formatPhp(totalSpend / totalPurchases)}</p>
             </div>
             <div className="py-5 md:py-0 md:px-6">
-              <p className="text-[11px] text-slate-500 mb-2">Purchase Rate</p>
+              <p className="text-[11px] text-gray-500 mb-2">Purchase Rate</p>
               <p className="text-3xl font-bold tracking-tight text-white">
                 {totalReach > 0 ? ((totalPurchases / totalReach) * 100).toFixed(3) : '0'}%
               </p>
-              <p className="text-[11px] text-slate-600 mt-1.5">of reached audience</p>
+              <p className="text-[11px] text-gray-600 mt-1.5">of reached audience</p>
             </div>
             <div className="pt-5 md:pt-0 md:pl-6">
-              <p className="text-[11px] text-slate-500 mb-2">Ads with Purchases</p>
+              <p className="text-[11px] text-gray-500 mb-2">Ads with Purchases</p>
               <p className="text-3xl font-bold tracking-tight text-red-400">{adsWithPurchases}</p>
-              <p className="text-[11px] text-slate-600 mt-1.5">of {adCount} total ads</p>
+              <p className="text-[11px] text-gray-600 mt-1.5">of {adCount} total ads</p>
             </div>
           </div>
         </div>
@@ -266,8 +266,8 @@ export default async function OwnerDashboard() {
 
       {/* Quick navigation + Follower sparkline */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200/70 p-5"
-          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+        <div className="md:col-span-2 bg-card rounded-2xl card-shadow p-5"
+          style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
           <SectionLabel>Quick Navigation</SectionLabel>
           <div className="flex flex-wrap gap-2">
             <Link href="/dashboard/owner/campaign-rankings"
@@ -282,7 +282,7 @@ export default async function OwnerDashboard() {
               { label: 'Generate Report',       href: '/dashboard/owner/report' },
             ].map(({ label, href }) => (
               <Link key={href} href={href}
-                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-red-200 hover:text-red-700 rounded-full px-4 py-1.5 text-sm font-medium transition-colors">
+                className="bg-card hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-red-200 hover:text-red-400 rounded-full px-4 py-1.5 text-sm font-medium transition-colors">
                 {label}
               </Link>
             ))}
@@ -290,8 +290,8 @@ export default async function OwnerDashboard() {
         </div>
 
         {latestFollower && (
-          <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+          <div className="bg-card rounded-2xl card-shadow p-5"
+            style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
             <FollowerSparkline
               data={sparklineData}
               currentCount={latestFollower.followers}
@@ -306,34 +306,34 @@ export default async function OwnerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {topCampaign && (
-          <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+          <div className="bg-card rounded-2xl card-shadow p-5"
+            style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
             <SectionLabel>Top Performing Campaign</SectionLabel>
             <div className="flex items-start justify-between gap-3 mb-4">
-              <p className="text-sm font-bold text-slate-800 leading-snug line-clamp-2">
+              <p className="text-sm font-bold text-gray-800 leading-snug line-clamp-2">
                 {topCampaign.ad_name}
               </p>
-              <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-full px-2.5 py-0.5">
+              <span className="flex-shrink-0 text-[10px] font-semibold bg-green-500/10 border border-green-500/30 text-green-400 rounded-full px-2.5 py-0.5">
                 Best ROI
               </span>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Purchases</p>
-                <p className="text-xl font-bold text-slate-900">{formatNumber(topCampaign.purchases ?? 0)}</p>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Purchases</p>
+                <p className="text-xl font-bold text-gray-900">{formatNumber(topCampaign.purchases ?? 0)}</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Ad Spend</p>
-                <p className="text-xl font-bold text-slate-900">{formatPhp(topCampaign.amount_spent)}</p>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ad Spend</p>
+                <p className="text-xl font-bold text-gray-900">{formatPhp(topCampaign.amount_spent)}</p>
               </div>
-              <div className="bg-emerald-50 rounded-xl p-3">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Cost / Purchase</p>
-                <p className="text-xl font-bold text-emerald-700">
+              <div className="bg-green-500/10 rounded-xl p-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Cost / Purchase</p>
+                <p className="text-xl font-bold text-green-400">
                   {topCampaignCpp !== null ? formatPhp(topCampaignCpp) : '—'}
                 </p>
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 mt-3">
+            <p className="text-[10px] text-gray-400 mt-3">
               {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(topCampaign.reporting_starts))}
               {' – '}
               {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(topCampaign.reporting_ends))}
@@ -342,37 +342,37 @@ export default async function OwnerDashboard() {
         )}
 
         {lastUpload && (
-          <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+          <div className="bg-card rounded-2xl card-shadow p-5"
+            style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
             <SectionLabel>Last Data Upload</SectionLabel>
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <p className="text-sm font-bold text-slate-800">
+                <p className="text-sm font-bold text-gray-800">
                   {UPLOAD_TYPE_LABELS[lastUpload.upload_type] ?? lastUpload.upload_type}
                 </p>
-                <p className="text-[11px] text-slate-400 mt-0.5 font-mono truncate max-w-[200px]">
+                <p className="text-[11px] text-gray-400 mt-0.5 font-mono truncate max-w-[200px]">
                   {lastUpload.filename}
                 </p>
               </div>
-              <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-full px-2.5 py-0.5">
+              <span className="flex-shrink-0 text-[10px] font-semibold bg-green-500/10 border border-green-500/30 text-green-400 rounded-full px-2.5 py-0.5">
                 Success
               </span>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">When</p>
-                <p className="text-base font-bold text-slate-900">{timeAgo(lastUpload.uploaded_at)}</p>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">When</p>
+                <p className="text-base font-bold text-gray-900">{timeAgo(lastUpload.uploaded_at)}</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Inserted</p>
-                <p className="text-base font-bold text-slate-900">{formatNumber(lastUpload.records_inserted)}</p>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Inserted</p>
+                <p className="text-base font-bold text-gray-900">{formatNumber(lastUpload.records_inserted)}</p>
               </div>
-              <div className="bg-slate-50 rounded-xl p-3">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Updated</p>
-                <p className="text-base font-bold text-slate-900">{formatNumber(lastUpload.records_updated)}</p>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Updated</p>
+                <p className="text-base font-bold text-gray-900">{formatNumber(lastUpload.records_updated)}</p>
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 mt-3">
+            <p className="text-[10px] text-gray-400 mt-3">
               {new Intl.DateTimeFormat('en-PH', {
                 year: 'numeric', month: 'short', day: 'numeric',
                 hour: '2-digit', minute: '2-digit',
@@ -383,8 +383,8 @@ export default async function OwnerDashboard() {
       </div>
 
       {/* Model summary */}
-      <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+      <div className="bg-card rounded-2xl card-shadow p-5"
+        style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
         <SectionLabel>Predictive Model Summary</SectionLabel>
         <RegressionSummary model={latestModel} />
       </div>

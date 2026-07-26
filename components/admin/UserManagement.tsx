@@ -30,9 +30,9 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
 ]
 
 const ROLE_BADGE_CLASS: Record<Role, string> = {
-  BUSINESS_OWNER: 'bg-amber-100 text-amber-800 border-amber-200',
-  SALES_DIRECTOR: 'bg-red-100 text-red-800 border-red-200',
-  MARKETING_MANAGER: 'bg-purple-100 text-purple-800 border-purple-200',
+  BUSINESS_OWNER: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
+  SALES_DIRECTOR: 'bg-red-500/10 text-red-400 border-red-500/30',
+  MARKETING_MANAGER: 'bg-violet-500/10 text-violet-300 border-violet-500/30',
 }
 
 function formatDate(date: Date) {
@@ -44,7 +44,7 @@ function formatDate(date: Date) {
 function FormAlert({ state }: { state: { error?: string; success?: string } | null }) {
   if (!state?.error && !state?.success) return null
   return (
-    <Alert className={`mt-2 ${state.error ? 'border-red-200 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-700'}`}>
+    <Alert className={`mt-2 ${state.error ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-green-500/30 bg-green-500/10 text-green-400'}`}>
       <AlertDescription className="text-sm">{state.error ?? state.success}</AlertDescription>
     </Alert>
   )
@@ -59,8 +59,8 @@ function CreateUserForm() {
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="font-semibold text-slate-800">All Users</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Manage roles, passwords, and access</p>
+          <h2 className="font-semibold text-gray-800">All Users</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Manage roles, passwords, and access</p>
         </div>
         <Button
           onClick={() => setOpen(v => !v)}
@@ -71,34 +71,34 @@ function CreateUserForm() {
       </div>
 
       {open && (
-        <form action={async (fd) => { await action(fd); if (!state?.error) setOpen(false) }} className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-4">
-          <h3 className="font-semibold text-slate-700 mb-4">Create New User</h3>
+        <form action={async (fd) => { await action(fd); if (!state?.error) setOpen(false) }} className="bg-gray-50 border border-gray-200 rounded-2xl p-6 mb-4">
+          <h3 className="font-semibold text-gray-700 mb-4">Create New User</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
               <Input
                 name="email"
                 type="email"
                 required
                 placeholder="user@example.com"
-                className="w-full border-slate-300 focus-visible:ring-red-500"
+                className="w-full border-gray-300 focus-visible:ring-red-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Password</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
               <Input
                 name="password"
                 type="password"
                 required
                 minLength={8}
                 placeholder="Min. 8 characters"
-                className="w-full border-slate-300 focus-visible:ring-red-500"
+                className="w-full border-gray-300 focus-visible:ring-red-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Role</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
               <Select name="role" defaultValue={ROLE_OPTIONS[0].value}>
-                <SelectTrigger className="w-full border-slate-300 focus-visible:ring-red-500">
+                <SelectTrigger className="w-full border-gray-300 focus-visible:ring-red-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -117,7 +117,7 @@ function CreateUserForm() {
             >
               {pending ? 'Creating…' : 'Create User'}
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)} className="text-slate-500">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)} className="text-gray-500">
               Cancel
             </Button>
           </div>
@@ -141,10 +141,10 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
 
   return (
     <>
-      <TableRow className="border-t border-slate-100 align-top">
-        <TableCell className="px-4 py-3 text-slate-500 text-xs hidden sm:table-cell">#{user.id}</TableCell>
+      <TableRow className="border-t border-gray-100 align-top">
+        <TableCell className="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">#{user.id}</TableCell>
         <TableCell className="px-4 py-3">
-          <div className="font-medium text-slate-800 text-sm">{user.email}</div>
+          <div className="font-medium text-gray-800 text-sm">{user.email}</div>
           {isSelf && <span className="text-xs text-red-500">(you)</span>}
         </TableCell>
         <TableCell className="px-4 py-3">
@@ -156,7 +156,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
             <form action={roleAction} className="flex items-center gap-2">
               <input type="hidden" name="userId" value={user.id} />
               <Select name="role" defaultValue={user.role}>
-                <SelectTrigger className="border-slate-300 focus-visible:ring-red-500 h-7 text-xs min-w-[140px]" size="sm">
+                <SelectTrigger className="border-gray-300 focus-visible:ring-red-500 h-7 text-xs min-w-[140px]" size="sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -169,7 +169,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
                 type="submit"
                 disabled={rolePending}
                 size="xs"
-                className="bg-slate-800 hover:bg-slate-700 text-white"
+                className="bg-zinc-800 hover:bg-zinc-700 text-white"
               >
                 {rolePending ? '…' : 'Save'}
               </Button>
@@ -177,20 +177,20 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
           )}
           {!isSelf && <FormAlert state={roleState} />}
         </TableCell>
-        <TableCell className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap hidden md:table-cell">{formatDate(user.created_at)}</TableCell>
+        <TableCell className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap hidden md:table-cell">{formatDate(user.created_at)}</TableCell>
         <TableCell className="px-4 py-3">
           {!isSelf && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { setShowPwForm(v => !v); setShowDelConfirm(false) }}
-                className="text-xs text-slate-600 hover:text-red-600 underline underline-offset-2 transition-colors"
+                className="text-xs text-gray-600 hover:text-red-600 underline underline-offset-2 transition-colors"
               >
                 Reset PW
               </button>
-              <span className="text-slate-300">|</span>
+              <span className="text-gray-300">|</span>
               <button
                 onClick={() => { setShowDelConfirm(v => !v); setShowPwForm(false) }}
-                className="text-xs text-red-500 hover:text-red-700 underline underline-offset-2 transition-colors"
+                className="text-xs text-red-500 hover:text-red-300 underline underline-offset-2 transition-colors"
               >
                 Delete
               </button>
@@ -204,17 +204,17 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
         <TableRow className="border-t-0">
           <TableCell colSpan={5} className="px-4 pb-3">
             <form action={async (fd) => { await pwAction(fd); setShowPwForm(false) }}
-              className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-wrap items-end gap-3">
+              className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-wrap items-end gap-3">
               <input type="hidden" name="userId" value={user.id} />
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">New Password for {user.email}</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">New Password for {user.email}</label>
                 <Input
                   name="password"
                   type="password"
                   required
                   minLength={8}
                   placeholder="Min. 8 characters"
-                  className="border-slate-300 focus-visible:ring-red-500"
+                  className="border-gray-300 focus-visible:ring-red-500"
                 />
               </div>
               <Button
@@ -224,7 +224,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
               >
                 {pwPending ? 'Saving…' : 'Set Password'}
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowPwForm(false)} className="text-slate-500">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowPwForm(false)} className="text-gray-500">
                 Cancel
               </Button>
               <FormAlert state={pwState} />
@@ -238,9 +238,9 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
         <TableRow className="border-t-0">
           <TableCell colSpan={5} className="px-4 pb-3">
             <form action={async (fd) => { await delAction(fd); setShowDelConfirm(false) }}
-              className="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-wrap items-center gap-3">
+              className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-wrap items-center gap-3">
               <input type="hidden" name="userId" value={user.id} />
-              <p className="text-sm text-red-700">
+              <p className="text-sm text-red-400">
                 Are you sure you want to delete <strong>{user.email}</strong>? This cannot be undone.
               </p>
               <Button
@@ -250,7 +250,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
               >
                 {delPending ? 'Deleting…' : 'Yes, Delete'}
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowDelConfirm(false)} className="text-slate-500">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowDelConfirm(false)} className="text-gray-500">
                 Cancel
               </Button>
               <FormAlert state={delState} />
@@ -268,15 +268,15 @@ export default function UserManagement({ users, currentUserId }: Props) {
     <div>
       <CreateUserForm />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-card rounded-2xl card-shadow overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">ID</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Email</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Role</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Created</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Actions</TableHead>
+            <TableRow className="bg-gray-50">
+              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">ID</TableHead>
+              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Email</TableHead>
+              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Role</TableHead>
+              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Created</TableHead>
+              <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

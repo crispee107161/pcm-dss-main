@@ -119,7 +119,7 @@ export default async function SalesReportPage() {
       </div>
 
       <div className="flex justify-end mb-6 print:hidden">
-        <PrintButton />
+        <PrintButton href="/print/sales/report" />
       </div>
 
       <div id="report-content" className="space-y-6 print:space-y-8">
@@ -133,19 +133,19 @@ export default async function SalesReportPage() {
         </div>
 
         {/* Executive Summary KPIs */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 print-no-break">
-          <h2 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">Executive Summary</h2>
+        <div className="bg-card rounded-2xl card-shadow p-6 print-no-break">
+          <h2 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Executive Summary</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Ad Spend',    value: formatPHP(totalSpend),               sub: '3-month period',  color: 'text-red-700' },
-              { label: 'Total Purchases',   value: totalPurchases.toLocaleString(),      sub: 'from ads',        color: 'text-green-700' },
-              { label: 'Total Ad Reach',    value: totalReach.toLocaleString(),          sub: 'unique people',   color: 'text-purple-700' },
-              { label: 'Cost per Purchase', value: cpa ? formatPHP(cpa) : '—',          sub: 'avg CPA',         color: 'text-amber-700' },
+              { label: 'Total Ad Spend',    value: formatPHP(totalSpend),               sub: '3-month period',  color: 'text-red-400' },
+              { label: 'Total Purchases',   value: totalPurchases.toLocaleString(),      sub: 'from ads',        color: 'text-green-400' },
+              { label: 'Total Ad Reach',    value: totalReach.toLocaleString(),          sub: 'unique people',   color: 'text-violet-400' },
+              { label: 'Cost per Purchase', value: cpa ? formatPHP(cpa) : '—',          sub: 'avg CPA',         color: 'text-yellow-400' },
             ].map(({ label, value, sub, color }) => (
-              <div key={label} className="bg-slate-50 rounded-xl p-4">
-                <p className="text-xs text-slate-500 uppercase tracking-wider">{label}</p>
+              <div key={label} className="bg-gray-50 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
                 <p className={`text-xl font-bold mt-1 ${color}`}>{value}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{sub}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
               </div>
             ))}
           </div>
@@ -153,18 +153,18 @@ export default async function SalesReportPage() {
 
         {/* Top 5 Ads by Purchases */}
         {top5Ads.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 print-no-break">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">Top 5 Ads by Purchases</h2>
+          <div className="bg-card rounded-2xl card-shadow p-6 print-no-break">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Top 5 Ads by Purchases</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50">
-                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-3 py-3">#</th>
-                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-3 py-3">Ad Name</th>
-                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-3 py-3 hidden sm:table-cell">Period</th>
-                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-3 py-3">Spend</th>
-                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-3 py-3">Purchases</th>
-                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-3 py-3 hidden sm:table-cell">CPA</th>
+                  <tr className="bg-gray-50">
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3">#</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3">Ad Name</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3 hidden sm:table-cell">Period</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3">Spend</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3">Purchases</th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3 hidden sm:table-cell">CPA</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,15 +172,15 @@ export default async function SalesReportPage() {
                     const pur = ad.purchases ?? 0
                     const adCpa = pur > 0 ? ad.amount_spent / pur : null
                     return (
-                      <tr key={i} className="border-t border-slate-100 hover:bg-slate-50">
-                        <td className="px-3 py-2.5 text-slate-500 font-medium">{i + 1}</td>
-                        <td className="px-3 py-2.5 text-slate-800 font-medium max-w-[200px] truncate">{ad.ad_name}</td>
-                        <td className="px-3 py-2.5 text-slate-500 text-xs whitespace-nowrap hidden sm:table-cell">
+                      <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
+                        <td className="px-3 py-2.5 text-gray-500 font-medium">{i + 1}</td>
+                        <td className="px-3 py-2.5 text-gray-800 font-medium max-w-[200px] truncate">{ad.ad_name}</td>
+                        <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap hidden sm:table-cell">
                           {formatDate(ad.reporting_starts)}
                         </td>
-                        <td className="px-3 py-2.5 text-slate-700">{formatPHP(ad.amount_spent)}</td>
-                        <td className="px-3 py-2.5 text-green-700 font-semibold">{pur}</td>
-                        <td className="px-3 py-2.5 text-slate-600 hidden sm:table-cell">{adCpa ? formatPHP(adCpa) : '—'}</td>
+                        <td className="px-3 py-2.5 text-gray-700">{formatPHP(ad.amount_spent)}</td>
+                        <td className="px-3 py-2.5 text-green-400 font-semibold">{pur}</td>
+                        <td className="px-3 py-2.5 text-gray-600 hidden sm:table-cell">{adCpa ? formatPHP(adCpa) : '—'}</td>
                       </tr>
                     )
                   })}
@@ -191,37 +191,37 @@ export default async function SalesReportPage() {
         )}
 
         {/* Best Lag Correlation */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 print-no-break">
-          <h2 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">
+        <div className="bg-card rounded-2xl card-shadow p-6 print-no-break">
+          <h2 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">
             Time-Lagged Correlation (FR-19)
           </h2>
           <LaggedCorrelationPanel data={lagData} />
         </div>
 
         {/* Monthly Performance */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 print-no-break">
-          <h2 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">Monthly Ad Performance</h2>
+        <div className="bg-card rounded-2xl card-shadow p-6 print-no-break">
+          <h2 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Monthly Ad Performance</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Period</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Ads Run</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Total Spend</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Purchases</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Reach</th>
-                  <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">CPA</th>
+                <tr className="bg-gray-50">
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Period</th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Ads Run</th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Total Spend</th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Purchases</th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">Reach</th>
+                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">CPA</th>
                 </tr>
               </thead>
               <tbody>
                 {monthlyData.map(row => (
-                  <tr key={row.period} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-800">{row.period}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">{row.ad_count}</td>
-                    <td className="px-4 py-3 text-slate-800 font-medium">{formatPHP(row.spend)}</td>
-                    <td className="px-4 py-3 text-green-700 font-semibold">{row.purchases}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">{row.reach.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">
+                  <tr key={row.period} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-800">{row.period}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{row.ad_count}</td>
+                    <td className="px-4 py-3 text-gray-800 font-medium">{formatPHP(row.spend)}</td>
+                    <td className="px-4 py-3 text-green-400 font-semibold">{row.purchases}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{row.reach.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
                       {row.purchases > 0 ? formatPHP(row.spend / row.purchases) : '—'}
                     </td>
                   </tr>
@@ -232,13 +232,13 @@ export default async function SalesReportPage() {
                   const mReach = monthlyData.reduce((s, r) => s + r.reach, 0)
                   const mCount = monthlyData.reduce((s, r) => s + r.ad_count, 0)
                   return (
-                    <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-                      <td className="px-4 py-3 text-slate-800">Total</td>
-                      <td className="px-4 py-3 text-slate-800 hidden sm:table-cell">{mCount}</td>
-                      <td className="px-4 py-3 text-red-700">{formatPHP(mSpend)}</td>
-                      <td className="px-4 py-3 text-green-700">{mPurchases}</td>
-                      <td className="px-4 py-3 text-slate-800 hidden sm:table-cell">{mReach.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-slate-600 hidden sm:table-cell">
+                    <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold">
+                      <td className="px-4 py-3 text-gray-800">Total</td>
+                      <td className="px-4 py-3 text-gray-800 hidden sm:table-cell">{mCount}</td>
+                      <td className="px-4 py-3 text-red-400">{formatPHP(mSpend)}</td>
+                      <td className="px-4 py-3 text-green-400">{mPurchases}</td>
+                      <td className="px-4 py-3 text-gray-800 hidden sm:table-cell">{mReach.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
                         {mPurchases > 0 ? formatPHP(mSpend / mPurchases) : '—'}
                       </td>
                     </tr>
@@ -251,16 +251,16 @@ export default async function SalesReportPage() {
 
         {/* Predictive Model */}
         {latestModel && equation && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 print-no-break">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">
+          <div className="bg-card rounded-2xl card-shadow p-6 print-no-break">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">
               Predictive Model ({isMLR ? 'Multiple Linear Regression, log-transformed' : 'Simple Linear Regression'}) — FR-20
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-slate-500 mb-2">Regression Equation</p>
-                <p className="font-mono text-sm text-slate-800 bg-slate-50 rounded-lg px-4 py-3 break-all">{equation}</p>
+                <p className="text-sm text-gray-500 mb-2">Regression Equation</p>
+                <p className="font-mono text-sm text-gray-800 bg-gray-50 rounded-lg px-4 py-3 break-all">{equation}</p>
                 {isMLR && (
-                  <p className="text-xs text-slate-400 mt-2">
+                  <p className="text-xs text-gray-400 mt-2">
                     Log(1+x) transformation applied to all predictors to model diminishing returns.
                   </p>
                 )}
@@ -272,9 +272,9 @@ export default async function SalesReportPage() {
                   { label: '80% Prediction Interval width', value: latestModel.residual_std_error != null ? `±${(latestModel.residual_std_error * 1.2816).toFixed(2)} purchases` : '—' },
                   { label: 'Sample Size (n)', value: latestModel.n.toString() },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex justify-between items-center bg-slate-50 rounded-lg px-4 py-2">
-                    <span className="text-sm text-slate-500">{label}</span>
-                    <span className="font-semibold text-slate-800 text-sm">{value}</span>
+                  <div key={label} className="flex justify-between items-center bg-gray-50 rounded-lg px-4 py-2">
+                    <span className="text-sm text-gray-500">{label}</span>
+                    <span className="font-semibold text-gray-800 text-sm">{value}</span>
                   </div>
                 ))}
               </div>
@@ -284,14 +284,14 @@ export default async function SalesReportPage() {
 
         {/* 7-Day Page Views Forecast */}
         {dailyMetrics.length >= 7 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 print-no-break">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">
+          <div className="bg-card rounded-2xl card-shadow p-6 print-no-break">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">
               7-Day Page Views Forecast (FR-22)
             </h2>
-            <p className="text-sm text-slate-500 mb-1">
+            <p className="text-sm text-gray-500 mb-1">
               Holt-Winters level: <strong>{viewsForecast.lastLevel.toLocaleString()} views/day</strong>. Next 7 days shown as orange dots.
             </p>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-gray-400 mb-4">
               {viewsForecast.method === 'holt-winters'
                 ? 'Triple exponential smoothing (α=0.3, β=0.1, γ=0.3, period=7) — captures trend and weekly seasonality.'
                 : 'Double exponential smoothing (Holt linear) — upload more data to enable seasonal model.'}
@@ -302,13 +302,13 @@ export default async function SalesReportPage() {
 
         {/* Content Categories */}
         {Object.keys(adCatCounts).length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 print-no-break">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">Ad Content Category Distribution</h2>
+          <div className="bg-card rounded-2xl card-shadow p-6 print-no-break">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Ad Content Category Distribution</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {Object.entries(adCatCounts).map(([cat, count]) => (
-                <div key={cat} className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                  <span className="text-sm text-slate-700">{cat}</span>
-                  <span className="text-sm font-semibold text-slate-800">{count}</span>
+                <div key={cat} className="flex justify-between items-center py-1.5 border-b border-gray-50">
+                  <span className="text-sm text-gray-700">{cat}</span>
+                  <span className="text-sm font-semibold text-gray-800">{count}</span>
                 </div>
               ))}
             </div>
@@ -333,7 +333,7 @@ export default async function SalesReportPage() {
         }} />
 
         {/* Key Insights */}
-        <div className="bg-slate-900 rounded-2xl p-6 print-no-break">
+        <div className="bg-zinc-900 rounded-2xl p-6 print-no-break">
           <h2 className="text-lg font-bold text-white mb-3">Key Insights</h2>
           <ul className="space-y-2 text-sm text-zinc-300">
             {cpa && (
@@ -379,7 +379,7 @@ export default async function SalesReportPage() {
           </ul>
         </div>
 
-        <div className="text-center text-xs text-slate-400 pt-4 pb-2">
+        <div className="text-center text-xs text-gray-400 pt-4 pb-2">
           PC Merchandise DSS · Report generated {formatDate(generatedAt)} · Sales Director Dashboard
         </div>
       </div>

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
-import { Geist, Poppins } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
-const poppins = Poppins({ subsets: ['latin'], variable: '--font-display', weight: ['500', '600', '700', '800'] });
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
   title: 'PC Merchandise DSS',
@@ -18,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={cn("h-full", "font-sans", geist.variable, poppins.variable)}>
-      <body className="min-h-full bg-background antialiased">
+    <html lang="en" className={cn("h-full", "font-sans", geist.variable, geistMono.variable)}>
+      <body className="min-h-full bg-background antialiased" suppressHydrationWarning>
         {children}
         <Analytics />
       </body>

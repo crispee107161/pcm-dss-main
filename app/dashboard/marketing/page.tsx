@@ -18,13 +18,13 @@ function formatDate(date: Date): string {
 
 type Accent = 'red' | 'green' | 'amber' | 'slate'
 const accentStyles: Record<Accent, string> = {
-  red:   'bg-red-50 text-red-500',
-  green: 'bg-emerald-50 text-emerald-500',
-  amber: 'bg-amber-50 text-amber-500',
-  slate: 'bg-slate-100 text-slate-400',
+  red:   'bg-red-500/10 text-red-400',
+  green: 'bg-green-500/10 text-green-400',
+  amber: 'bg-yellow-500/10 text-yellow-400',
+  slate: 'bg-gray-100 text-gray-400',
 }
 
-function KpiCard({ label, value, sub, valueClass = 'text-slate-900', icon, accent = 'slate' }: {
+function KpiCard({ label, value, sub, valueClass = 'text-gray-900', icon, accent = 'slate' }: {
   label: string
   value: React.ReactNode
   sub?: string
@@ -33,10 +33,10 @@ function KpiCard({ label, value, sub, valueClass = 'text-slate-900', icon, accen
   accent?: Accent
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/70 p-5 flex flex-col gap-3"
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+    <div className="bg-card rounded-2xl card-shadow p-5 flex flex-col gap-3"
+      style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">{label}</p>
+        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">{label}</p>
         <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accentStyles[accent]}`}>
           {icon}
         </span>
@@ -44,7 +44,7 @@ function KpiCard({ label, value, sub, valueClass = 'text-slate-900', icon, accen
       <div>
         <p className={`text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
         {sub && (
-          <span className="inline-block mt-2 text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+          <span className="inline-block mt-2 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
             {sub}
           </span>
         )}
@@ -56,7 +56,7 @@ function KpiCard({ label, value, sub, valueClass = 'text-slate-900', icon, accen
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 mb-4">
-      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">{children}</p>
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">{children}</p>
       <div className="flex-1 h-px bg-gradient-to-r from-red-100/70 to-transparent" />
     </div>
   )
@@ -122,14 +122,14 @@ export default async function MarketingDashboard() {
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-5">
 
       {/* Welcome */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200/60">
+      <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
         <div>
-          <h1 className="text-xl font-extrabold font-heading text-slate-900 tracking-tight">Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Monitor uploads, data health, and model status</p>
+          <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">Dashboard</h1>
+          <p className="text-gray-400 text-sm mt-0.5">Monitor uploads, data health, and model status</p>
         </div>
         <div className="text-right hidden sm:block">
-          <p className="text-xs text-slate-400">Welcome back</p>
-          <p className="text-sm font-bold text-slate-800">{displayName}</p>
+          <p className="text-xs text-gray-400">Welcome back</p>
+          <p className="text-sm font-bold text-gray-800">{displayName}</p>
         </div>
       </div>
 
@@ -146,7 +146,7 @@ export default async function MarketingDashboard() {
         <KpiCard
           label="Model Status"
           value={latestModel ? 'Trained' : 'Pending'}
-          valueClass={latestModel ? 'text-emerald-600' : 'text-amber-600'}
+          valueClass={latestModel ? 'text-green-400' : 'text-yellow-400'}
           accent={latestModel ? 'green' : 'amber'}
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>}
         />
@@ -154,7 +154,7 @@ export default async function MarketingDashboard() {
           label="Avg Engagement"
           value={avgEngagement !== null ? `${(avgEngagement * 100).toFixed(2)}%` : '—'}
           sub={postCount > 0 ? `across ${postCount} posts` : undefined}
-          valueClass="text-amber-600"
+          valueClass="text-yellow-400"
           accent="amber"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>}
         />
@@ -162,20 +162,20 @@ export default async function MarketingDashboard() {
 
       {/* Data coverage strip */}
       {coverageMin && coverageMax && (
-        <div className="bg-white rounded-2xl border border-slate-200/70 px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-2"
-          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] border-l-2 border-red-300/60 pl-2">
+        <div className="bg-card rounded-2xl card-shadow px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-2"
+          style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] border-l-2 border-red-300/60 pl-2">
             Data Coverage
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-700">{formatDate(coverageMin)}</span>
-            <span className="text-slate-300">→</span>
-            <span className="text-xs font-semibold text-slate-700">{formatDate(coverageMax)}</span>
+            <span className="text-xs font-semibold text-gray-700">{formatDate(coverageMin)}</span>
+            <span className="text-gray-300">→</span>
+            <span className="text-xs font-semibold text-gray-700">{formatDate(coverageMax)}</span>
           </div>
-          <span className="text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+          <span className="text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
             {adCoverage._count._all} ad records
           </span>
-          <span className="text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+          <span className="text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
             {totalUploads} total uploads
           </span>
         </div>
@@ -186,27 +186,27 @@ export default async function MarketingDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           {topCategory && (
-            <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+            <div className="bg-card rounded-2xl card-shadow p-5"
+              style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
               <SectionLabel>Top Category by Purchases</SectionLabel>
               <div className="flex items-start justify-between gap-3 mb-4">
-                <p className="text-sm font-bold text-slate-800">{topCategory.name}</p>
-                <span className="flex-shrink-0 text-[10px] font-semibold bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-full px-2.5 py-0.5">
+                <p className="text-sm font-bold text-gray-800">{topCategory.name}</p>
+                <span className="flex-shrink-0 text-[10px] font-semibold bg-green-500/10 border border-green-500/30 text-green-400 rounded-full px-2.5 py-0.5">
                   Top Performer
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="bg-slate-50 rounded-xl p-3">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Purchases</p>
-                  <p className="text-xl font-bold text-slate-900">{topCategory.totalPurchases.toLocaleString()}</p>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Purchases</p>
+                  <p className="text-xl font-bold text-gray-900">{topCategory.totalPurchases.toLocaleString()}</p>
                 </div>
-                <div className="bg-slate-50 rounded-xl p-3">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Ad Spend</p>
-                  <p className="text-xl font-bold text-slate-900">{formatPhp(topCategory.totalSpend)}</p>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ad Spend</p>
+                  <p className="text-xl font-bold text-gray-900">{formatPhp(topCategory.totalSpend)}</p>
                 </div>
-                <div className="bg-emerald-50 rounded-xl p-3">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Ads</p>
-                  <p className="text-xl font-bold text-emerald-700">{topCategory.adCount}</p>
+                <div className="bg-green-500/10 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ads</p>
+                  <p className="text-xl font-bold text-green-400">{topCategory.adCount}</p>
                 </div>
               </div>
               {categoriesWithStats.length > 1 && (
@@ -217,12 +217,12 @@ export default async function MarketingDashboard() {
                       : 0
                     return (
                       <div key={c.name} className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 w-3">{i + 1}</span>
-                        <span className="text-[11px] text-slate-600 w-24 truncate">{c.name}</span>
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <span className="text-[10px] text-gray-400 w-3">{i + 1}</span>
+                        <span className="text-[11px] text-gray-600 w-24 truncate">{c.name}</span>
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-[10px] text-slate-400 w-8 text-right">{c.totalPurchases}</span>
+                        <span className="text-[10px] text-gray-400 w-8 text-right">{c.totalPurchases}</span>
                       </div>
                     )
                   })}
@@ -232,32 +232,32 @@ export default async function MarketingDashboard() {
           )}
 
           {postCount > 0 && avgEngagement !== null && (
-            <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+            <div className="bg-card rounded-2xl card-shadow p-5"
+              style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
               <SectionLabel>Post Engagement Summary</SectionLabel>
               <div className="flex items-end gap-3 mb-4">
-                <p className="text-4xl font-bold tracking-tight text-amber-600">
+                <p className="text-4xl font-bold tracking-tight text-yellow-400">
                   {(avgEngagement * 100).toFixed(2)}%
                 </p>
-                <span className="text-[11px] text-slate-400 mb-1">avg engagement rate</span>
+                <span className="text-[11px] text-gray-400 mb-1">avg engagement rate</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 rounded-xl p-3">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total Posts</p>
-                  <p className="text-xl font-bold text-slate-900">{postCount.toLocaleString()}</p>
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Total Posts</p>
+                  <p className="text-xl font-bold text-gray-900">{postCount.toLocaleString()}</p>
                 </div>
-                <div className="bg-amber-50 rounded-xl p-3">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Quality</p>
+                <div className="bg-yellow-500/10 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Quality</p>
                   <p className={`text-xl font-bold ${
-                    avgEngagement >= 0.05 ? 'text-emerald-600'
-                    : avgEngagement >= 0.02 ? 'text-amber-600'
-                    : 'text-red-500'
+                    avgEngagement >= 0.05 ? 'text-green-400'
+                    : avgEngagement >= 0.02 ? 'text-yellow-400'
+                    : 'text-red-400'
                   }`}>
                     {avgEngagement >= 0.05 ? 'Strong' : avgEngagement >= 0.02 ? 'Average' : 'Low'}
                   </p>
                 </div>
               </div>
-              <p className="text-[10px] text-slate-400 mt-3">
+              <p className="text-[10px] text-gray-400 mt-3">
                 Engagement rate = (reactions + comments + shares) / reach. Strong ≥ 5%, Average 2–5%, Low &lt; 2%.
               </p>
             </div>
@@ -266,8 +266,8 @@ export default async function MarketingDashboard() {
       )}
 
       {/* Quick actions */}
-      <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+      <div className="bg-card rounded-2xl card-shadow p-5"
+        style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
         <SectionLabel>Quick Actions</SectionLabel>
         <div className="flex flex-wrap gap-2">
           <Link href="/dashboard/marketing/upload"
@@ -279,7 +279,7 @@ export default async function MarketingDashboard() {
             { label: 'Manage Keywords',    href: '/dashboard/marketing/keywords' },
           ].map(({ label, href }) => (
             <Link key={href} href={href}
-              className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-red-200 hover:text-red-700 rounded-full px-4 py-1.5 text-sm font-medium transition-colors">
+              className="bg-card hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-red-200 hover:text-red-400 rounded-full px-4 py-1.5 text-sm font-medium transition-colors">
               {label}
             </Link>
           ))}
@@ -287,15 +287,15 @@ export default async function MarketingDashboard() {
       </div>
 
       {/* Current model */}
-      <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+      <div className="bg-card rounded-2xl card-shadow p-5"
+        style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
         <SectionLabel>Current Model</SectionLabel>
         <RegressionSummary model={latestModel} />
       </div>
 
       {/* Recent uploads */}
-      <div className="bg-white rounded-2xl border border-slate-200/70 p-5"
-        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+      <div className="bg-card rounded-2xl card-shadow p-5"
+        style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
         <SectionLabel>Recent Uploads</SectionLabel>
         <UploadHistory logs={recentUploads} />
       </div>

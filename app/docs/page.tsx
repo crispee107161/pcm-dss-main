@@ -22,15 +22,15 @@ const sections = [
 
 export default function DocsPage() {
   return (
-    <div className="bg-white text-slate-900 min-h-screen">
+    <div className="bg-white text-neutral-900 min-h-screen">
       {/* Nav */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-slate-200">
+      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
             <img src="/pcm-logo.png" alt="PCM" className="w-7 h-7 object-contain rounded-lg shrink-0" />
-            <span className="font-bold text-sm tracking-tight text-slate-900 truncate">PC Merchandise</span>
-            <span className="hidden sm:block text-slate-300 mx-1 shrink-0">·</span>
-            <span className="hidden sm:block text-sm text-slate-500 shrink-0">Docs</span>
+            <span className="font-bold text-sm tracking-tight text-neutral-900 truncate">PC Merchandise</span>
+            <span className="hidden sm:block text-neutral-300 mx-1 shrink-0">·</span>
+            <span className="hidden sm:block text-sm text-neutral-500 shrink-0">Docs</span>
           </div>
           <Link
             href="/login"
@@ -44,13 +44,13 @@ export default function DocsPage() {
         </div>
 
         {/* Mobile section nav */}
-        <div className="lg:hidden overflow-x-auto border-t border-slate-100">
+        <div className="lg:hidden overflow-x-auto border-t border-neutral-100">
           <div className="flex gap-0.5 px-4 py-1.5 min-w-max">
             {sections.map((s) => (
               <a
                 key={s.id}
                 href={`#${s.id}`}
-                className="px-3 py-1 rounded-md text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors whitespace-nowrap"
+                className="px-3 py-1 rounded-md text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 transition-colors whitespace-nowrap"
               >
                 {s.label}
               </a>
@@ -63,13 +63,13 @@ export default function DocsPage() {
         {/* Sidebar TOC */}
         <aside className="hidden lg:block w-56 shrink-0">
           <div className="sticky top-24">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4">On this page</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-4">On this page</p>
             <nav className="flex flex-col gap-1">
               {sections.map((s) => (
                 <a
                   key={s.id}
                   href={`#${s.id}`}
-                  className="text-sm text-slate-500 hover:text-red-600 py-1 transition-colors"
+                  className="text-sm text-neutral-500 hover:text-red-600 py-1 transition-colors"
                 >
                   {s.label}
                 </a>
@@ -85,10 +85,10 @@ export default function DocsPage() {
             <div className="inline-flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-xs font-semibold px-3 py-1.5 rounded-full mb-4">
               Technical Documentation
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4 leading-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold text-neutral-900 mb-4 leading-tight">
               PCM DSS — Developer Docs
             </h1>
-            <p className="text-slate-500 text-lg leading-relaxed">
+            <p className="text-neutral-500 text-lg leading-relaxed">
               A role-based decision support system for PC Merchandise, a Filipino computer accessories
               business. Built with Next.js 15, Prisma, Neon PostgreSQL, Auth.js, and Groq AI.
             </p>
@@ -98,14 +98,14 @@ export default function DocsPage() {
 
           {/* Overview */}
           <Section id="overview" title="Overview">
-            <p className="text-slate-600 leading-relaxed mb-4">
+            <p className="text-neutral-600 leading-relaxed mb-4">
               PCM DSS (PC Merchandise Decision Support System) is an internal analytics platform
               that ingests Facebook Ads Manager and Organic Post CSV exports, runs statistical
               models (regression, correlation), and surfaces actionable insights — budget allocation
               recommendations, campaign health scoring, trend analysis, and purchase prediction — to
               three distinct user roles.
             </p>
-            <p className="text-slate-600 leading-relaxed mb-6">
+            <p className="text-neutral-600 leading-relaxed mb-6">
               The system is built entirely on Next.js Server Actions with no separate API server.
               All data lives in a Neon PostgreSQL database managed through Prisma ORM.
             </p>
@@ -148,7 +148,7 @@ export default function DocsPage() {
 
           {/* User Roles */}
           <Section id="user-roles" title="User Roles">
-            <p className="text-slate-600 leading-relaxed mb-4">
+            <p className="text-neutral-600 leading-relaxed mb-4">
               Every user is assigned exactly one role at account creation. Role is stored in the{' '}
               <Code>User</Code> table and enforced server-side on every Server Action and page.
               Unauthorized access redirects to <Code>/login</Code>.
@@ -161,7 +161,7 @@ export default function DocsPage() {
                 ['Business Owner', 'BUSINESS_OWNER', 'Full read access across all dashboards, administration panel, category performance'],
               ]}
             />
-            <p className="text-slate-500 text-sm mt-4">
+            <p className="text-neutral-500 text-sm mt-4">
               Admin user management (create/delete accounts, change roles) is available to{' '}
               <Code>BUSINESS_OWNER</Code> only at <Code>/dashboard/owner/administration</Code>.
             </p>
@@ -197,8 +197,8 @@ export default function DocsPage() {
               ].map(([feature, desc]) => (
                 <li key={feature} className="flex gap-3">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-2" />
-                  <span className="text-slate-600 leading-relaxed">
-                    <span className="font-semibold text-slate-800">{feature}</span> — {desc}
+                  <span className="text-neutral-600 leading-relaxed">
+                    <span className="font-semibold text-neutral-800">{feature}</span> — {desc}
                   </span>
                 </li>
               ))}
@@ -209,7 +209,7 @@ export default function DocsPage() {
 
           {/* Architecture */}
           <Section id="architecture" title="Architecture">
-            <p className="text-slate-600 leading-relaxed mb-4">
+            <p className="text-neutral-600 leading-relaxed mb-4">
               No separate Express or backend server. All server logic lives in Next.js Server Actions
               under <Code>actions/</Code> and server components under <Code>app/</Code>.
             </p>
@@ -288,13 +288,13 @@ export default function DocsPage() {
   prisma/
     schema.prisma                   # Database schema`}</CodeBlock>
 
-            <h3 className="text-base font-semibold text-slate-800 mt-8 mb-3">Data flow</h3>
-            <p className="text-slate-600 leading-relaxed mb-4">
+            <h3 className="text-base font-semibold text-neutral-800 mt-8 mb-3">Data flow</h3>
+            <p className="text-neutral-600 leading-relaxed mb-4">
               CSV uploads → server action parses rows → Prisma upsert into <Code>Ad</Code> or{' '}
               <Code>FacebookPost</Code> tables → regression model re-trained on next analytics
               load → simulation uses stored model coefficients.
             </p>
-            <p className="text-slate-600 leading-relaxed">
+            <p className="text-neutral-600 leading-relaxed">
               Categorization flows: manual select → <Code>updatePostCategoryForm</Code> →{' '}
               <Code>prisma.facebookPost.update</Code> → <Code>revalidatePath</Code>.
               Auto-categorize: <Code>autoCategorizeAll</Code> → fetch uncategorized + keywords →{' '}
@@ -306,7 +306,7 @@ export default function DocsPage() {
 
           {/* Server Actions */}
           <Section id="actions" title="Server Actions">
-            <p className="text-slate-600 leading-relaxed mb-6">
+            <p className="text-neutral-600 leading-relaxed mb-6">
               All mutations go through Next.js Server Actions in <Code>actions/</Code>. Every action
               calls <Code>auth()</Code> first and throws <Code>Unauthorized</Code> if the session is
               missing or the role doesn't match. Actions call <Code>revalidatePath</Code> to
@@ -378,18 +378,18 @@ export default function DocsPage() {
 
           {/* Database */}
           <Section id="database" title="Database Schema">
-            <p className="text-slate-600 leading-relaxed mb-4">
+            <p className="text-neutral-600 leading-relaxed mb-4">
               PostgreSQL managed via Prisma. The schema is defined in{' '}
               <Code>prisma/schema.prisma</Code>. Run <Code>npx prisma migrate dev</Code> to apply
               migrations or <Code>npx prisma db push</Code> for direct schema sync.
             </p>
 
-            <h3 className="text-base font-semibold text-slate-800 mt-6 mb-3">Enums</h3>
+            <h3 className="text-base font-semibold text-neutral-800 mt-6 mb-3">Enums</h3>
             <CodeBlock>{`enum Role          { MARKETING_MANAGER | SALES_DIRECTOR | BUSINESS_OWNER }
 enum UploadType    { ADS_CSV | POSTS_CSV | PAGE_METRIC_CSV | FOLLOWER_HISTORY_CSV | PAGE_VIEWERS_CSV | DEMOGRAPHICS_CSV }
 enum UploadStatus  { SUCCESS | FAILED }`}</CodeBlock>
 
-            <h3 className="text-base font-semibold text-slate-800 mt-6 mb-3">Models</h3>
+            <h3 className="text-base font-semibold text-neutral-800 mt-6 mb-3">Models</h3>
             <CodeBlock>{`User
   id             Int      @id @default(autoincrement())
   email          String   @unique
@@ -515,8 +515,8 @@ FollowerTerritory
   territory    String @unique
   distribution Float`}</CodeBlock>
 
-            <h3 className="text-base font-semibold text-slate-800 mt-8 mb-2">Key relationships</h3>
-            <p className="text-slate-600 leading-relaxed">
+            <h3 className="text-base font-semibold text-neutral-800 mt-8 mb-2">Key relationships</h3>
+            <p className="text-neutral-600 leading-relaxed">
               <Code>FacebookPost</Code> and <Code>Ad</Code> both have a nullable <Code>category_id</Code>{' '}
               foreign key to <Code>Category</Code>. A <Code>Keyword</Code> belongs to exactly one{' '}
               <Code>Category</Code> and drives the keyword-matching auto-categorize logic. The{' '}
@@ -529,7 +529,7 @@ FollowerTerritory
 
           {/* Env vars */}
           <Section id="env" title="Environment Variables">
-            <p className="text-slate-600 leading-relaxed mb-4">
+            <p className="text-neutral-600 leading-relaxed mb-4">
               Create a <Code>.env</Code> file in the project root with the following variables.
             </p>
             <Table
@@ -540,9 +540,9 @@ FollowerTerritory
                 ['GROQ_API_KEY', 'Yes', 'Groq API key — used for AI keyword suggestions and chat assistant'],
               ]}
             />
-            <p className="text-slate-500 text-sm mt-4">
+            <p className="text-neutral-500 text-sm mt-4">
               Generate <Code>AUTH_SECRET</Code> with:{' '}
-              <code className="bg-slate-100 text-red-700 text-[0.8em] font-mono px-1.5 py-0.5 rounded">
+              <code className="bg-neutral-100 text-red-700 text-[0.8em] font-mono px-1.5 py-0.5 rounded">
                 node -e &quot;require(&apos;crypto&apos;).randomBytes(32).toString(&apos;base64&apos;)&quot;
               </code>
             </p>
@@ -599,7 +599,7 @@ npx prisma studio
 # Prisma — regenerate client after schema changes
 npx prisma generate`}</CodeBlock>
 
-            <h3 className="text-base font-semibold text-slate-800 mt-8 mb-2">First-time setup</h3>
+            <h3 className="text-base font-semibold text-neutral-800 mt-8 mb-2">First-time setup</h3>
             <CodeBlock>{`# 1. Clone and install
 git clone <repo-url>
 cd pcm-dss
@@ -618,8 +618,8 @@ npx prisma db push
 # 5. Start dev server
 npm run dev`}</CodeBlock>
 
-            <h3 className="text-base font-semibold text-slate-800 mt-8 mb-2">Deployment</h3>
-            <p className="text-slate-600 leading-relaxed">
+            <h3 className="text-base font-semibold text-neutral-800 mt-8 mb-2">Deployment</h3>
+            <p className="text-neutral-600 leading-relaxed">
               The app deploys to Vercel. Push to the <Code>main</Code> branch to trigger an
               automatic production build. Set <Code>DATABASE_URL</Code>, <Code>AUTH_SECRET</Code>,
               and <Code>GROQ_API_KEY</Code> in the Vercel project environment variables. The
@@ -631,7 +631,7 @@ npm run dev`}</CodeBlock>
           <Divider />
 
           <div className="text-center py-8">
-            <p className="text-sm text-slate-400 mb-4">PC Merchandise · Confidential Internal Tool</p>
+            <p className="text-sm text-neutral-400 mb-4">PC Merchandise · Confidential Internal Tool</p>
             <Link
               href="/login"
               className="text-sm text-red-600 hover:text-red-700 transition-colors"
@@ -643,7 +643,7 @@ npm run dev`}</CodeBlock>
       </div>
 
       {/* Footer */}
-      <footer className="bg-slate-900 border-t border-white/5 px-4 sm:px-6 py-10 mt-8">
+      <footer className="bg-neutral-900 border-t border-white/5 px-4 sm:px-6 py-10 mt-8">
         <div className="max-w-5xl mx-auto flex flex-col items-center gap-4">
           <div className="flex items-center gap-2.5">
             <img src="/pcm-logo.png" alt="PCM" className="w-7 h-7 object-contain rounded-md opacity-70" />
@@ -669,19 +669,19 @@ npm run dev`}</CodeBlock>
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="mb-12 scroll-mt-24">
-      <h2 className="text-xl font-bold text-slate-900 mb-5">{title}</h2>
+      <h2 className="text-xl font-bold text-neutral-900 mb-5">{title}</h2>
       {children}
     </section>
   )
 }
 
 function Divider() {
-  return <hr className="border-slate-100 my-10" />
+  return <hr className="border-neutral-100 my-10" />
 }
 
 function Code({ children }: { children: React.ReactNode }) {
   return (
-    <code className="bg-slate-100 text-red-700 text-[0.8em] font-mono px-1.5 py-0.5 rounded">
+    <code className="bg-neutral-100 text-red-700 text-[0.8em] font-mono px-1.5 py-0.5 rounded">
       {children}
     </code>
   )
@@ -689,7 +689,7 @@ function Code({ children }: { children: React.ReactNode }) {
 
 function CodeBlock({ children }: { children: string }) {
   return (
-    <pre className="bg-slate-950 text-slate-200 text-sm font-mono rounded-xl p-5 overflow-x-auto leading-relaxed my-4 whitespace-pre">
+    <pre className="bg-neutral-950 text-neutral-200 text-sm font-mono rounded-xl p-5 overflow-x-auto leading-relaxed my-4 whitespace-pre">
       {children}
     </pre>
   )
@@ -697,12 +697,12 @@ function CodeBlock({ children }: { children: string }) {
 
 function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 my-4">
+    <div className="overflow-x-auto rounded-xl border border-neutral-200 my-4">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-slate-50 border-b border-slate-200">
+          <tr className="bg-neutral-50 border-b border-neutral-200">
             {headers.map((h) => (
-              <th key={h} className="text-left px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">
+              <th key={h} className="text-left px-4 py-3 font-semibold text-neutral-700 whitespace-nowrap">
                 {h}
               </th>
             ))}
@@ -710,9 +710,9 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-neutral-50/50'}>
               {row.map((cell, j) => (
-                <td key={j} className="px-4 py-3 text-slate-600 align-top">
+                <td key={j} className="px-4 py-3 text-neutral-600 align-top">
                   {j === 0 ? (
                     <code className="text-red-700 text-[0.85em] font-mono bg-red-50 px-1.5 py-0.5 rounded">
                       {cell}
@@ -732,14 +732,14 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
 
 function KVTable({ rows }: { rows: string[][] }) {
   return (
-    <div className="rounded-xl border border-slate-200 overflow-hidden my-4">
+    <div className="rounded-xl border border-neutral-200 overflow-hidden my-4">
       {rows.map(([k, v], i) => (
         <div
           key={k}
-          className={`flex gap-4 px-4 py-3 text-sm ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}`}
+          className={`flex gap-4 px-4 py-3 text-sm ${i % 2 === 0 ? 'bg-white' : 'bg-neutral-50/60'}`}
         >
-          <span className="font-semibold text-slate-700 w-24 sm:w-36 shrink-0">{k}</span>
-          <span className="text-slate-600">{v}</span>
+          <span className="font-semibold text-neutral-700 w-24 sm:w-36 shrink-0">{k}</span>
+          <span className="text-neutral-600">{v}</span>
         </div>
       ))}
     </div>
@@ -748,15 +748,15 @@ function KVTable({ rows }: { rows: string[][] }) {
 
 function ActionBlock({ file, actions }: { file: string; actions: string[][] }) {
   return (
-    <div className="rounded-xl border border-slate-200 overflow-hidden mb-6">
-      <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-        <code className="text-xs font-mono text-slate-500">{file}</code>
+    <div className="rounded-xl border border-neutral-200 overflow-hidden mb-6">
+      <div className="px-4 py-2.5 bg-neutral-50 border-b border-neutral-200">
+        <code className="text-xs font-mono text-neutral-500">{file}</code>
       </div>
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-neutral-100">
         {actions.map(([sig, desc]) => (
           <div key={sig} className="px-4 py-3 flex flex-col sm:flex-row gap-1 sm:gap-4">
             <code className="text-red-700 text-xs font-mono shrink-0 sm:w-64">{sig}</code>
-            <span className="text-sm text-slate-600">{desc}</span>
+            <span className="text-sm text-neutral-600">{desc}</span>
           </div>
         ))}
       </div>

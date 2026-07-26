@@ -5,6 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 @media print {
+  @page {
+    size: A4;
+    margin: 15mm 18mm;
+  }
+
   body {
     background: white !important;
   }
@@ -21,10 +26,142 @@
   }
 }
 
+/*
+ * Sure-derived neutral scale + semantic tokens.
+ * Source of the raw hex values: we-promise/sure design system
+ * (app/assets/tailwind/sure-design-system/_generated.css), ported by hand.
+ * Tailwind's default gray/red/green/yellow/blue/violet/orange keys are
+ * overridden here, so any existing `gray-*`/`red-*`/etc. utility class in
+ * this codebase picks up Sure's warmer, flatter palette automatically.
+ */
+@theme {
+  /*
+   * PCM DSS is dark-only (no light/dark toggle exists), so this scale is
+   * defined directly in dark-appropriate order rather than mirroring Sure's
+   * light-mode ramp: gray-900 is near-white (max contrast against the black
+   * canvas, used for headings/primary text via existing `text-gray-900`
+   * call sites) down to gray-25 (near-black, subtle fills). Sure itself
+   * keeps one raw scale and flips *semantic* tokens per-mode instead — that
+   * wasn't practical here since this codebase calls raw `gray-N` utilities
+   * directly at ~90 call sites rather than semantic classes.
+   */
+  --color-gray-25: #171717;
+  --color-gray-50: #242424;
+  --color-gray-100: #363636;
+  --color-gray-200: #5C5C5C;
+  --color-gray-300: #737373;
+  --color-gray-400: #9E9E9E;
+  --color-gray-500: #CFCFCF;
+  --color-gray-600: #E7E7E7;
+  --color-gray-700: #F0F0F0;
+  --color-gray-800: #F7F7F7;
+  --color-gray-900: #FAFAFA;
+
+  --color-red-25: #FFFBFB;
+  --color-red-50: #FFF1F0;
+  --color-red-100: #FFDEDB;
+  --color-red-200: #FEB9B3;
+  --color-red-300: #F88C86;
+  --color-red-400: #ED4E4E;
+  --color-red-500: #F13636;
+  --color-red-600: #EC2222;
+  --color-red-700: #C91313;
+  --color-red-800: #A40E0E;
+  --color-red-900: #7E0707;
+
+  --color-green-25: #F6FEF9;
+  --color-green-50: #ECFDF3;
+  --color-green-100: #D1FADF;
+  --color-green-200: #A6F4C5;
+  --color-green-300: #6CE9A6;
+  --color-green-400: #32D583;
+  --color-green-500: #12B76A;
+  --color-green-600: #10A861;
+  --color-green-700: #078C52;
+  --color-green-800: #05603A;
+  --color-green-900: #054F31;
+
+  --color-yellow-25: #FFFCF5;
+  --color-yellow-50: #FFFAEB;
+  --color-yellow-100: #FEF0C7;
+  --color-yellow-200: #FEDF89;
+  --color-yellow-300: #FEC84B;
+  --color-yellow-400: #FDB022;
+  --color-yellow-500: #F79009;
+  --color-yellow-600: #DC6803;
+  --color-yellow-700: #B54708;
+  --color-yellow-800: #93370D;
+  --color-yellow-900: #7A2E0E;
+
+  --color-blue-25: #F5FAFF;
+  --color-blue-50: #EFF8FF;
+  --color-blue-100: #D1E9FF;
+  --color-blue-200: #B2DDFF;
+  --color-blue-300: #84CAFF;
+  --color-blue-400: #53B1FD;
+  --color-blue-500: #2E90FA;
+  --color-blue-600: #1570EF;
+  --color-blue-700: #175CD3;
+  --color-blue-800: #1849A9;
+  --color-blue-900: #194185;
+
+  --color-violet-25: #FBFAFF;
+  --color-violet-50: #F5F3FF;
+  --color-violet-100: #ECE9FE;
+  --color-violet-200: #DDD6FE;
+  --color-violet-300: #C3B5FD;
+  --color-violet-400: #A48AFB;
+  --color-violet-500: #875BF7;
+  --color-violet-600: #7839EE;
+  --color-violet-700: #6927DA;
+
+  --color-orange-25: #FFF9F5;
+  --color-orange-50: #FFF4ED;
+  --color-orange-100: #FFE6D5;
+  --color-orange-200: #FFD6AE;
+  --color-orange-300: #FF9C66;
+  --color-orange-400: #FF692E;
+  --color-orange-500: #FF4405;
+  --color-orange-600: #E62E05;
+  --color-orange-700: #BC1B06;
+
+  /* Alpha ramps used for hairline borders / rings / shadows */
+  --color-alpha-black-25: rgba(11, 11, 11, 0.03);
+  --color-alpha-black-50: rgba(11, 11, 11, 0.05);
+  --color-alpha-black-100: rgba(11, 11, 11, 0.08);
+  --color-alpha-black-200: rgba(11, 11, 11, 0.10);
+  --color-alpha-black-300: rgba(11, 11, 11, 0.15);
+  --color-alpha-black-400: rgba(11, 11, 11, 0.20);
+  --color-alpha-black-500: rgba(11, 11, 11, 0.30);
+  --color-alpha-black-700: rgba(11, 11, 11, 0.50);
+
+  --color-alpha-white-25: rgba(255, 255, 255, 0.03);
+  --color-alpha-white-50: rgba(255, 255, 255, 0.05);
+  --color-alpha-white-100: rgba(255, 255, 255, 0.08);
+  --color-alpha-white-200: rgba(255, 255, 255, 0.10);
+  --color-alpha-white-300: rgba(255, 255, 255, 0.15);
+  --color-alpha-white-400: rgba(255, 255, 255, 0.20);
+  --color-alpha-white-500: rgba(255, 255, 255, 0.30);
+  --color-alpha-white-700: rgba(255, 255, 255, 0.50);
+
+  /* Sure's shadow scale — hairline ring composed with a soft, low-opacity drop shadow */
+  --shadow-xs: 0px 1px 2px 0px rgba(11, 11, 11, 0.06);
+  --shadow-sm: 0px 1px 6px 0px rgba(11, 11, 11, 0.06);
+  --shadow-md: 0px 4px 8px -2px rgba(11, 11, 11, 0.06);
+  --shadow-lg: 0px 12px 16px -4px rgba(11, 11, 11, 0.06);
+  --shadow-xl: 0px 20px 24px -4px rgba(11, 11, 11, 0.06);
+}
+
 @theme inline {
-  --font-display: var(--font-display);
-  --font-heading: var(--font-display);
+  /*
+   * Sure uses a single typeface (Geist) for everything — no separate
+   * display/heading family. `font-heading` call sites stay as-is but now
+   * resolve to the same Geist stack as `font-sans`.
+   */
+  --font-display: var(--font-sans);
+  --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -68,76 +205,88 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Shadcn semantic tokens — dark-only, matching app.sure.am's actual
+ * dashboard: near-black canvas, green as the primary/positive accent
+ * (Sure's own logo + gain color), red reserved for destructive/negative.
+ * `.dark` is kept as an identical duplicate of `:root` as a no-op safety
+ * net — nothing currently applies a `.dark` class, `:root` is the only
+ * value that matters, but any future `dark:` variant usage resolves the
+ * same way either way.
+ */
 :root {
-  --background: oklch(0.993 0.003 60);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.577 0.245 27.325);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.577 0.245 27.325);
-  --chart-1: oklch(0.577 0.245 27.3);
-  --chart-2: oklch(0.68 0.18 45);
-  --chart-3: oklch(0.62 0.14 160);
-  --chart-4: oklch(0.55 0.16 240);
-  --chart-5: oklch(0.72 0.12 300);
+  --background: #0B0B0B;
+  --foreground: #FAFAFA;
+  --card: #171717;
+  --card-foreground: #FAFAFA;
+  --popover: #171717;
+  --popover-foreground: #FAFAFA;
+  --primary: #12B76A;
+  --primary-foreground: #0B0B0B;
+  --secondary: #242424;
+  --secondary-foreground: #FAFAFA;
+  --muted: #171717;
+  --muted-foreground: #9E9E9E;
+  --accent: #242424;
+  --accent-foreground: #FAFAFA;
+  --destructive: #ED4E4E;
+  --border: var(--color-alpha-white-200);
+  --input: var(--color-alpha-white-300);
+  --ring: var(--color-alpha-white-700);
+  --chart-1: #12B76A;
+  --chart-2: #53B1FD;
+  --chart-3: #ED4E4E;
+  --chart-4: #A48AFB;
+  --chart-5: #FDB022;
   --radius: 0.625rem;
-  --status-positive: oklch(0.62 0.14 160);
-  --status-warning:  oklch(0.68 0.18 45);
-  --status-negative: oklch(0.577 0.245 27.325);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --status-positive: #32D583;
+  --status-warning: #FDB022;
+  --status-negative: #ED4E4E;
+  --sidebar: #0B0B0B;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-primary: #12B76A;
+  --sidebar-primary-foreground: #0B0B0B;
+  --sidebar-accent: #171717;
+  --sidebar-accent-foreground: #FAFAFA;
+  --sidebar-border: var(--color-alpha-white-200);
+  --sidebar-ring: var(--color-alpha-white-500);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.577 0.245 27.3);
-  --chart-2: oklch(0.68 0.18 45);
-  --chart-3: oklch(0.62 0.14 160);
-  --chart-4: oklch(0.55 0.16 240);
-  --chart-5: oklch(0.72 0.12 300);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0B0B0B;
+  --foreground: #FAFAFA;
+  --card: #171717;
+  --card-foreground: #FAFAFA;
+  --popover: #171717;
+  --popover-foreground: #FAFAFA;
+  --primary: #12B76A;
+  --primary-foreground: #0B0B0B;
+  --secondary: #242424;
+  --secondary-foreground: #FAFAFA;
+  --muted: #171717;
+  --muted-foreground: #9E9E9E;
+  --accent: #242424;
+  --accent-foreground: #FAFAFA;
+  --destructive: #ED4E4E;
+  --border: var(--color-alpha-white-200);
+  --input: var(--color-alpha-white-300);
+  --ring: var(--color-alpha-white-700);
+  --chart-1: #12B76A;
+  --chart-2: #53B1FD;
+  --chart-3: #ED4E4E;
+  --chart-4: #A48AFB;
+  --chart-5: #FDB022;
+  --status-positive: #32D583;
+  --status-warning: #FDB022;
+  --status-negative: #ED4E4E;
+  --sidebar: #0B0B0B;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-primary: #12B76A;
+  --sidebar-primary-foreground: #0B0B0B;
+  --sidebar-accent: #171717;
+  --sidebar-accent-foreground: #FAFAFA;
+  --sidebar-border: var(--color-alpha-white-200);
+  --sidebar-ring: var(--color-alpha-white-500);
 }
 
 @layer base {
@@ -153,33 +302,151 @@
   }
 }
 
-/* Scrollbar */
+/* Scrollbar — neutral, matching Sure's restrained use of accent color */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+::-webkit-scrollbar-thumb { background: var(--color-gray-400); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gray-600); }
 
 /* Selection */
-::selection { background: rgba(220,38,38,0.12); color: #1e293b; }
+::selection { background: rgba(18,183,106,0.25); color: #FAFAFA; }
 
-/* Card shadows */
+/*
+ * Sure's actual dashboard widgets (Cashflow / Net Worth / Outflows on
+ * app.sure.am) carry no border or shadow at all — grouping comes purely
+ * from the `bg-card` shade sitting a notch lighter than the page canvas.
+ * `card-shadow` is kept as a class (rather than deleted) so the ~40 call
+ * sites don't need touching again, but it's intentionally a no-op now.
+ * `card-shadow-floating` keeps the real ring+shadow recipe — Sure *does*
+ * shadow actually-floating surfaces (dropdowns, popovers, modals).
+ */
 .card-shadow {
-  box-shadow:
-    0 0 0 1px rgba(0,0,0,0.04),
-    0 1px 3px rgba(0,0,0,0.08),
-    0 4px 16px rgba(0,0,0,0.06),
-    0 0 40px rgba(220,38,38,0.02);
+  box-shadow: none;
 }
 .card-shadow-floating {
   box-shadow:
-    0 0 0 1px rgba(0,0,0,0.06),
-    0 4px 12px rgba(0,0,0,0.12),
-    0 16px 40px rgba(0,0,0,0.1),
-    0 0 60px rgba(220,38,38,0.04);
+    0 0 0 1px var(--color-alpha-white-50),
+    var(--shadow-lg);
 }
 
-/* Tabular numerals for all KPI/stat values */
-.tabular { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
+/* shadow-border-* — hairline ring + shadow, sized per Sure's scale */
+.shadow-border-xs { box-shadow: var(--shadow-xs), 0px 0px 0px 1px var(--color-alpha-black-50); }
+.shadow-border-sm { box-shadow: var(--shadow-sm), 0px 0px 0px 1px var(--color-alpha-black-50); }
+.shadow-border-md { box-shadow: var(--shadow-md), 0px 0px 0px 1px var(--color-alpha-black-50); }
+.shadow-border-lg { box-shadow: var(--shadow-lg), 0px 0px 0px 1px var(--color-alpha-black-50); }
+.shadow-border-xl { box-shadow: var(--shadow-xl), 0px 0px 0px 1px var(--color-alpha-black-50); }
+.dark .shadow-border-xs { box-shadow: var(--shadow-xs), 0px 0px 0px 1px var(--color-alpha-white-50); }
+.dark .shadow-border-sm { box-shadow: var(--shadow-sm), 0px 0px 0px 1px var(--color-alpha-white-50); }
+.dark .shadow-border-md { box-shadow: var(--shadow-md), 0px 0px 0px 1px var(--color-alpha-white-50); }
+.dark .shadow-border-lg { box-shadow: var(--shadow-lg), 0px 0px 0px 1px var(--color-alpha-white-50); }
+.dark .shadow-border-xl { box-shadow: var(--shadow-xl), 0px 0px 0px 1px var(--color-alpha-white-50); }
+
+/* Structural ink/border helpers — deliberately NOT named text-primary/border-primary
+   to avoid colliding with the brand-red `--color-primary` utilities Tailwind
+   already generates from the theme above. */
+.text-ink { color: var(--foreground); }
+.text-ink-muted { color: var(--color-gray-500); }
+.dark .text-ink-muted { color: var(--color-gray-300); }
+.text-ink-subtle { color: var(--color-gray-400); }
+
+.border-hairline { border-color: var(--color-alpha-black-200); }
+.dark .border-hairline { border-color: var(--color-alpha-white-400); }
+.border-hairline-strong { border-color: var(--color-alpha-black-300); }
+.dark .border-hairline-strong { border-color: var(--color-alpha-white-500); }
+.border-hairline-subtle { border-color: var(--color-alpha-black-50); }
+.dark .border-hairline-subtle { border-color: var(--color-alpha-white-200); }
+
+/*
+ * Chart hover tooltip surface (Sure recipe): hairline ring composed with a
+ * soft 8/24 drop shadow. Use on Recharts custom tooltip content.
+ */
+.chart-tooltip {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow:
+    0 0 0 1px var(--color-alpha-black-50),
+    0 8px 24px rgba(11, 11, 11, 0.12);
+}
+.dark .chart-tooltip {
+  box-shadow:
+    0 0 0 1px var(--color-alpha-white-50),
+    0 8px 24px rgba(11, 11, 11, 0.12);
+}
+
+/*
+ * Horizontally scrollable table wrapper (Sure recipe): overflow-x: auto with
+ * a pure-CSS "scroll shadow" — cover gradients scroll with the content and
+ * hide the fixed edge-shadow gradients, so a soft shadow only appears when
+ * there is more to scroll.
+ */
+.table-scroll {
+  --table-scroll-bg: var(--card);
+  overflow-x: auto;
+  background:
+    linear-gradient(to right, var(--table-scroll-bg) 30%, transparent),
+    linear-gradient(to left, var(--table-scroll-bg) 30%, transparent) 100% 0,
+    radial-gradient(farthest-side at 0 50%, rgba(11, 11, 11, 0.06), transparent),
+    radial-gradient(farthest-side at 100% 50%, rgba(11, 11, 11, 0.06), transparent) 100% 0;
+  background-repeat: no-repeat;
+  background-color: var(--table-scroll-bg);
+  background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* Segmented control — track + equal-footprint segments, for time-range / metric toggles */
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--color-gray-50);
+}
+.dark .segmented-control {
+  background: var(--color-alpha-white-100);
+}
+.segmented-control__segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-gray-500);
+  cursor: pointer;
+  transition: background-color 200ms, color 200ms;
+}
+.dark .segmented-control__segment {
+  color: var(--color-gray-300);
+}
+.segmented-control__segment:hover {
+  background: var(--color-gray-200);
+}
+.dark .segmented-control__segment:hover {
+  background: var(--color-gray-800);
+}
+.segmented-control__segment--active,
+.segmented-control__segment--active:hover {
+  background: #FFFFFF;
+  color: var(--foreground);
+  box-shadow: var(--shadow-sm);
+}
+.dark .segmented-control__segment--active,
+.dark .segmented-control__segment--active:hover {
+  background: var(--color-gray-700);
+  color: #FFFFFF;
+}
+
+/* Tabular numerals for all KPI/stat values — Sure renders numeric/financial
+   figures in Geist Mono rather than the sans face. */
+.tabular {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
 
 /* Shared enter animations */
 @keyframes fade-slide-up {
@@ -221,9 +488,20 @@
   overflow: hidden;
 }
 
-/* Focus ring standard */
+/*
+ * Focus ring — Sure's recipe: an always-present *transparent* outline so
+ * elements with `transition-colors` animate transparent -> token instead of
+ * popping in, paired with `:focus-visible` (never shows for mouse/touch).
+ */
 .focus-ring {
-  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1;
+  outline: 2px solid transparent;
+  outline-offset: 0;
+}
+.focus-ring:focus-visible {
+  outline-color: var(--color-alpha-black-700);
+}
+.dark .focus-ring:focus-visible {
+  outline-color: var(--color-alpha-white-700);
 }
 
 /* Explicit spin keyframe — Tailwind v4 @theme inline can omit @keyframes from the CSS output */

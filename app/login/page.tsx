@@ -112,7 +112,7 @@ export default function LoginPage() {
                 Turn ad data<br />
                 into <span style={{ color: '#ef4444' }}>decisions.</span>
               </h1>
-              <p className="text-zinc-500 text-sm mt-5 max-w-[280px] leading-relaxed">
+              <p className="text-gray-500 text-sm mt-5 max-w-[280px] leading-relaxed">
                 Predictive models, correlation analysis, and AI insights — purpose-built for PC Merchandise.
               </p>
             </div>
@@ -123,7 +123,7 @@ export default function LoginPage() {
                 <div key={i} className="bar rounded-sm flex-1"
                   style={{ height: `${h}%`, background: i === 5 ? '#ef4444' : i === 6 ? '#dc2626' : 'rgba(239,68,68,0.25)' }} />
               ))}
-              <p className="text-zinc-500 text-[10px] ml-2 self-end pb-0.5">Page Views</p>
+              <p className="text-gray-500 text-[10px] ml-2 self-end pb-0.5">Page Views</p>
             </div>
 
             {/* Floating stat cards */}
@@ -134,7 +134,7 @@ export default function LoginPage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
                 </div>
                 <div>
-                  <p className="text-zinc-500 text-[11px]">Total Ad Reach</p>
+                  <p className="text-gray-500 text-[11px]">Total Ad Reach</p>
                   <p className="text-white font-bold text-sm">847,293 people</p>
                 </div>
               </div>
@@ -145,7 +145,7 @@ export default function LoginPage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
                 </div>
                 <div>
-                  <p className="text-zinc-500 text-[11px]">Purchases Tracked</p>
+                  <p className="text-gray-500 text-[11px]">Purchases Tracked</p>
                   <p className="text-white font-bold text-sm">1,284 conversions</p>
                 </div>
               </div>
@@ -156,7 +156,7 @@ export default function LoginPage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
                 </div>
                 <div>
-                  <p className="text-zinc-500 text-[11px]">Model Accuracy</p>
+                  <p className="text-gray-500 text-[11px]">Model Accuracy</p>
                   <p className="text-white font-bold text-sm">R² = 89.4%</p>
                 </div>
               </div>
@@ -166,7 +166,7 @@ export default function LoginPage() {
           {/* Footer */}
           <div className="relative z-10">
             <div className="mb-4" style={{ height: 1, background: 'linear-gradient(to right, rgba(220,38,38,0.5), transparent)' }} />
-            <p className="text-zinc-700 text-xs">© 2025 PC Merchandise · Confidential Internal Tool</p>
+            <p className="text-gray-700 text-xs">© 2025 PC Merchandise · Confidential Internal Tool</p>
           </div>
         </div>
 
@@ -189,7 +189,7 @@ export default function LoginPage() {
             {/* Heading */}
             <div className="r1 mb-8">
               <h2 className="text-[2rem] font-black text-white tracking-tight leading-tight">Welcome back.</h2>
-              <p className="text-zinc-500 text-sm mt-1">Sign in to your dashboard</p>
+              <p className="text-gray-500 text-sm mt-1">Sign in to your dashboard</p>
             </div>
 
             {/* Error */}
@@ -205,7 +205,7 @@ export default function LoginPage() {
 
             <form action={formAction} className="space-y-4">
               <div className="r2">
-                <label htmlFor="email" className="block text-[11px] font-bold text-zinc-500 uppercase tracking-[0.14em] mb-2">
+                <label htmlFor="email" className="block text-[11px] font-bold text-gray-500 uppercase tracking-[0.14em] mb-2">
                   Email Address
                 </label>
                 <input
@@ -215,13 +215,13 @@ export default function LoginPage() {
                   autoComplete="email"
                   required
                   style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(63,63,70,0.9)', outline: 'none', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                  className="w-full px-4 py-3 rounded-lg text-white placeholder-zinc-600 text-sm"
+                  className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-600 text-sm"
                   placeholder="you@pcmerchandise.com"
                 />
               </div>
 
               <div className="r3">
-                <label htmlFor="password" className="block text-[11px] font-bold text-zinc-500 uppercase tracking-[0.14em] mb-2">
+                <label htmlFor="password" className="block text-[11px] font-bold text-gray-500 uppercase tracking-[0.14em] mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -232,13 +232,13 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     required
                     style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(63,63,70,0.9)', outline: 'none', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-white placeholder-zinc-600 text-sm"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-white placeholder-gray-600 text-sm"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="pw-toggle absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 p-0.5"
+                    className="pw-toggle absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 p-0.5"
                     tabIndex={-1}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
@@ -283,7 +283,7 @@ export default function LoginPage() {
               </div>
             </form>
 
-            <p className="r5 text-zinc-700 text-xs text-center mt-8">
+            <p className="r5 text-gray-700 text-xs text-center mt-8">
               Access restricted to authorized personnel only.
             </p>
           </div>

@@ -17,15 +17,15 @@ function formatDate(date: Date): string {
 }
 
 const MODEL_LABELS: Record<string, { label: string; color: string; description: string }> = {
-  log_mlr:   { label: 'Log-Linear MLR',   color: 'bg-blue-100 text-blue-800',     description: 'Log-transformed predictors capture diminishing returns' },
-  plain_mlr: { label: 'Plain MLR',         color: 'bg-slate-100 text-slate-700',   description: 'Linear relationship between raw metrics and purchases' },
-  poly_mlr:  { label: 'Polynomial MLR',    color: 'bg-purple-100 text-purple-800', description: 'Quadratic spend term captures non-linear ad response curves' },
-  ridge_mlr: { label: 'Ridge MLR',         color: 'bg-amber-100 text-amber-800',   description: 'Regularized to reduce overfitting from correlated predictors' },
+  log_mlr:   { label: 'Log-Linear MLR',   color: 'bg-blue-500/10 text-blue-300',     description: 'Log-transformed predictors capture diminishing returns' },
+  plain_mlr: { label: 'Plain MLR',         color: 'bg-gray-100 text-gray-400',   description: 'Linear relationship between raw metrics and purchases' },
+  poly_mlr:  { label: 'Polynomial MLR',    color: 'bg-violet-500/10 text-violet-300', description: 'Quadratic spend term captures non-linear ad response curves' },
+  ridge_mlr: { label: 'Ridge MLR',         color: 'bg-yellow-500/10 text-yellow-300',   description: 'Regularized to reduce overfitting from correlated predictors' },
 }
 
 function getModelMeta(model: RegressionModel) {
   const type = model.model_type ?? (model.coef_reach != null ? 'plain_mlr' : 'slr')
-  return MODEL_LABELS[type] ?? { label: 'Simple Linear Regression', color: 'bg-slate-100 text-slate-700', description: 'Predicts purchases from spend only' }
+  return MODEL_LABELS[type] ?? { label: 'Simple Linear Regression', color: 'bg-gray-100 text-gray-400', description: 'Predicts purchases from spend only' }
 }
 
 function buildEquation(model: RegressionModel): string {
@@ -64,7 +64,7 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
 
   if (!model) {
     return (
-      <div className="text-center py-8 text-slate-500 text-sm">
+      <div className="text-center py-8 text-gray-500 text-sm">
         No regression model trained yet. Upload at least 10 ad records with purchase data.
       </div>
     )
@@ -75,9 +75,9 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
   const equation = buildEquation(model)
   const r2Percent = (model.r_squared * 100).toFixed(1)
   const r2Quality = model.r_squared >= 0.7 ? 'Strong' : model.r_squared >= 0.4 ? 'Moderate' : 'Weak'
-  const r2Color = model.r_squared >= 0.7 ? 'text-green-700' : model.r_squared >= 0.4 ? 'text-amber-700' : 'text-red-700'
+  const r2Color = model.r_squared >= 0.7 ? 'text-green-400' : model.r_squared >= 0.4 ? 'text-yellow-400' : 'text-red-400'
   const adjR2 = computeAdjR2(model.r_squared, model.n, model.model_type, isMLR)
-  const adjR2Color = adjR2 >= 0.7 ? 'text-green-700' : adjR2 >= 0.4 ? 'text-amber-700' : 'text-red-700'
+  const adjR2Color = adjR2 >= 0.7 ? 'text-green-400' : adjR2 >= 0.4 ? 'text-yellow-400' : 'text-red-400'
 
   return (
     <TooltipProvider delay={300}>
@@ -86,82 +86,82 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${meta.color}`}>
             {meta.label}
           </span>
-          <span className="text-xs text-slate-500">Auto-selected — best adjusted R² across 4 candidate models</span>
+          <span className="text-xs text-gray-500">Auto-selected — best adjusted R² across 4 candidate models</span>
         </div>
 
-        <div className="bg-slate-100 border border-slate-200 border-l-4 border-l-slate-400 rounded-xl p-5 font-mono text-sm text-slate-700 overflow-x-auto">
-          <p className="text-slate-400 text-xs mb-2 font-sans"># {meta.label} — {meta.description}</p>
+        <div className="bg-gray-100 border border-gray-200 border-l-4 border-l-gray-400 rounded-xl p-5 font-mono text-sm text-gray-700 overflow-x-auto">
+          <p className="text-gray-400 text-xs mb-2 font-sans"># {meta.label} — {meta.description}</p>
           {equation}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-slate-50 rounded-xl p-4">
+          <div className="bg-gray-50 rounded-xl p-4">
             <div className="flex items-center gap-1 mb-1">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">R² Score</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">R² Score</p>
               <Tooltip>
-                <TooltipTrigger className="text-slate-400 hover:text-slate-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
+                <TooltipTrigger className="text-gray-400 hover:text-gray-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
                 <TooltipContent>Proportion of variance in purchases explained by this model. 70%+ = strong, 40–70% = moderate, &lt;40% = weak.</TooltipContent>
               </Tooltip>
             </div>
             <p className={`text-2xl font-bold ${r2Color}`}>{r2Percent}%</p>
-            <p className="text-xs text-slate-500 mt-1">{r2Quality} fit</p>
+            <p className="text-xs text-gray-500 mt-1">{r2Quality} fit</p>
           </div>
 
-          <div className="bg-slate-50 rounded-xl p-4">
+          <div className="bg-gray-50 rounded-xl p-4">
             <div className="flex items-center gap-1 mb-1">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">Adj. R²</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">Adj. R²</p>
               <Tooltip>
-                <TooltipTrigger className="text-slate-400 hover:text-slate-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
+                <TooltipTrigger className="text-gray-400 hover:text-gray-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
                 <TooltipContent>R² penalized for the number of predictors — prefers simpler models. More reliable than raw R² for comparing model types.</TooltipContent>
               </Tooltip>
             </div>
             <p className={`text-2xl font-bold ${adjR2Color}`}>
               {(adjR2 * 100).toFixed(1)}%
             </p>
-            <p className="text-xs text-slate-500 mt-1">complexity-adjusted</p>
+            <p className="text-xs text-gray-500 mt-1">complexity-adjusted</p>
           </div>
 
-          <div className="bg-slate-50 rounded-xl p-4">
+          <div className="bg-gray-50 rounded-xl p-4">
             <div className="flex items-center gap-1 mb-1">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">Data Points</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">Data Points</p>
               <Tooltip>
-                <TooltipTrigger className="text-slate-400 hover:text-slate-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
+                <TooltipTrigger className="text-gray-400 hover:text-gray-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
                 <TooltipContent>Number of ad records with known purchase outcomes used to train this model. More data generally improves reliability.</TooltipContent>
               </Tooltip>
             </div>
-            <p className="text-2xl font-bold text-slate-900">{model.n}</p>
-            <p className="text-xs text-slate-500 mt-1">ad records</p>
+            <p className="text-2xl font-bold text-gray-900">{model.n}</p>
+            <p className="text-xs text-gray-500 mt-1">ad records</p>
           </div>
 
           {isMLR ? (
-            <div className="bg-slate-50 rounded-xl p-4">
+            <div className="bg-gray-50 rounded-xl p-4">
               <div className="flex items-center gap-1 mb-1">
-                <p className="text-xs text-slate-500 uppercase tracking-wider">Residual Std Error</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Residual Std Error</p>
                 <Tooltip>
-                  <TooltipTrigger className="text-slate-400 hover:text-slate-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
+                  <TooltipTrigger className="text-gray-400 hover:text-gray-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
                   <TooltipContent>Average prediction error in purchase units. The 80% prediction interval is ±RSE × 1.28 purchases wide around each forecast.</TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-2xl font-bold text-slate-900">{(model.residual_std_error ?? 0).toFixed(3)}</p>
-              <p className="text-xs text-slate-500 mt-1">80% PI ± {((model.residual_std_error ?? 0) * 1.2816).toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900">{(model.residual_std_error ?? 0).toFixed(3)}</p>
+              <p className="text-xs text-gray-500 mt-1">80% PI ± {((model.residual_std_error ?? 0) * 1.2816).toFixed(2)}</p>
             </div>
           ) : (
-            <div className="bg-slate-50 rounded-xl p-4">
+            <div className="bg-gray-50 rounded-xl p-4">
               <div className="flex items-center gap-1 mb-1">
-                <p className="text-xs text-slate-500 uppercase tracking-wider">Coefficient</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Coefficient</p>
                 <Tooltip>
-                  <TooltipTrigger className="text-slate-400 hover:text-slate-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
+                  <TooltipTrigger className="text-gray-400 hover:text-gray-600 focus-visible:outline-none"><InfoIcon /></TooltipTrigger>
                   <TooltipContent>Estimated additional purchases per peso of ad spend. Higher means more purchase-efficient spend.</TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-2xl font-bold text-slate-900">{model.coefficient.toFixed(6)}</p>
-              <p className="text-xs text-slate-500 mt-1">per ₱ spent</p>
+              <p className="text-2xl font-bold text-gray-900">{model.coefficient.toFixed(6)}</p>
+              <p className="text-xs text-gray-500 mt-1">per ₱ spent</p>
             </div>
           )}
         </div>
 
         {isMLR && (
-          <Collapsible open={open} onOpenChange={setOpen} className="bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
+          <Collapsible open={open} onOpenChange={setOpen} className="bg-blue-500/10 border border-blue-500/30 rounded-xl text-sm text-blue-300">
             <CollapsibleTrigger className="w-full px-4 py-3 font-semibold flex items-center justify-between cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-inset rounded-xl">
               <span>How to read the {meta.label} coefficients</span>
               <svg
@@ -172,7 +172,7 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
               </svg>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <ul className="space-y-2 text-xs text-blue-700 px-4 pb-4">
+              <ul className="space-y-2 text-xs text-blue-300/80 px-4 pb-4">
                 {model.model_type === 'plain_mlr' ? (
                   <li>Each coefficient reflects the direct change in purchases per unit increase in the raw metric.</li>
                 ) : (
@@ -191,7 +191,7 @@ export default function RegressionSummary({ model }: RegressionSummaryProps) {
           </Collapsible>
         )}
 
-        <p className="text-slate-400 text-xs">
+        <p className="text-gray-400 text-xs">
           Model trained {formatDate(model.trained_at)} using {model.n} records with known purchase outcomes.
         </p>
       </div>

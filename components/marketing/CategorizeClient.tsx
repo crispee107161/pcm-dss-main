@@ -38,14 +38,50 @@ interface Props {
   categories: Category[]
 }
 
+const PAGE_SIZE = 50
+
+function PaginationBar({
+  page, pageCount, onPageChange,
+}: { page: number; pageCount: number; onPageChange: (page: number) => void }) {
+  if (pageCount <= 1) return null
+
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-gray-100">
+      <p className="text-xs text-gray-400">Page {page} of {pageCount}</p>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          className="h-7 px-3 text-xs"
+        >
+          Previous
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={page >= pageCount}
+          onClick={() => onPageChange(page + 1)}
+          className="h-7 px-3 text-xs"
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 function TypeBadge({ type }: { type: string }) {
   const colors: Record<string, string> = {
-    Video: 'bg-purple-100 text-purple-700 border-purple-200',
-    Reel: 'bg-pink-100 text-pink-700 border-pink-200',
-    Photo: 'bg-red-100 text-red-700 border-red-200',
-    Link: 'bg-amber-100 text-amber-700 border-amber-200',
+    Video: 'bg-violet-500/10 text-violet-300 border-violet-500/30',
+    Reel: 'bg-blue-500/10 text-blue-300 border-blue-500/30',
+    Photo: 'bg-red-500/10 text-red-400 border-red-500/30',
+    Link: 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30',
   }
-  const cls = colors[type] ?? 'bg-slate-100 text-slate-700 border-slate-200'
+  const cls = colors[type] ?? 'bg-gray-100 text-gray-700 border-gray-200'
   return (
     <Badge className={`rounded-full h-auto py-0.5 px-2 text-xs font-medium ${cls}`}>{type}</Badge>
   )
@@ -53,11 +89,11 @@ function TypeBadge({ type }: { type: string }) {
 
 function CategoryBadge({ name }: { name: string }) {
   const colors: Record<string, string> = {
-    'Product Showcase': 'bg-red-100 text-red-800 border-red-200',
-    Testimonial: 'bg-green-100 text-green-800 border-green-200',
-    'Promotional Offer': 'bg-orange-100 text-orange-800 border-orange-200',
+    'Product Showcase': 'bg-red-500/10 text-red-400 border-red-500/30',
+    Testimonial: 'bg-green-500/10 text-green-400 border-green-500/30',
+    'Promotional Offer': 'bg-orange-500/10 text-orange-400 border-orange-500/30',
   }
-  const cls = colors[name] ?? 'bg-slate-100 text-slate-700 border-slate-200'
+  const cls = colors[name] ?? 'bg-gray-100 text-gray-700 border-gray-200'
   return (
     <Badge className={`rounded-full h-auto py-0.5 px-2 text-xs font-medium ${cls}`}>{name}</Badge>
   )
@@ -68,7 +104,7 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
 
   if (posts.length === 0) {
     return (
-      <div className="p-12 text-center text-slate-500 text-sm">
+      <div className="p-12 text-center text-gray-500 text-sm">
         No organic posts uploaded yet. Upload a Facebook Insights CSV first.
       </div>
     )
@@ -77,11 +113,11 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-slate-50">
-          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Post Details</TableHead>
-          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
-          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Current Category</TableHead>
-          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Update</TableHead>
+        <TableRow className="bg-gray-50">
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Post Details</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Current Category</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Update</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -92,14 +128,14 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
           const boundAction = updatePostCategoryForm.bind(null, post.id)
 
           return (
-            <TableRow key={post.id} className="hover:bg-slate-50 border-t border-slate-100">
+            <TableRow key={post.id} className="hover:bg-gray-50 border-t border-gray-100">
               <TableCell className="px-4 py-3 max-w-xs">
                 {post.title ? (
-                  <div className="font-medium text-slate-800 text-sm truncate" title={post.title}>
+                  <div className="font-medium text-gray-800 text-sm truncate" title={post.title}>
                     {post.title}
                   </div>
                 ) : (
-                  <span className="text-slate-400 text-xs italic">No title</span>
+                  <span className="text-gray-400 text-xs italic">No title</span>
                 )}
                 <a
                   href={post.permalink}
@@ -121,17 +157,17 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
                 ) : suggestedName ? (
                   <span className="flex items-center gap-1.5">
                     <CategoryBadge name={suggestedName} />
-                    <span className="text-xs text-slate-400">(suggested)</span>
+                    <span className="text-xs text-gray-400">(suggested)</span>
                   </span>
                 ) : (
-                  <span className="text-slate-400 text-xs">Uncategorized</span>
+                  <span className="text-gray-400 text-xs">Uncategorized</span>
                 )}
               </TableCell>
 
               <TableCell className="px-4 py-3">
                 <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <Select name="categoryId" defaultValue={defaultSelectValue}>
-                    <SelectTrigger className="text-xs border-slate-300 focus-visible:ring-red-500 min-w-[140px] h-7" size="sm">
+                    <SelectTrigger className="text-xs border-gray-300 focus-visible:ring-red-500 min-w-[140px] h-7" size="sm">
                       <SelectValue placeholder="— None —" />
                     </SelectTrigger>
                     <SelectContent>
@@ -163,7 +199,7 @@ function AdsTable({ ads, categories }: { ads: AdRow[]; categories: Category[] })
 
   if (ads.length === 0) {
     return (
-      <div className="p-12 text-center text-slate-500 text-sm">
+      <div className="p-12 text-center text-gray-500 text-sm">
         No ads uploaded yet. Upload a Facebook Ads Manager CSV first.
       </div>
     )
@@ -172,11 +208,11 @@ function AdsTable({ ads, categories }: { ads: AdRow[]; categories: Category[] })
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-slate-50">
-          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Ad Details</TableHead>
-          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
-          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Current Category</TableHead>
-          <TableHead className="text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Update</TableHead>
+        <TableRow className="bg-gray-50">
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Ad Details</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Current Category</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Update</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -187,12 +223,12 @@ function AdsTable({ ads, categories }: { ads: AdRow[]; categories: Category[] })
           const boundAction = updateAdCategoryForm.bind(null, ad.id)
 
           return (
-            <TableRow key={ad.id} className="hover:bg-slate-50 border-t border-slate-100">
+            <TableRow key={ad.id} className="hover:bg-gray-50 border-t border-gray-100">
               <TableCell className="px-4 py-3 max-w-xs">
-                <div className="font-medium text-slate-800 text-sm truncate" title={ad.ad_name}>
+                <div className="font-medium text-gray-800 text-sm truncate" title={ad.ad_name}>
                   {ad.ad_name}
                 </div>
-                <div className="text-xs text-slate-400 mt-0.5 truncate" title={ad.ad_set_name}>
+                <div className="text-xs text-gray-400 mt-0.5 truncate" title={ad.ad_set_name}>
                   {ad.ad_set_name}
                 </div>
               </TableCell>
@@ -207,17 +243,17 @@ function AdsTable({ ads, categories }: { ads: AdRow[]; categories: Category[] })
                 ) : suggestedName ? (
                   <span className="flex items-center gap-1.5">
                     <CategoryBadge name={suggestedName} />
-                    <span className="text-xs text-slate-400">(suggested)</span>
+                    <span className="text-xs text-gray-400">(suggested)</span>
                   </span>
                 ) : (
-                  <span className="text-slate-400 text-xs">Uncategorized</span>
+                  <span className="text-gray-400 text-xs">Uncategorized</span>
                 )}
               </TableCell>
 
               <TableCell className="px-4 py-3">
                 <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <Select name="categoryId" defaultValue={defaultSelectValue}>
-                    <SelectTrigger className="text-xs border-slate-300 focus-visible:ring-red-500 min-w-[140px] h-7" size="sm">
+                    <SelectTrigger className="text-xs border-gray-300 focus-visible:ring-red-500 min-w-[140px] h-7" size="sm">
                       <SelectValue placeholder="— None —" />
                     </SelectTrigger>
                     <SelectContent>
@@ -249,6 +285,8 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
   const [showAll, setShowAll] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [result, setResult] = useState<{ posts: number; ads: number } | null>(null)
+  const [postsPage, setPostsPage] = useState(1)
+  const [adsPage, setAdsPage] = useState(1)
 
   // Uncategorized counts
   const uncategorizedPosts = posts.filter(p => p.category_id === null)
@@ -259,6 +297,19 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
   // Filtered data for the tables
   const visiblePosts = showAll ? posts : uncategorizedPosts
   const visibleAds = showAll ? ads : uncategorizedAds
+
+  const postsPageCount = Math.max(1, Math.ceil(visiblePosts.length / PAGE_SIZE))
+  const adsPageCount = Math.max(1, Math.ceil(visibleAds.length / PAGE_SIZE))
+  const clampedPostsPage = Math.min(postsPage, postsPageCount)
+  const clampedAdsPage = Math.min(adsPage, adsPageCount)
+  const pagedPosts = visiblePosts.slice((clampedPostsPage - 1) * PAGE_SIZE, clampedPostsPage * PAGE_SIZE)
+  const pagedAds = visibleAds.slice((clampedAdsPage - 1) * PAGE_SIZE, clampedAdsPage * PAGE_SIZE)
+
+  function handleShowAllChange(next: boolean) {
+    setShowAll(next)
+    setPostsPage(1)
+    setAdsPage(1)
+  }
 
   // All done in the current tab view
   const currentTabEmpty = activeTab === 'posts' ? visiblePosts.length === 0 : visibleAds.length === 0
@@ -277,22 +328,22 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
       {/* Header row */}
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         {/* Tabs — counts show uncategorized remaining */}
-        <TabsList className="bg-slate-100 rounded-xl p-1 h-auto gap-1">
+        <TabsList className="bg-gray-100 rounded-xl p-1 h-auto gap-1">
           <TabsTrigger
             value="posts"
-            className="px-5 py-2 rounded-lg text-sm font-medium data-active:bg-white data-active:text-slate-900 data-active:shadow-sm text-slate-500 hover:text-slate-700"
+            className="px-5 py-2 rounded-lg text-sm font-medium data-active:bg-white data-active:text-black data-active:shadow-sm text-gray-500 hover:text-gray-700"
           >
             Organic Posts
-            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-500 data-[state=active]:bg-red-100 data-[state=active]:text-red-700">
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500 data-[state=active]:bg-red-100 data-[state=active]:text-red-700">
               {showAll ? posts.length : uncategorizedPosts.length}
             </span>
           </TabsTrigger>
           <TabsTrigger
             value="ads"
-            className="px-5 py-2 rounded-lg text-sm font-medium data-active:bg-white data-active:text-slate-900 data-active:shadow-sm text-slate-500 hover:text-slate-700"
+            className="px-5 py-2 rounded-lg text-sm font-medium data-active:bg-white data-active:text-black data-active:shadow-sm text-gray-500 hover:text-gray-700"
           >
             Ads
-            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-500">
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-500">
               {showAll ? ads.length : uncategorizedAds.length}
             </span>
           </TabsTrigger>
@@ -302,7 +353,7 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
         <div className="flex items-center gap-3">
           {/* Result pill */}
           {result && (
-            <p className="animate-fade-slide-up text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+            <p className="animate-fade-slide-up text-xs text-green-400 font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
               {result.posts + result.ads === 0
                 ? 'Nothing new to categorize'
                 : `Applied to ${result.posts + result.ads} item${result.posts + result.ads !== 1 ? 's' : ''} (${result.posts} post${result.posts !== 1 ? 's' : ''}, ${result.ads} ad${result.ads !== 1 ? 's' : ''})`
@@ -311,11 +362,11 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
           )}
 
           {/* Show all toggle */}
-          <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-700 select-none">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-500 hover:text-gray-700 select-none">
             <span>{showAll ? 'Show all' : 'Uncategorized only'}</span>
             <Switch
               checked={showAll}
-              onCheckedChange={setShowAll}
+              onCheckedChange={handleShowAllChange}
             />
           </label>
 
@@ -323,7 +374,7 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
           <button
             onClick={handleAutoCategorize}
             disabled={isPending || totalUncategorized === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-500 active:bg-red-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-500 active:bg-red-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
             style={{ boxShadow: totalUncategorized > 0 && !isPending ? '0 4px 14px rgba(220,38,38,0.25)' : undefined }}
           >
             {isPending ? (
@@ -354,55 +405,57 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
 
       {/* Table or all-done state */}
       {!showAll && allCategorized ? (
-        <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-            <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-card rounded-2xl card-shadow">
+          <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-sm font-semibold text-slate-700 mb-1">All caught up</p>
-          <p className="text-xs text-slate-400 max-w-[240px]">Every post and ad has been categorized. Use <button onClick={() => setShowAll(true)} className="text-red-500 hover:underline">Show all</button> to review or reassign.</p>
+          <p className="text-sm font-semibold text-gray-700 mb-1">All caught up</p>
+          <p className="text-xs text-gray-400 max-w-[240px]">Every post and ad has been categorized. Use <button onClick={() => handleShowAllChange(true)} className="text-red-500 hover:underline">Show all</button> to review or reassign.</p>
         </div>
       ) : (
         <>
           <TabsContent value="posts">
             {!showAll && visiblePosts.length === 0 ? (
-              <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-card rounded-2xl card-shadow">
+                <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-sm font-semibold text-slate-700 mb-1">All posts categorized</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-sm font-semibold text-gray-700 mb-1">All posts categorized</p>
+                <p className="text-xs text-gray-400">
                   Switch to the Ads tab, or{' '}
-                  <button onClick={() => setShowAll(true)} className="text-red-500 hover:underline">show all</button> to review.
+                  <button onClick={() => handleShowAllChange(true)} className="text-red-500 hover:underline">show all</button> to review.
                 </p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <PostsTable posts={visiblePosts} categories={categories} />
+              <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+                <PostsTable posts={pagedPosts} categories={categories} />
+                <PaginationBar page={clampedPostsPage} pageCount={postsPageCount} onPageChange={setPostsPage} />
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="ads">
             {!showAll && visibleAds.length === 0 ? (
-              <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-white rounded-2xl border border-slate-200">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-                  <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-card rounded-2xl card-shadow">
+                <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-sm font-semibold text-slate-700 mb-1">All ads categorized</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-sm font-semibold text-gray-700 mb-1">All ads categorized</p>
+                <p className="text-xs text-gray-400">
                   Switch to the Organic Posts tab, or{' '}
-                  <button onClick={() => setShowAll(true)} className="text-red-500 hover:underline">show all</button> to review.
+                  <button onClick={() => handleShowAllChange(true)} className="text-red-500 hover:underline">show all</button> to review.
                 </p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <AdsTable ads={visibleAds} categories={categories} />
+              <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+                <AdsTable ads={pagedAds} categories={categories} />
+                <PaginationBar page={clampedAdsPage} pageCount={adsPageCount} onPageChange={setAdsPage} />
               </div>
             )}
           </TabsContent>
@@ -410,9 +463,9 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
       )}
 
       {/* Legend */}
-      <p className="text-xs text-slate-400 mt-3">
-        Showing <span className="font-medium text-slate-500">{showAll ? 'all items' : 'uncategorized only'}</span> —
-        use <span className="font-medium text-slate-500">Show all</span> to review or reassign existing categories.
+      <p className="text-xs text-gray-400 mt-3">
+        Showing <span className="font-medium text-gray-500">{showAll ? 'all items' : 'uncategorized only'}</span> —
+        use <span className="font-medium text-gray-500">Show all</span> to review or reassign existing categories.
         Keywords configured in{' '}
         <a href="/dashboard/marketing/keywords" className="text-red-500 hover:underline">Manage Keywords</a>.
       </p>

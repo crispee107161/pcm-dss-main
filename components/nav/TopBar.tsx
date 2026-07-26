@@ -10,12 +10,10 @@ interface TopBarProps {
   navItems: NavItem[]
   email: string
   roleLabel: string
-  collapsed: boolean
-  onToggle: () => void
   onMobileMenuOpen: () => void
 }
 
-export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle, onMobileMenuOpen }: TopBarProps) {
+export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }: TopBarProps) {
   const pathname = usePathname()
 
   const resolved = navItems.map((item, i) => {
@@ -57,10 +55,9 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
     <div
       className="h-14 flex items-center justify-between px-4 sticky top-0 z-40 print:hidden flex-shrink-0"
       style={{
-        background: 'rgba(255,255,255,0.97)',
+        background: 'rgba(11,11,11,0.9)',
         backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid rgba(220,38,38,0.08)',
-        boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 2px 12px rgba(0,0,0,0.05)',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
       }}
     >
       {/* Left */}
@@ -69,32 +66,16 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
         <button
           onClick={onMobileMenuOpen}
           aria-label="Open menu"
-          className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 flex-shrink-0"
+          className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 flex-shrink-0"
         >
           <Menu01Icon size={16} />
-        </button>
-
-        {/* Desktop sidebar toggle */}
-        <button
-          onClick={onToggle}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="hidden md:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 flex-shrink-0"
-        >
-          {collapsed ? (
-            <Menu01Icon size={16} />
-          ) : (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={1.5} />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v18" />
-            </svg>
-          )}
         </button>
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 text-sm min-w-0">
           <Link
             href={homeItem?.href ?? '#'}
-            className="text-slate-400 hover:text-red-600 transition-colors flex-shrink-0"
+            className="text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
             aria-label="Dashboard home"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -102,22 +83,19 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
             </svg>
           </Link>
 
+          <Link
+            href={homeItem?.href ?? '#'}
+            className="text-gray-400 hover:text-gray-600 font-medium transition-[color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+          >
+            Home
+          </Link>
+
           <Chevron />
 
           {!isHome ? (
-            <>
-              <Link
-                href={homeItem?.href ?? '#'}
-                className="text-slate-400 hover:text-slate-600 font-medium transition-[color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
-              >
-                <span className="hidden sm:inline">PCM DSS</span>
-                <span className="sm:hidden">Home</span>
-              </Link>
-              <Chevron />
-              <span className="text-slate-800 font-bold truncate">{currentLabel}</span>
-            </>
+            <span className="text-gray-800 font-bold truncate">{currentLabel}</span>
           ) : (
-            <span className="text-slate-800 font-bold">Dashboard</span>
+            <span className="text-gray-800 font-bold">Dashboard</span>
           )}
         </nav>
       </div>
@@ -125,8 +103,8 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
       {/* Right */}
       <div className="flex items-center gap-3 flex-shrink-0 ml-4">
         <div className="text-right hidden sm:block">
-          <p className="text-xs font-semibold text-slate-700 leading-none">{roleLabel}</p>
-          <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-[180px]">{email}</p>
+          <p className="text-xs font-semibold text-gray-700 leading-none">{roleLabel}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[180px]">{email}</p>
         </div>
         <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-red-200 rounded-full">
           <AvatarFallback className="bg-red-600 text-white text-xs font-bold">{initial}</AvatarFallback>
@@ -138,7 +116,7 @@ export default function TopBar({ navItems, email, roleLabel, collapsed, onToggle
 
 function Chevron() {
   return (
-    <svg className="w-3 h-3 text-slate-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3 h-3 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
   )

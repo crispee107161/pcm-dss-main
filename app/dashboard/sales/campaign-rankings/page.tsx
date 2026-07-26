@@ -15,10 +15,10 @@ function formatDate(date: Date | null) {
 
 function RankBadge({ rank }: { rank: number }) {
   const base = 'inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold'
-  if (rank === 1) return <span className={`${base} bg-amber-400 text-white`}>1</span>
-  if (rank === 2) return <span className={`${base} bg-slate-300 text-slate-800`}>2</span>
-  if (rank === 3) return <span className={`${base} bg-orange-300 text-white`}>3</span>
-  return <span className={`${base} bg-slate-100 text-slate-500`}>{rank}</span>
+  if (rank === 1) return <span className={`${base} bg-yellow-400 text-white`}>1</span>
+  if (rank === 2) return <span className={`${base} bg-gray-300 text-gray-800`}>2</span>
+  if (rank === 3) return <span className={`${base} bg-orange-600 text-white`}>3</span>
+  return <span className={`${base} bg-gray-100 text-gray-500`}>{rank}</span>
 }
 
 interface RankRow {
@@ -39,42 +39,44 @@ function RankingTable({
   formatValue: (v: number) => string
 }) {
   if (rows.length === 0) {
-    return <p className="text-slate-500 text-sm p-6">No data available.</p>
+    return <p className="text-gray-500 text-sm p-6">No data available.</p>
   }
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="bg-slate-50">
-          <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 w-10">#</th>
-          <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Ad Name</th>
-          <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Period</th>
-          <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">{valueLabel}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, i) => (
-          <tr key={i} className="hover:bg-slate-50 border-t border-slate-100">
-            <td className="px-4 py-3">
-              <RankBadge rank={i + 1} />
-            </td>
-            <td className="px-4 py-3">
-              <div className="font-medium text-slate-800 text-sm max-w-xs truncate" title={row.name}>
-                {row.name}
-              </div>
-              <div className="text-xs text-slate-400 truncate" title={row.adSetName}>
-                {row.adSetName}
-              </div>
-            </td>
-            <td className="px-4 py-3 hidden md:table-cell text-xs text-slate-500">
-              {formatDate(row.reportingStarts)} – {formatDate(row.reportingEnds)}
-            </td>
-            <td className="px-4 py-3 text-right font-semibold text-slate-800">
-              {formatValue(row.value)}
-            </td>
+    <div className="table-scroll rounded-lg">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-gray-50">
+            <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 w-10">#</th>
+            <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Ad Name</th>
+            <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">Period</th>
+            <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">{valueLabel}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} className="hover:bg-gray-50 border-t border-gray-100">
+              <td className="px-4 py-3">
+                <RankBadge rank={i + 1} />
+              </td>
+              <td className="px-4 py-3">
+                <div className="font-medium text-gray-800 text-sm max-w-xs truncate" title={row.name}>
+                  {row.name}
+                </div>
+                <div className="text-xs text-gray-400 truncate" title={row.adSetName}>
+                  {row.adSetName}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                {formatDate(row.reportingStarts)} – {formatDate(row.reportingEnds)}
+              </td>
+              <td className="px-4 py-3 text-right font-semibold text-gray-800 whitespace-nowrap">
+                {formatValue(row.value)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -154,38 +156,38 @@ export default async function SalesCampaignRankingsPage({
       <DateRangeFilter from={from} to={to} className="mb-6" />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-          <p className="text-xs text-slate-500 uppercase tracking-wider">Total Ads Tracked</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{totalAds}</p>
+        <div className="bg-card rounded-2xl card-shadow p-5">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Total Ads Tracked</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{totalAds}</p>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-          <p className="text-xs text-slate-500 uppercase tracking-wider">Total Ad Spend</p>
-          <p className="text-2xl font-bold text-red-700 mt-1">{formatPHP(totalSpendValue)}</p>
+        <div className="bg-card rounded-2xl card-shadow p-5">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Total Ad Spend</p>
+          <p className="text-2xl font-bold text-red-400 mt-1">{formatPHP(totalSpendValue)}</p>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 col-span-2 md:col-span-1">
-          <p className="text-xs text-slate-500 uppercase tracking-wider">Ads with Purchases</p>
-          <p className="text-2xl font-bold text-green-700 mt-1">{adsWithPurchases}</p>
+        <div className="bg-card rounded-2xl card-shadow p-5 col-span-2 md:col-span-1">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Purchases</p>
+          <p className="text-2xl font-bold text-green-400 mt-1">{adsWithPurchases}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">Top by Spend</h2>
+        <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-800">Top by Spend</h2>
           </div>
           <RankingTable rows={bySpend} valueLabel="Amount Spent" formatValue={v => formatPHP(v)} />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">Top by Purchases</h2>
+        <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-800">Top by Purchases</h2>
           </div>
           <RankingTable rows={byPurchases} valueLabel="Purchases" formatValue={v => v.toLocaleString()} />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">Top by Reach</h2>
+        <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-800">Top by Reach</h2>
           </div>
           <RankingTable rows={byReach} valueLabel="Reach" formatValue={v => v.toLocaleString()} />
         </div>

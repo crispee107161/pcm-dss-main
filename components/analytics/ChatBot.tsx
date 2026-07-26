@@ -55,11 +55,11 @@ export default function ChatBot() {
     <>
       {/* Chat panel */}
       {open && (
-        <div className="animate-scale-in fixed bottom-20 left-2 right-2 sm:left-auto sm:right-4 sm:w-[380px] z-[60] flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden card-shadow-floating"
+        <div className="animate-scale-in fixed bottom-20 left-2 right-2 sm:left-auto sm:right-4 sm:w-[380px] z-[60] flex flex-col bg-card rounded-2xl overflow-hidden card-shadow-floating print:hidden"
           style={{ height: '480px' }}>
 
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-slate-900 flex-shrink-0">
+          <div className="flex items-center gap-3 px-4 py-3 bg-black flex-shrink-0">
             <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -68,11 +68,11 @@ export default function ChatBot() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-semibold">PCM Assistant</p>
-              <p className="text-slate-400 text-xs">Powered by Groq · Llama 3</p>
+              <p className="text-gray-400 text-xs">Powered by Groq · Llama 3</p>
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="text-slate-400 hover:text-white transition-colors p-1"
+              className="text-gray-400 hover:text-white transition-colors p-1"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -85,7 +85,7 @@ export default function ChatBot() {
           <div className="p-4 space-y-3">
             {history.length === 0 && (
               <div className="space-y-3">
-                <p className="text-xs text-slate-400 text-center pt-2">
+                <p className="text-xs text-gray-400 text-center pt-2">
                   Ask me anything about your campaigns, model, or performance data.
                 </p>
                 <div className="grid grid-cols-1 gap-2 mt-2">
@@ -93,7 +93,7 @@ export default function ChatBot() {
                     <button
                       key={s}
                       onClick={() => handleSend(s)}
-                      className="animate-fade-slide-up text-left text-xs text-slate-600 bg-slate-50 hover:bg-red-50/40 hover:text-slate-800 border border-slate-200 hover:border-red-200 rounded-xl px-3 py-2 transition-[background-color,border-color,color]"
+                      className="animate-fade-slide-up text-left text-xs text-gray-600 bg-gray-50 hover:bg-red-500/10 hover:text-gray-800 border border-gray-200 hover:border-red-500/30 rounded-xl px-3 py-2 transition-[background-color,border-color,color]"
                       style={{ animationDelay: `${i * 60}ms` }}
                     >
                       {s}
@@ -108,7 +108,7 @@ export default function ChatBot() {
                 <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                   msg.role === 'user'
                     ? 'bg-red-600 text-white rounded-br-sm'
-                    : 'bg-slate-100 text-slate-800 rounded-bl-sm'
+                    : 'bg-gray-100 text-gray-800 rounded-bl-sm'
                 }`}>
                   {msg.text}
                 </div>
@@ -117,10 +117,10 @@ export default function ChatBot() {
 
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
-                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             )}
@@ -130,7 +130,7 @@ export default function ChatBot() {
           </ScrollArea>
 
           {/* Input */}
-          <div className="flex-shrink-0 border-t border-slate-100 p-3 flex gap-2">
+          <div className="flex-shrink-0 border-t border-gray-100 p-3 flex gap-2">
             <input
               ref={inputRef}
               value={input}
@@ -138,12 +138,12 @@ export default function ChatBot() {
               onKeyDown={handleKeyDown}
               placeholder="Ask about your data..."
               disabled={loading}
-              className="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 focus-visible:border-transparent disabled:opacity-50 placeholder-slate-400 transition-[border-color]"
+              className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 focus-visible:border-transparent disabled:opacity-50 placeholder-gray-400 transition-[border-color]"
             />
             <button
               onClick={() => handleSend()}
               disabled={!input.trim() || loading}
-              className="w-9 h-9 flex items-center justify-center bg-red-600 hover:bg-red-500 active:bg-red-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl transition-[background-color] flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+              className="w-9 h-9 flex items-center justify-center bg-red-600 hover:bg-red-500 active:bg-red-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl transition-[background-color] flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -156,11 +156,11 @@ export default function ChatBot() {
       {/* Floating button */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="fixed bottom-4 right-4 z-[60] flex items-center justify-center bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1"
+        className="fixed bottom-4 right-4 z-[60] flex items-center justify-center bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 print:hidden"
         style={{
           width: 52,
           height: 52,
-          boxShadow: '0 4px 16px rgba(220,38,38,0.4), 0 1px 4px rgba(0,0,0,0.15)',
+          boxShadow: '0 4px 16px rgba(220,38,38,0.4), 0 1px 4px rgba(255,255,255,0.1)',
           transition: 'background-color 0.15s, box-shadow 0.15s, transform 0.15s',
         }}
         title="AI Assistant"

@@ -43,14 +43,14 @@ export default function UploadForm() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-slate-800">Upload Facebook CSVs</h2>
+      <h2 className="text-lg font-semibold text-gray-800">Upload Facebook CSVs</h2>
 
       {/* Drop zone */}
       <div
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
           isDragging
-            ? 'border-red-500 bg-red-50'
-            : 'border-slate-300 hover:border-red-400 hover:bg-zinc-50'
+            ? 'border-red-500 bg-red-500/10'
+            : 'border-gray-300 hover:border-red-400 hover:bg-gray-50'
         }`}
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
@@ -61,12 +61,14 @@ export default function UploadForm() {
           addFiles(e.dataTransfer.files)
         }}
       >
-        <DatabaseIcon size={40} className="mx-auto text-slate-400 mb-3" />
-        <p className="text-slate-600 font-medium text-sm">
+        <div className="flex justify-center mb-3">
+          <DatabaseIcon size={40} className="text-gray-400" />
+        </div>
+        <p className="text-gray-600 font-medium text-sm">
           Drag & drop CSV files here, or{' '}
-          <span className="text-red-700">click to browse</span>
+          <span className="text-red-400">click to browse</span>
         </p>
-        <p className="text-slate-400 text-xs mt-1">
+        <p className="text-gray-400 text-xs mt-1">
           Select multiple files at once — Ads, Posts, Page Metrics, and more
         </p>
         <input
@@ -83,7 +85,7 @@ export default function UploadForm() {
       {queue.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-700">
+            <p className="text-sm font-medium text-gray-700">
               {queue.length} file{queue.length !== 1 ? 's' : ''} queued
             </p>
             {!isPending && (
@@ -91,20 +93,20 @@ export default function UploadForm() {
                 onClick={handleClearAll}
                 variant="ghost"
                 size="sm"
-                className="text-xs text-slate-400 hover:text-slate-600 h-auto py-0"
+                className="text-xs text-gray-400 hover:text-gray-600 h-auto py-0"
               >
                 Clear all
               </Button>
             )}
           </div>
 
-          <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+          <ul className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
             {queue.map((entry) => (
-              <li key={entry.id} className="flex items-start gap-3 px-4 py-3 bg-white">
+              <li key={entry.id} className="flex items-start gap-3 px-4 py-3 bg-card">
                 {/* Status icon */}
                 <div className="flex-shrink-0 mt-0.5">
                   {entry.status === 'pending' && (
-                    <span className="h-4 w-4 rounded-full border-2 border-slate-300 inline-block" />
+                    <span className="h-4 w-4 rounded-full border-2 border-gray-300 inline-block" />
                   )}
                   {entry.status === 'uploading' && (
                     <Loading01Icon size={16} color="#dc2626" />
@@ -123,17 +125,17 @@ export default function UploadForm() {
 
                 {/* File info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-700 truncate font-medium">{entry.file.name}</p>
+                  <p className="text-sm text-gray-700 truncate font-medium">{entry.file.name}</p>
                   {entry.result?.status === 'SUCCESS' && (
                     <div className="flex flex-wrap gap-1.5 mt-1 items-center">
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-gray-500">
                         +{entry.result.records_inserted} inserted, ~{entry.result.records_updated} updated
                       </span>
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-slate-200">
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200">
                         {UPLOAD_TYPE_LABELS[entry.result.upload_type] ?? entry.result.upload_type}
                       </Badge>
                       {entry.result.retrained && (
-                        <Badge className="bg-red-100 text-red-700 border-red-200 font-medium">
+                        <Badge className="bg-red-500/10 text-red-400 border-red-500/30 font-medium">
                           Model retrained
                         </Badge>
                       )}
@@ -148,7 +150,7 @@ export default function UploadForm() {
                 {entry.status === 'pending' && !isPending && (
                   <button
                     onClick={() => removeFile(entry.id)}
-                    className="flex-shrink-0 text-slate-300 hover:text-slate-500 transition-colors"
+                    className="flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
                     aria-label={`Remove ${entry.file.name}`}
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,7 +193,7 @@ export default function UploadForm() {
             onClick={handleClearAll}
             variant="ghost"
             size="sm"
-            className="text-slate-500"
+            className="text-gray-500"
           >
             Clear
           </Button>
@@ -203,30 +205,30 @@ export default function UploadForm() {
         <div
           className={`p-4 rounded-xl border ${
             successCount === 0
-              ? 'bg-red-50 border-red-200'
-              : 'bg-green-50 border-green-200'
+              ? 'bg-red-500/10 border-red-500/30'
+              : 'bg-green-500/10 border-green-500/30'
           }`}
         >
           <div className="flex items-start gap-3">
             {successCount === 0 ? (
-              <svg className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             ) : (
-              <CircleCheckIcon ref={successIconRef} size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
+              <CircleCheckIcon ref={successIconRef} size={20} className="text-green-400 flex-shrink-0 mt-0.5" />
             )}
             <div>
-              <p className="font-medium text-sm text-slate-800">
+              <p className="font-medium text-sm text-gray-800">
                 {successCount} of {queue.length} file{queue.length !== 1 ? 's' : ''} uploaded successfully
                 {failedCount > 0 && `, ${failedCount} failed`}
               </p>
               {successCount > 0 && (
-                <p className="text-sm text-slate-600 mt-0.5">
+                <p className="text-sm text-gray-600 mt-0.5">
                   {totalInserted} records inserted, {totalUpdated} records updated
                 </p>
               )}
               {retrainCount > 0 && (
-                <p className="text-xs text-red-700 font-medium mt-1">
+                <p className="text-xs text-red-400 font-medium mt-1">
                   Regression model retrained {retrainCount} time{retrainCount !== 1 ? 's' : ''}
                 </p>
               )}

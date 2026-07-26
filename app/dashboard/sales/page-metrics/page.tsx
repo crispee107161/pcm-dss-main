@@ -17,14 +17,14 @@ function fmt(date: Date) {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(date))
 }
 
-function StatCard({ label, value, sub, color = 'text-slate-900' }: {
+function StatCard({ label, value, sub, color = 'text-gray-900' }: {
   label: string; value: string; sub?: string; color?: string
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-      <p className="text-xs text-slate-500 uppercase tracking-wider">{label}</p>
+    <div className="bg-card rounded-2xl card-shadow p-5">
+      <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
       <p className={`text-xl font-bold mt-1 ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
     </div>
   )
 }
@@ -117,10 +117,10 @@ export default async function SalesPageMetricsPage() {
       <PageHeader title="Page Metrics" description="Facebook page-level performance: follows, views, interactions, demographics" />
 
       {!hasAnyData && postCount === 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center mb-8">
+        <div className="bg-card rounded-2xl card-shadow p-12 text-center mb-8">
           <div className="text-4xl mb-4">📊</div>
-          <h2 className="text-slate-700 font-semibold mb-2">No page data available yet</h2>
-          <p className="text-slate-500 text-sm max-w-lg mx-auto">
+          <h2 className="text-gray-700 font-semibold mb-2">No page data available yet</h2>
+          <p className="text-gray-500 text-sm max-w-lg mx-auto">
             The Marketing Manager must upload Facebook page export files to unlock these metrics.
           </p>
         </div>
@@ -128,37 +128,37 @@ export default async function SalesPageMetricsPage() {
 
       {postCount > 0 && (
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-red-500 rounded-full inline-block" />
             Organic Post Performance
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
             <StatCard label="Total Posts"    value={postCount.toLocaleString()} />
-            <StatCard label="Total Reach"    value={totalPostReach.toLocaleString()} color="text-red-700" />
-            <StatCard label="Total Views"    value={(postAgg._sum.views ?? 0).toLocaleString()} color="text-purple-700" />
-            <StatCard label="Reactions"      value={(postAgg._sum.reactions ?? 0).toLocaleString()} color="text-pink-700" />
-            <StatCard label="Comments"       value={(postAgg._sum.comments ?? 0).toLocaleString()} color="text-amber-700" />
-            <StatCard label="Avg Engagement" value={`${avgEngagement.toFixed(2)}%`} color="text-green-700" />
+            <StatCard label="Total Reach"    value={totalPostReach.toLocaleString()} color="text-red-400" />
+            <StatCard label="Total Views"    value={(postAgg._sum.views ?? 0).toLocaleString()} color="text-violet-400" />
+            <StatCard label="Reactions"      value={(postAgg._sum.reactions ?? 0).toLocaleString()} color="text-blue-400" />
+            <StatCard label="Comments"       value={(postAgg._sum.comments ?? 0).toLocaleString()} color="text-yellow-400" />
+            <StatCard label="Avg Engagement" value={`${avgEngagement.toFixed(2)}%`} color="text-green-400" />
           </div>
           {typeBreakdown.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100">
-                <h3 className="font-medium text-slate-700 text-sm">Performance by Post Type</h3>
+            <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="font-medium text-gray-700 text-sm">Performance by Post Type</h3>
               </div>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50">
-                    <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Type</th>
-                    <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Posts</th>
-                    <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3">Avg Engagement</th>
+                  <tr className="bg-gray-50">
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Type</th>
+                    <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Posts</th>
+                    <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Avg Engagement</th>
                   </tr>
                 </thead>
                 <tbody>
                   {typeBreakdown.map(row => (
-                    <tr key={row.post_type} className="border-t border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-2.5 font-medium text-slate-700">{row.post_type}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-600">{row._count.id}</td>
-                      <td className="px-4 py-2.5 text-right text-slate-600">{(row._avg.engagement_rate ?? 0).toFixed(2)}%</td>
+                    <tr key={row.post_type} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-2.5 font-medium text-gray-700">{row.post_type}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-600">{row._count.id}</td>
+                      <td className="px-4 py-2.5 text-right text-gray-600">{(row._avg.engagement_rate ?? 0).toFixed(2)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -170,26 +170,26 @@ export default async function SalesPageMetricsPage() {
 
       {dailyMetrics.length > 0 && (
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-amber-400 rounded-full inline-block" />
             Daily Page Activity
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <StatCard label="Follows"      value={totalFollows.toLocaleString()}      sub="total in period" color="text-red-700" />
-            <StatCard label="Interactions" value={totalInteractions.toLocaleString()} sub="total in period" color="text-amber-700" />
-            <StatCard label="Link Clicks"  value={totalLinkClicks.toLocaleString()}   sub="total in period" color="text-red-600" />
-            <StatCard label="Page Views"   value={totalViews.toLocaleString()}         sub="total in period" color="text-purple-700" />
-            <StatCard label="Page Visits"  value={totalVisits.toLocaleString()}        sub="total in period" color="text-green-700" />
+            <StatCard label="Follows"      value={totalFollows.toLocaleString()}      sub="total in period" color="text-red-400" />
+            <StatCard label="Interactions" value={totalInteractions.toLocaleString()} sub="total in period" color="text-yellow-400" />
+            <StatCard label="Link Clicks"  value={totalLinkClicks.toLocaleString()}   sub="total in period" color="text-red-400" />
+            <StatCard label="Page Views"   value={totalViews.toLocaleString()}         sub="total in period" color="text-violet-400" />
+            <StatCard label="Page Visits"  value={totalVisits.toLocaleString()}        sub="total in period" color="text-green-400" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-medium text-slate-700 mb-1 text-sm">Follows, Interactions & Visits</h3>
-              <p className="text-xs text-slate-400 mb-4">Daily counts over the uploaded period</p>
+            <div className="bg-card rounded-2xl card-shadow p-6">
+              <h3 className="font-medium text-gray-700 mb-1 text-sm">Follows, Interactions & Visits</h3>
+              <p className="text-xs text-gray-400 mb-4">Daily counts over the uploaded period</p>
               <DailyMetricsChart data={dailyChartData} />
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-medium text-slate-700 mb-1 text-sm">Page Views & Link Clicks</h3>
-              <p className="text-xs text-slate-400 mb-4">Views (left axis) vs. link clicks (right axis)</p>
+            <div className="bg-card rounded-2xl card-shadow p-6">
+              <h3 className="font-medium text-gray-700 mb-1 text-sm">Page Views & Link Clicks</h3>
+              <p className="text-xs text-gray-400 mb-4">Views (left axis) vs. link clicks (right axis)</p>
               <ViewsClicksChart data={dailyChartData} />
             </div>
           </div>
@@ -198,17 +198,17 @@ export default async function SalesPageMetricsPage() {
 
       {dailyMetrics.length >= 7 && (
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-indigo-500 rounded-full inline-block" />
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-blue-500 rounded-full inline-block" />
             Page Views — Holt-Winters Forecast
-            <span className="text-xs font-normal text-slate-400">(FR-22)</span>
+            <span className="text-xs font-normal text-gray-400">(FR-22)</span>
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-card rounded-2xl card-shadow p-6">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="font-medium text-slate-700 text-sm">Historical views + 7-day forecast</h3>
-              <span className="text-xs text-slate-400">Level: {viewsForecast.lastLevel.toLocaleString()} views/day{viewsForecast.method === 'holt-winters' ? ' · Triple exp. smoothing' : ' · Double exp. smoothing'}</span>
+              <h3 className="font-medium text-gray-700 text-sm">Historical views + 7-day forecast</h3>
+              <span className="text-xs text-gray-400">Level: {viewsForecast.lastLevel.toLocaleString()} views/day{viewsForecast.method === 'holt-winters' ? ' · Triple exp. smoothing' : ' · Double exp. smoothing'}</span>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-gray-400 mb-4">
               Solid line = actual daily views · Dashed red = 7-day moving average · Orange dots = 7-day forecast
             </p>
             <MovingAverageForecastChart data={forecastChartData} />
@@ -218,26 +218,26 @@ export default async function SalesPageMetricsPage() {
 
       {followerHistory.length > 0 && (
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-red-500 rounded-full inline-block" />
             Follower Growth
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {latestFollowers !== null && (
-              <StatCard label="Current Followers" value={latestFollowers.toLocaleString()} color="text-red-700" />
+              <StatCard label="Current Followers" value={latestFollowers.toLocaleString()} color="text-red-400" />
             )}
             {followerGrowth !== null && (
               <StatCard
                 label="Growth in Period"
                 value={`${followerGrowth >= 0 ? '+' : ''}${followerGrowth.toLocaleString()}`}
-                color={followerGrowth >= 0 ? 'text-green-700' : 'text-red-600'}
+                color={followerGrowth >= 0 ? 'text-green-400' : 'text-red-600'}
               />
             )}
             <StatCard label="Data Points" value={followerHistory.length.toLocaleString()} sub="days of history" />
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="font-medium text-slate-700 mb-1 text-sm">Follower Count & Daily Change</h3>
-            <p className="text-xs text-slate-400 mb-4">Total followers (left) and day-over-day change (right)</p>
+          <div className="bg-card rounded-2xl card-shadow p-6">
+            <h3 className="font-medium text-gray-700 mb-1 text-sm">Follower Count & Daily Change</h3>
+            <p className="text-xs text-gray-400 mb-4">Total followers (left) and day-over-day change (right)</p>
             <FollowerHistoryChart data={followerChartData} />
           </div>
         </section>
@@ -245,24 +245,24 @@ export default async function SalesPageMetricsPage() {
 
       {pageViewers.length > 0 && (
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-purple-500 rounded-full inline-block" />
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-violet-500 rounded-full inline-block" />
             Page Viewers
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-            <StatCard label="New Viewers"       value={totalNewViewers.toLocaleString()}       color="text-red-700" sub="total in period" />
-            <StatCard label="Returning Viewers" value={totalReturningViewers.toLocaleString()} color="text-green-700" sub="total in period" />
+            <StatCard label="New Viewers"       value={totalNewViewers.toLocaleString()}       color="text-red-400" sub="total in period" />
+            <StatCard label="Returning Viewers" value={totalReturningViewers.toLocaleString()} color="text-green-400" sub="total in period" />
             <StatCard
               label="Return Rate"
               value={totalNewViewers + totalReturningViewers > 0
                 ? `${((totalReturningViewers / (totalNewViewers + totalReturningViewers)) * 100).toFixed(1)}%`
                 : '—'}
-              color="text-purple-700"
+              color="text-violet-400"
             />
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="font-medium text-slate-700 mb-1 text-sm">New vs. Returning Viewers</h3>
-            <p className="text-xs text-slate-400 mb-4">Stacked daily viewer counts</p>
+          <div className="bg-card rounded-2xl card-shadow p-6">
+            <h3 className="font-medium text-gray-700 mb-1 text-sm">New vs. Returning Viewers</h3>
+            <p className="text-xs text-gray-400 mb-4">Stacked daily viewer counts</p>
             <ViewersChart data={viewerChartData} />
           </div>
         </section>
@@ -270,19 +270,19 @@ export default async function SalesPageMetricsPage() {
 
       {(genderData.length > 0 || territoryData.length > 0) && (
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-slate-700 mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-pink-500 rounded-full inline-block" />
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-red-400 rounded-full inline-block" />
             Audience Demographics
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {genderData.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h3 className="font-medium text-slate-700 mb-1 text-sm">Gender Distribution</h3>
-                <p className="text-xs text-slate-400 mb-2">Follower gender breakdown</p>
+              <div className="bg-card rounded-2xl card-shadow p-6">
+                <h3 className="font-medium text-gray-700 mb-1 text-sm">Gender Distribution</h3>
+                <p className="text-xs text-gray-400 mb-2">Follower gender breakdown</p>
                 <GenderPieChart data={genderData} />
                 <div className="mt-3 space-y-1">
                   {genderData.map(g => (
-                    <div key={g.gender} className="flex justify-between text-xs text-slate-600">
+                    <div key={g.gender} className="flex justify-between text-xs text-gray-600">
                       <span>{g.gender}</span>
                       <span className="font-medium">{(g.distribution * 100).toFixed(1)}%</span>
                     </div>
@@ -291,9 +291,9 @@ export default async function SalesPageMetricsPage() {
               </div>
             )}
             {territoryData.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h3 className="font-medium text-slate-700 mb-1 text-sm">Top Territories</h3>
-                <p className="text-xs text-slate-400 mb-2">Followers by country/region</p>
+              <div className="bg-card rounded-2xl card-shadow p-6">
+                <h3 className="font-medium text-gray-700 mb-1 text-sm">Top Territories</h3>
+                <p className="text-xs text-gray-400 mb-2">Followers by country/region</p>
                 <TerritoryChart data={territoryData} />
               </div>
             )}

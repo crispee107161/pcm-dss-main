@@ -14,7 +14,7 @@ function formatNum(v: number) {
 function GradeBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
   return (
-    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
       <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
     </div>
   )
@@ -110,11 +110,11 @@ export default async function CategoryPerformancePage() {
                 return `${best.avg_engagement!.toFixed(2)}% avg`
               })() },
           ].map(({ label, value, sub }) => (
-            <div key={label} className="bg-white rounded-2xl border border-slate-200/70 p-5"
-              style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] mb-2">{label}</p>
-              <p className="text-lg font-bold text-slate-900 truncate">{value}</p>
-              {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+            <div key={label} className="bg-card rounded-2xl card-shadow p-5"
+              style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] mb-2">{label}</p>
+              <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
+              {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
             </div>
           ))}
         </div>
@@ -122,67 +122,67 @@ export default async function CategoryPerformancePage() {
 
       {/* Main table */}
       {sorted.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200/70 p-10 text-center"
-          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
-          <p className="text-slate-500 text-sm">No categories assigned yet.</p>
-          <p className="text-slate-400 text-xs mt-1">Go to <strong>Categorize Content</strong> to assign categories to your ads and posts.</p>
+        <div className="bg-card rounded-2xl card-shadow p-10 text-center"
+          style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
+          <p className="text-gray-500 text-sm">No categories assigned yet.</p>
+          <p className="text-gray-400 text-xs mt-1">Go to <strong>Categorize Content</strong> to assign categories to your ads and posts.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200/70 overflow-hidden"
-          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+        <div className="bg-card rounded-2xl card-shadow overflow-hidden"
+          style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
 
           {/* Paid ads section */}
-          <div className="px-5 py-4 border-b border-slate-100">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">Paid Ad Performance by Category</p>
+          <div className="px-5 py-4 border-b border-gray-100">
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Paid Ad Performance by Category</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200">
-                  <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em] text-left">Category</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Ads</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em] text-right">Total Spend</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em] text-right">Purchases</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">CPA</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Conv. Rate</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em] text-right hidden md:table-cell">Reach</th>
+                <tr className="bg-gray-50/80 border-b border-gray-200">
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-left">Category</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Ads</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Total Spend</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Purchases</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">CPA</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Conv. Rate</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden md:table-cell">Reach</th>
                 </tr>
               </thead>
               <tbody>
                 {sorted.map((r, i) => (
-                  <tr key={r.cat.id} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <tr key={r.cat.id} className="border-t border-gray-100 hover:bg-gray-50/50 transition-colors">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                        <span className="font-semibold text-slate-800">{r.cat.name}</span>
+                        <span className="w-5 h-5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                        <span className="font-semibold text-gray-800">{r.cat.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-right text-slate-500 hidden sm:table-cell">{r.ad_count}</td>
+                    <td className="px-4 py-4 text-right text-gray-500 hidden sm:table-cell">{r.ad_count}</td>
                     <td className="px-4 py-4 text-right">
-                      <div className="font-semibold text-slate-800">{formatPHP(r.total_spend)}</div>
-                      <GradeBar value={r.total_spend} max={maxSpend} color="bg-slate-300" />
+                      <div className="font-semibold text-gray-800">{formatPHP(r.total_spend)}</div>
+                      <GradeBar value={r.total_spend} max={maxSpend} color="bg-gray-300" />
                       {totalSpend > 0 && (
-                        <div className="text-[10px] text-slate-400 mt-0.5 hidden sm:block">{((r.total_spend / totalSpend) * 100).toFixed(1)}% of total</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 hidden sm:block">{((r.total_spend / totalSpend) * 100).toFixed(1)}% of total</div>
                       )}
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="font-bold text-red-600">{formatNum(r.total_purchases)}</div>
                       <GradeBar value={r.total_purchases} max={maxPurchases} color="bg-red-400" />
                       {totalPurchases > 0 && (
-                        <div className="text-[10px] text-slate-400 mt-0.5 hidden sm:block">{((r.total_purchases / totalPurchases) * 100).toFixed(1)}% of total</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 hidden sm:block">{((r.total_purchases / totalPurchases) * 100).toFixed(1)}% of total</div>
                       )}
                     </td>
                     <td className="px-4 py-4 text-right hidden sm:table-cell">
                       {r.cpa !== null
-                        ? <span className="font-semibold text-slate-700">{formatPHP(r.cpa)}</span>
-                        : <span className="text-slate-300">—</span>}
+                        ? <span className="font-semibold text-gray-700">{formatPHP(r.cpa)}</span>
+                        : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-4 text-right hidden sm:table-cell">
                       {r.purchase_rate !== null
-                        ? <span className="font-semibold text-slate-700">{(r.purchase_rate * 100).toFixed(3)}%</span>
-                        : <span className="text-slate-300">—</span>}
+                        ? <span className="font-semibold text-gray-700">{(r.purchase_rate * 100).toFixed(3)}%</span>
+                        : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-4 text-right text-slate-600 hidden md:table-cell">{formatNum(r.total_reach)}</td>
+                    <td className="px-4 py-4 text-right text-gray-600 hidden md:table-cell">{formatNum(r.total_reach)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -190,15 +190,15 @@ export default async function CategoryPerformancePage() {
           </div>
 
           {/* Organic posts section */}
-          <div className="px-5 py-4 border-t border-slate-200 border-b border-slate-100 bg-slate-50/40">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">Organic Post Performance by Category</p>
+          <div className="px-5 py-4 border-t border-gray-200 border-b border-gray-100 bg-gray-50/40">
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Organic Post Performance by Category</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200">
+                <tr className="bg-gray-50/80 border-b border-gray-200">
                   {['Category', 'Posts', 'Total Reach', 'Avg Engagement Rate'].map(h => (
-                    <th key={h} className={`px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em] ${h === 'Category' ? 'text-left' : 'text-right'}`}>{h}</th>
+                    <th key={h} className={`px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] ${h === 'Category' ? 'text-left' : 'text-right'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -207,23 +207,23 @@ export default async function CategoryPerformancePage() {
                   .filter(r => r.post_count > 0)
                   .sort((a, b) => (b.avg_engagement ?? 0) - (a.avg_engagement ?? 0))
                   .map((r) => (
-                    <tr key={r.cat.id} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-4 font-semibold text-slate-800">{r.cat.name}</td>
-                      <td className="px-4 py-4 text-right text-slate-500">{r.post_count}</td>
-                      <td className="px-4 py-4 text-right text-slate-700 font-semibold">{formatNum(r.total_post_reach)}</td>
+                    <tr key={r.cat.id} className="border-t border-gray-100 hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-4 font-semibold text-gray-800">{r.cat.name}</td>
+                      <td className="px-4 py-4 text-right text-gray-500">{r.post_count}</td>
+                      <td className="px-4 py-4 text-right text-gray-700 font-semibold">{formatNum(r.total_post_reach)}</td>
                       <td className="px-4 py-4 text-right">
                         {r.avg_engagement !== null ? (
                           <div>
-                            <span className="font-bold text-emerald-600">{r.avg_engagement.toFixed(2)}%</span>
-                            <GradeBar value={r.avg_engagement} max={maxEngagement} color="bg-emerald-400" />
+                            <span className="font-bold text-green-400">{r.avg_engagement.toFixed(2)}%</span>
+                            <GradeBar value={r.avg_engagement} max={maxEngagement} color="bg-green-400" />
                           </div>
-                        ) : <span className="text-slate-300">—</span>}
+                        ) : <span className="text-gray-300">—</span>}
                       </td>
                     </tr>
                   ))}
                 {sorted.every(r => r.post_count === 0) && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400 text-sm">No posts assigned to categories yet.</td>
+                    <td colSpan={4} className="px-4 py-6 text-center text-gray-400 text-sm">No posts assigned to categories yet.</td>
                   </tr>
                 )}
               </tbody>
@@ -234,11 +234,11 @@ export default async function CategoryPerformancePage() {
 
       {/* Uncategorized warning */}
       {(uncategorized_ads > 0 || uncategorized_posts > 0) && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
-          <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 flex items-start gap-3">
+          <svg className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-sm text-amber-800">
+          <p className="text-sm text-yellow-300">
             <strong>{uncategorized_ads} ad{uncategorized_ads !== 1 ? 's' : ''}</strong> and{' '}
             <strong>{uncategorized_posts} post{uncategorized_posts !== 1 ? 's' : ''}</strong> are uncategorized and excluded from this report.
             Assign them in <strong>Categorize Content</strong> for a complete picture.

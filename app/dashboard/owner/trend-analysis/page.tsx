@@ -67,7 +67,7 @@ export default async function OwnerTrendAnalysisPage() {
       : null
 
   function DeltaBadge({ value }: { value: number | null }) {
-    if (value === null) return <span className="text-slate-400 text-xs">—</span>
+    if (value === null) return <span className="text-gray-400 text-xs">—</span>
     const up = value >= 0
     return (
       <span className={`text-xs font-medium ${up ? 'text-green-600' : 'text-red-500'}`}>
@@ -82,24 +82,24 @@ export default async function OwnerTrendAnalysisPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         {adTrends.map(t => (
-          <div key={t.period} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">{t.period}</p>
+          <div key={t.period} className="bg-card rounded-2xl card-shadow p-5">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">{t.period}</p>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500">Spend</span>
-                <span className="font-semibold text-slate-800 text-sm">{formatPHP(t.total_spend)}</span>
+                <span className="text-xs text-gray-500">Spend</span>
+                <span className="font-semibold text-gray-800 text-sm">{formatPHP(t.total_spend)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500">Purchases</span>
-                <span className="font-semibold text-green-700 text-sm">{t.total_purchases}</span>
+                <span className="text-xs text-gray-500">Purchases</span>
+                <span className="font-semibold text-green-400 text-sm">{t.total_purchases}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500">Reach</span>
-                <span className="font-semibold text-slate-800 text-sm">{t.total_reach.toLocaleString()}</span>
+                <span className="text-xs text-gray-500">Reach</span>
+                <span className="font-semibold text-gray-800 text-sm">{t.total_reach.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500">Ads</span>
-                <span className="font-semibold text-slate-800 text-sm">{t.ad_count}</span>
+                <span className="text-xs text-gray-500">Ads</span>
+                <span className="font-semibold text-gray-800 text-sm">{t.ad_count}</span>
               </div>
             </div>
           </div>
@@ -107,15 +107,15 @@ export default async function OwnerTrendAnalysisPage() {
       </div>
 
       {lastTwo.length === 2 && (
-        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 mb-8 flex flex-wrap gap-6">
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-8 flex flex-wrap gap-6">
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
               {lastTwo[0].period} → {lastTwo[1].period} · Spend
             </p>
             <DeltaBadge value={spendDelta} />
           </div>
           <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
               {lastTwo[0].period} → {lastTwo[1].period} · Purchases
             </p>
             <DeltaBadge value={purchaseDelta} />
@@ -124,7 +124,7 @@ export default async function OwnerTrendAnalysisPage() {
       )}
 
       {allAds.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 text-sm">
+        <div className="bg-card rounded-2xl card-shadow p-12 text-center text-gray-500 text-sm">
           No ad data found. The Marketing Manager needs to upload a Facebook Ads Manager CSV.
         </div>
       ) : (

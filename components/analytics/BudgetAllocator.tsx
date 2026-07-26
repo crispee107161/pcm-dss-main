@@ -31,10 +31,10 @@ function modelLabel(modelType: string): string {
 function PctBar({ pct }: { pct: number }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full bg-red-500 rounded-full" style={{ width: `${Math.round(pct * 100)}%` }} />
       </div>
-      <span className="text-xs font-semibold text-slate-600 tabular-nums">{(pct * 100).toFixed(1)}%</span>
+      <span className="text-xs font-semibold text-gray-600 tabular-nums">{(pct * 100).toFixed(1)}%</span>
     </div>
   )
 }
@@ -45,13 +45,13 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
   const upper = Math.round(row.interval_upper)
 
   return (
-    <TableRow className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
-      <TableCell className="px-4 py-3 text-slate-400 text-xs w-8">{rank}</TableCell>
+    <TableRow className="border-t border-gray-100 hover:bg-gray-50/50 transition-colors">
+      <TableCell className="px-4 py-3 text-gray-400 text-xs w-8">{rank}</TableCell>
       <TableCell className="px-4 py-3">
-        <div className="font-semibold text-slate-800 text-sm max-w-[180px] truncate" title={row.ad_set_name}>
+        <div className="font-semibold text-gray-800 text-sm max-w-[180px] truncate" title={row.ad_set_name}>
           {row.ad_set_name}
         </div>
-        <div className="text-[11px] text-slate-500 mt-0.5">
+        <div className="text-[11px] text-gray-500 mt-0.5">
           Hist. CPA: {row.historical_cpa !== null ? formatPHP(row.historical_cpa) : '—'} · {row.historical_purchases} past purchases
         </div>
       </TableCell>
@@ -59,7 +59,7 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
         <PctBar pct={row.pct} />
       </TableCell>
       <TableCell className="px-4 py-3 text-right">
-        <span className="font-bold text-slate-800">{formatPHP(row.allocated_spend)}</span>
+        <span className="font-bold text-gray-800">{formatPHP(row.allocated_spend)}</span>
       </TableCell>
       <TableCell className="px-4 py-3 text-right">
         <span className="font-bold text-red-600 text-base">{point}</span>
@@ -77,17 +77,17 @@ export default function BudgetAllocator() {
 
   return (
     <div className="space-y-5">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-gray-500">
         Enter a total budget. The system distributes it across your top ad sets, weighted by their historical purchase efficiency (purchases per peso spent), then projects purchases using the regression model.
       </p>
 
       <form action={formAction} className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[180px] max-w-xs">
-          <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">
             Total Budget (PHP)
           </label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-sm">₱</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">₱</span>
             <Input
               name="budget"
               type="number"
@@ -95,7 +95,7 @@ export default function BudgetAllocator() {
               step="0.01"
               placeholder="10000"
               required
-              className="w-full pl-8 border-slate-200 focus-visible:ring-red-500 text-slate-900"
+              className="w-full pl-8 border-gray-200 focus-visible:ring-red-500 text-gray-900"
             />
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function BudgetAllocator() {
       </form>
 
       {error && (
-        <Alert className="border-red-200 bg-red-50 text-red-700">
+        <Alert variant="destructive">
           <AlertDescription className="text-sm">{error}</AlertDescription>
         </Alert>
       )}
@@ -134,17 +134,17 @@ export default function BudgetAllocator() {
         <div className="space-y-4">
           {/* Summary banner */}
           <div className="rounded-2xl p-5 flex flex-wrap gap-6"
-            style={{ background: 'linear-gradient(135deg, #1c0808 0%, #111 60%, #0d0d0d 100%)' }}>
+            style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-red-900) 22%, var(--card)) 0%, var(--card) 60%, var(--background) 100%)' }}>
             <div>
-              <p className="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Total Budget</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Total Budget</p>
               <p className="text-2xl font-bold text-white">{formatPHP(result.total_budget)}</p>
             </div>
             <div>
-              <p className="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Projected Purchases</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Purchases</p>
               <p className="text-2xl font-bold text-red-400">{Math.round(result.total_projected_purchases)}</p>
             </div>
             <div>
-              <p className="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Projected CPA</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected CPA</p>
               <p className="text-2xl font-bold text-white">
                 {result.total_projected_purchases > 0
                   ? formatPHP(result.total_budget / result.total_projected_purchases)
@@ -152,26 +152,26 @@ export default function BudgetAllocator() {
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-slate-400 uppercase tracking-wider mb-1">Ad Sets</p>
-              <p className="text-2xl font-bold text-slate-200">{result.allocations.length}</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Ad Sets</p>
+              <p className="text-2xl font-bold text-gray-200">{result.allocations.length}</p>
             </div>
             <div className="self-end ml-auto hidden sm:block">
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-gray-400">
                 {modelLabel(result.model_type)} · R² = {(result.model_r_squared * 100).toFixed(1)}%
               </p>
             </div>
           </div>
 
           {/* Allocation table */}
-          <div className="rounded-xl border border-slate-200 overflow-hidden">
+          <div className="rounded-xl border border-gray-200 overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/80 border-b border-slate-200">
-                  <TableHead className="px-4 py-3 w-8 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">#</TableHead>
-                  <TableHead className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Ad Set</TableHead>
-                  <TableHead className="px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Share</TableHead>
-                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Allocated</TableHead>
-                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Proj. Purchases</TableHead>
+                <TableRow className="bg-gray-50/80 border-b border-gray-200">
+                  <TableHead className="px-4 py-3 w-8 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">#</TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Ad Set</TableHead>
+                  <TableHead className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Share</TableHead>
+                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Allocated</TableHead>
+                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Proj. Purchases</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,7 +182,7 @@ export default function BudgetAllocator() {
             </Table>
           </div>
 
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-gray-400">
             Allocation weighted by historical purchase efficiency (purchases ÷ spend) per ad set. Projected purchases use the {modelLabel(result.model_type)} model with reach, messaging, and link clicks scaled from historical per-peso ratios (global average used as fallback when an ad set has no historical data for a metric). Approximate 80% prediction intervals shown below each purchase count (constant-width, based on model RSE).
           </p>
         </div>

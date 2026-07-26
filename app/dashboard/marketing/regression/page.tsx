@@ -51,25 +51,25 @@ export default async function RegressionPage() {
 
       {latestModel ? (
         <>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Current Model</h2>
+          <div className="bg-card rounded-2xl card-shadow p-6 mb-8">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Current Model</h2>
             <RegressionSummary model={latestModel} />
           </div>
 
           {!isMLR && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
-              <h2 className="text-lg font-semibold text-slate-800 mb-4">Interpretation Guide</h2>
-              <div className="space-y-3 text-sm text-slate-600">
+            <div className="bg-card rounded-2xl card-shadow p-6 mb-8">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Interpretation Guide</h2>
+              <div className="space-y-3 text-sm text-gray-600">
                 <div className="flex gap-3">
-                  <span className="font-semibold text-slate-800 w-24 flex-shrink-0">R² Score</span>
+                  <span className="font-semibold text-gray-800 w-24 flex-shrink-0">R² Score</span>
                   <p>Ad spend explains {(latestModel.r_squared * 100).toFixed(1)}% of variance in purchases.</p>
                 </div>
                 <div className="flex gap-3">
-                  <span className="font-semibold text-slate-800 w-24 flex-shrink-0">Coefficient</span>
+                  <span className="font-semibold text-gray-800 w-24 flex-shrink-0">Coefficient</span>
                   <p>For every ₱1 increase in ad spend, approximately <strong>{latestModel.coefficient.toFixed(6)}</strong> more purchases are expected.</p>
                 </div>
                 <div className="flex gap-3">
-                  <span className="font-semibold text-slate-800 w-24 flex-shrink-0">Intercept</span>
+                  <span className="font-semibold text-gray-800 w-24 flex-shrink-0">Intercept</span>
                   <p>Baseline predicted purchases at ₱0 spend: <strong>{latestModel.intercept.toFixed(4)}</strong>.</p>
                 </div>
               </div>
@@ -77,41 +77,41 @@ export default async function RegressionPage() {
           )}
 
           {allModels.length > 1 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h2 className="text-lg font-semibold text-slate-800 mb-4">Model History</h2>
+            <div className="bg-card rounded-2xl card-shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Model History</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr>
                       {['ID', 'Type', 'R²', 'Adj R²', 'n', 'RSE', 'Trained'].map(h => (
-                        <th key={h} className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-4 py-3 bg-slate-50">{h}</th>
+                        <th key={h} className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {allModels.map((m) => (
-                      <tr key={m.id} className={m.id === latestModel.id ? 'bg-red-50' : 'hover:bg-slate-50'}>
-                        <td className="px-4 py-3 text-slate-600 border-t border-slate-100">
-                          #{m.id} {m.id === latestModel.id && <span className="text-red-600 text-xs font-medium">(current)</span>}
+                      <tr key={m.id} className={m.id === latestModel.id ? 'bg-red-500/10' : 'hover:bg-gray-50'}>
+                        <td className="px-4 py-3 text-gray-600 border-t border-gray-100">
+                          #{m.id} {m.id === latestModel.id && <span className="text-red-400 text-xs font-medium">(current)</span>}
                         </td>
-                        <td className="px-4 py-3 text-slate-600 border-t border-slate-100 text-xs">
+                        <td className="px-4 py-3 text-gray-600 border-t border-gray-100 text-xs">
                           {modelTypeLabel(m.model_type, m.coef_reach != null)}
                         </td>
-                        <td className="px-4 py-3 border-t border-slate-100">
-                          <span className={`font-semibold ${m.r_squared >= 0.5 ? 'text-green-700' : 'text-amber-700'}`}>
+                        <td className="px-4 py-3 border-t border-gray-100">
+                          <span className={`font-semibold ${m.r_squared >= 0.5 ? 'text-green-400' : 'text-yellow-400'}`}>
                             {(m.r_squared * 100).toFixed(1)}%
                           </span>
                         </td>
-                        <td className="px-4 py-3 border-t border-slate-100">
+                        <td className="px-4 py-3 border-t border-gray-100">
                           {m.adj_r_squared != null
-                            ? <span className={`font-semibold ${m.adj_r_squared >= 0.5 ? 'text-green-700' : 'text-amber-700'}`}>{(m.adj_r_squared * 100).toFixed(1)}%</span>
-                            : <span className="text-slate-400">—</span>}
+                            ? <span className={`font-semibold ${m.adj_r_squared >= 0.5 ? 'text-green-400' : 'text-yellow-400'}`}>{(m.adj_r_squared * 100).toFixed(1)}%</span>
+                            : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="px-4 py-3 text-slate-700 border-t border-slate-100">{m.n}</td>
-                        <td className="px-4 py-3 text-slate-600 border-t border-slate-100 text-xs">
+                        <td className="px-4 py-3 text-gray-700 border-t border-gray-100">{m.n}</td>
+                        <td className="px-4 py-3 text-gray-600 border-t border-gray-100 text-xs">
                           {m.residual_std_error != null ? m.residual_std_error.toFixed(3) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-slate-500 border-t border-slate-100 text-xs whitespace-nowrap">{formatDate(m.trained_at)}</td>
+                        <td className="px-4 py-3 text-gray-500 border-t border-gray-100 text-xs whitespace-nowrap">{formatDate(m.trained_at)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -121,8 +121,8 @@ export default async function RegressionPage() {
           )}
         </>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-          <p className="text-slate-500 text-sm">No model trained yet. Upload Ads CSV data first.</p>
+        <div className="bg-card rounded-2xl card-shadow p-12 text-center">
+          <p className="text-gray-500 text-sm">No model trained yet. Upload Ads CSV data first.</p>
         </div>
       )}
     </div>

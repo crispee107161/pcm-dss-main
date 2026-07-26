@@ -22,22 +22,22 @@ export default async function SalesCorrelationPage() {
         description="Spearman rank correlation between ad metrics and purchase outcomes"
       />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">
+      <div className="bg-card rounded-2xl card-shadow p-6 mb-8">
+        <h2 className="text-base font-semibold text-gray-800 mb-4">
           Time-Lagged Pearson Correlation
-          <span className="ml-2 text-xs font-normal text-slate-500">(FR-19)</span>
+          <span className="ml-2 text-xs font-normal text-gray-500">(FR-19)</span>
         </h2>
         <LaggedCorrelationPanel data={lagData} />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">Spearman Rank Correlation (Overall)</h2>
+      <div className="bg-card rounded-2xl card-shadow p-6 mb-8">
+        <h2 className="text-base font-semibold text-gray-800 mb-4">Spearman Rank Correlation (Overall)</h2>
         <CorrelationTable rows={spearmanRows} />
       </div>
 
-      <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6">
-        <h2 className="text-base font-semibold text-slate-800 mb-2">How to read this</h2>
-        <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
+      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+        <h2 className="text-base font-semibold text-gray-800 mb-2">How to read this</h2>
+        <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
           <li>Values close to <strong>+1</strong> mean a strong positive relationship — as one metric rises, purchases tend to rise too.</li>
           <li>Values close to <strong>-1</strong> mean a strong negative relationship.</li>
           <li>Values close to <strong>0</strong> mean little or no relationship.</li>

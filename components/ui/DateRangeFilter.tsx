@@ -30,21 +30,21 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Filter</span>
+      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filter</span>
       <div className="flex items-center gap-1.5">
         <input
           type="date"
           defaultValue={from ?? ''}
           onChange={e => update('from', e.target.value)}
-          className="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 bg-white"
+          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 bg-card"
           aria-label="From date"
         />
-        <span className="text-slate-400 text-xs">to</span>
+        <span className="text-gray-400 text-xs">to</span>
         <input
           type="date"
           defaultValue={to ?? ''}
           onChange={e => update('to', e.target.value)}
-          className="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 bg-white"
+          className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 bg-card"
           aria-label="To date"
         />
       </div>

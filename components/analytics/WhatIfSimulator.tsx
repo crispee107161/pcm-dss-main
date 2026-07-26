@@ -21,12 +21,12 @@ function InputField({
 }) {
   return (
     <div className="flex-1 min-w-[140px]">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700 mb-1">
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       <div className="relative">
         {prefix && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-sm">{prefix}</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">{prefix}</span>
         )}
         <Input
           id={id}
@@ -36,7 +36,7 @@ function InputField({
           max={max}
           step={prefix === '₱' ? '0.01' : '1'}
           placeholder={placeholder}
-          className={`w-full ${prefix ? 'pl-8' : ''} border-slate-300 focus-visible:ring-red-500 text-slate-900`}
+          className={`w-full ${prefix ? 'pl-8' : ''} border-gray-300 focus-visible:ring-red-500 text-gray-900`}
         />
       </div>
     </div>
@@ -55,7 +55,7 @@ export default function WhatIfSimulator() {
 
   return (
     <div>
-      <p className="text-xs text-slate-500 mb-3">
+      <p className="text-xs text-gray-500 mb-3">
         Enter hypothetical engagement values. The model applies log(1+x) transformation to account for diminishing returns.
       </p>
 
@@ -84,36 +84,36 @@ export default function WhatIfSimulator() {
       </form>
 
       {error && (
-        <Alert className="mt-4 border-red-200 bg-red-50 text-red-700">
+        <Alert variant="destructive" className="mt-4">
           <AlertDescription className="text-sm">{error}</AlertDescription>
         </Alert>
       )}
 
       {result && point !== null && lower !== null && upper !== null && (
-        <div className="mt-4 p-5 rounded-xl bg-zinc-950 border border-zinc-800">
+        <div className="mt-4 p-5 rounded-xl bg-gray-25 border border-gray-100">
           <p className="text-red-500 text-xs font-medium uppercase tracking-wider mb-3">Simulation Result</p>
 
           <div className="flex flex-col sm:flex-row sm:items-start gap-6">
             <div>
-              <p className="text-zinc-400 text-xs mb-0.5">Inputs</p>
-              <p className="text-sm text-zinc-300">Reach: <strong className="text-white">{result.reach_input.toLocaleString()}</strong></p>
-              <p className="text-sm text-zinc-300">Messaging: <strong className="text-white">{result.messaging_input.toLocaleString()}</strong></p>
-              <p className="text-sm text-zinc-300">Spend: <strong className="text-white">{formatPhp(result.amount_spent_input)}</strong></p>
+              <p className="text-gray-400 text-xs mb-0.5">Inputs</p>
+              <p className="text-sm text-gray-500">Reach: <strong className="text-white">{result.reach_input.toLocaleString()}</strong></p>
+              <p className="text-sm text-gray-500">Messaging: <strong className="text-white">{result.messaging_input.toLocaleString()}</strong></p>
+              <p className="text-sm text-gray-500">Spend: <strong className="text-white">{formatPhp(result.amount_spent_input)}</strong></p>
             </div>
 
-            <div className="text-zinc-500 text-2xl hidden sm:block pt-4">&rarr;</div>
+            <div className="text-gray-500 text-2xl hidden sm:block pt-4">&rarr;</div>
 
             <div>
-              <p className="text-zinc-400 text-xs mb-1">Predicted Purchases</p>
+              <p className="text-gray-400 text-xs mb-1">Predicted Purchases</p>
               <p className="text-4xl font-bold text-red-500">
                 {point}
-                <span className="text-base font-normal text-zinc-400 ml-1">purchases</span>
+                <span className="text-base font-normal text-gray-400 ml-1">purchases</span>
               </p>
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-zinc-400">80% prediction interval:</span>
+                <span className="text-xs text-gray-400">80% prediction interval:</span>
                 <span className="text-sm font-semibold text-amber-400">{lower} – {upper}</span>
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 Interval widens automatically when inputs are far from training data.
               </p>
             </div>
@@ -132,13 +132,13 @@ export default function WhatIfSimulator() {
             </div>
           )}
 
-          <div className="mt-4 pt-3 border-t border-zinc-800 space-y-1">
-            <p className="text-xs text-zinc-400 font-mono break-all">{result.model.equation}</p>
-            <p className="text-xs text-zinc-500">
+          <div className="mt-4 pt-3 border-t border-gray-100 space-y-1">
+            <p className="text-xs text-gray-400 font-mono break-all">{result.model.equation}</p>
+            <p className="text-xs text-gray-500">
               R² = {(result.model.r_squared * 100).toFixed(1)}% · RSE = {result.model.residual_std_error.toFixed(3)} · n = {result.model.n}
             </p>
             {result.training_ranges && (
-              <p className="text-xs text-zinc-600">
+              <p className="text-xs text-gray-400">
                 Training ranges · Reach {result.training_ranges.reach[0].toLocaleString()}–{result.training_ranges.reach[1].toLocaleString()}
                 {' · '}Msgs {result.training_ranges.messaging[0].toLocaleString()}–{result.training_ranges.messaging[1].toLocaleString()}
                 {' · '}Spend {formatPhp(result.training_ranges.spend[0])}–{formatPhp(result.training_ranges.spend[1])}

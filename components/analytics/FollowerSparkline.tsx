@@ -1,6 +1,7 @@
 'use client'
 
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
+import { chartTooltipStyle, chartTooltipLabelStyle } from '@/lib/chart-tooltip'
 
 interface SparkPoint {
   date: string
@@ -21,19 +22,19 @@ export default function FollowerSparkline({ data, currentCount, netChange7d, asO
   return (
     <div className="flex flex-col h-full justify-between gap-3">
       <div>
-        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em]">Page Followers</p>
+        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Page Followers</p>
         <p className="text-3xl font-bold tracking-tight text-red-600 mt-3">
           {new Intl.NumberFormat('en-PH').format(currentCount)}
         </p>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <span className="text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-0.5">
+          <span className="text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
             {asOfDate}
           </span>
           {netChange7d !== 0 && (
             <span className={`text-xs font-bold rounded-full px-2.5 py-0.5 border ${
               isPositive
-                ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
-                : 'bg-red-50 border-red-100 text-red-500'
+                ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                : 'bg-red-500/10 border-red-500/30 text-red-400'
             }`}>
               {isPositive ? '+' : ''}{new Intl.NumberFormat('en-PH').format(netChange7d)} <span className="font-normal opacity-70">7d</span>
             </span>
@@ -61,16 +62,9 @@ export default function FollowerSparkline({ data, currentCount, netChange7d, asO
                 isAnimationActive={false}
               />
               <Tooltip
-                contentStyle={{
-                  fontSize: 11,
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  border: '1px solid #e2e8f0',
-                  background: '#fff',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                }}
+                contentStyle={{ ...chartTooltipStyle, fontSize: 11, padding: '4px 8px' }}
                 formatter={(v: unknown) => [typeof v === 'number' ? new Intl.NumberFormat('en-PH').format(v) : '—', 'Followers']}
-                labelStyle={{ color: '#94a3b8', fontSize: 10 }}
+                labelStyle={chartTooltipLabelStyle}
               />
             </AreaChart>
           </ResponsiveContainer>
