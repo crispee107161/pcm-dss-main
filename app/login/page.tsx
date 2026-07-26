@@ -215,7 +215,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   required
                   style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(63,63,70,0.9)', outline: 'none', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                  className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-600 text-sm"
+                  className="w-full px-4 py-3 rounded-lg text-white placeholder-gray-600 text-base sm:text-sm"
                   placeholder="you@pcmerchandise.com"
                 />
               </div>
@@ -232,7 +232,7 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     required
                     style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(63,63,70,0.9)', outline: 'none', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-white placeholder-gray-600 text-sm"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-white placeholder-gray-600 text-base sm:text-sm"
                     placeholder="••••••••"
                   />
                   <button
