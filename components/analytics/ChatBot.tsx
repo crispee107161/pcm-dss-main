@@ -169,7 +169,7 @@ export default function ChatBot() {
               onKeyDown={handleKeyDown}
               placeholder="Ask about your data..."
               disabled={loading}
-              className="flex-1 text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:border-transparent disabled:opacity-50 placeholder-gray-400 transition-[border-color]"
+              className="flex-1 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:border-transparent disabled:opacity-50 placeholder-gray-400 transition-[border-color]"
             />
             <button
               onClick={() => handleSend()}

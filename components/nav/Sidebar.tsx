@@ -395,21 +395,21 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
                         type="password"
                         placeholder="Current password"
                         required
-                        className="w-full bg-gray-50 border-gray-100 text-sidebar-foreground text-xs placeholder:text-gray-300 focus-visible:ring-ring focus-visible:ring-offset-gray-25"
+                        className="w-full bg-gray-50 border-gray-100 text-sidebar-foreground text-base sm:text-xs placeholder:text-gray-300 focus-visible:ring-ring focus-visible:ring-offset-gray-25"
                       />
                       <Input
                         name="new_password"
                         type="password"
                         placeholder="New password"
                         required
-                        className="w-full bg-gray-50 border-gray-100 text-sidebar-foreground text-xs placeholder:text-gray-300 focus-visible:ring-ring focus-visible:ring-offset-gray-25"
+                        className="w-full bg-gray-50 border-gray-100 text-sidebar-foreground text-base sm:text-xs placeholder:text-gray-300 focus-visible:ring-ring focus-visible:ring-offset-gray-25"
                       />
                       <Input
                         name="confirm_password"
                         type="password"
                         placeholder="Confirm new password"
                         required
-                        className="w-full bg-gray-50 border-gray-100 text-sidebar-foreground text-xs placeholder:text-gray-300 focus-visible:ring-ring focus-visible:ring-offset-gray-25"
+                        className="w-full bg-gray-50 border-gray-100 text-sidebar-foreground text-base sm:text-xs placeholder:text-gray-300 focus-visible:ring-ring focus-visible:ring-offset-gray-25"
                       />
                       <button
                         type="submit"

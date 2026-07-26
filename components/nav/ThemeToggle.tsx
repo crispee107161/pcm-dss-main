@@ -47,10 +47,18 @@ export default function ThemeToggle() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
         </svg>
       ) : (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <rect x="3" y="4.5" width="18" height="12" rx="1.5" strokeWidth={1.5} />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 20h8M12 16.5V20" />
-        </svg>
+        <>
+          {/* Desktop: "system" reads as the monitor you're using */}
+          <svg className="w-4 h-4 hidden md:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="3" y="4.5" width="18" height="12" rx="1.5" strokeWidth={1.5} />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 20h8M12 16.5V20" />
+          </svg>
+          {/* Mobile: a monitor doesn't match the device in your hand — use a phone instead */}
+          <svg className="w-4 h-4 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <rect x="7" y="2.25" width="10" height="19.5" rx="2" strokeWidth={1.5} />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 18.75h2" />
+          </svg>
+        </>
       )}
     </button>
   )

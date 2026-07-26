@@ -165,11 +165,11 @@ export default function UploadForm() {
       )}
 
       {/* Upload button */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <Button
           onClick={runBatchUpload}
           disabled={isPending || pendingCount === 0}
-          className="bg-primary hover:bg-green-600 text-white px-4 gap-2"
+          className="bg-primary hover:bg-green-600 text-white px-4 gap-2 w-full sm:w-auto h-11 sm:h-8 text-base sm:text-sm"
         >
           {isPending ? (
             <>
@@ -193,7 +193,7 @@ export default function UploadForm() {
             onClick={handleClearAll}
             variant="ghost"
             size="sm"
-            className="text-gray-500"
+            className="text-gray-500 w-full sm:w-auto"
           >
             Clear
           </Button>
