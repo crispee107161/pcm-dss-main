@@ -73,7 +73,7 @@ export default function LoginPage() {
         .pw-toggle:hover { color: #f4f4f5; }
       `}</style>
 
-      <div className="min-h-screen flex" style={{ background: '#080808' }}>
+      <div className="min-h-dvh flex" style={{ background: '#080808' }}>
 
         {/* ── LEFT PANEL ── */}
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12"

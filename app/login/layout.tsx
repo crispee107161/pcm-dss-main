@@ -4,5 +4,5 @@
  * regardless of the user's stored theme preference.
  */
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
-  return <div className="dark bg-background min-h-screen">{children}</div>
+  return <div className="dark bg-background min-h-dvh">{children}</div>
 }
