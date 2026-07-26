@@ -96,22 +96,22 @@ export default function WhatIfSimulator() {
           <div className="flex flex-col sm:flex-row sm:items-start gap-6">
             <div>
               <p className="text-gray-400 text-xs mb-0.5">Inputs</p>
-              <p className="text-sm text-gray-500">Reach: <strong className="text-white">{result.reach_input.toLocaleString()}</strong></p>
-              <p className="text-sm text-gray-500">Messaging: <strong className="text-white">{result.messaging_input.toLocaleString()}</strong></p>
-              <p className="text-sm text-gray-500">Spend: <strong className="text-white">{formatPhp(result.amount_spent_input)}</strong></p>
+              <p className="text-sm text-gray-500">Reach: <strong className="sensitive text-white">{result.reach_input.toLocaleString()}</strong></p>
+              <p className="text-sm text-gray-500">Messaging: <strong className="sensitive text-white">{result.messaging_input.toLocaleString()}</strong></p>
+              <p className="text-sm text-gray-500">Spend: <strong className="sensitive text-white">{formatPhp(result.amount_spent_input)}</strong></p>
             </div>
 
             <div className="text-gray-500 text-2xl hidden sm:block pt-4">&rarr;</div>
 
             <div>
               <p className="text-gray-400 text-xs mb-1">Predicted Purchases</p>
-              <p className="text-4xl font-bold text-red-500">
+              <p className="sensitive text-4xl font-bold text-red-500">
                 {point}
                 <span className="text-base font-normal text-gray-400 ml-1">purchases</span>
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-xs text-gray-400">80% prediction interval:</span>
-                <span className="text-sm font-semibold text-amber-400">{lower} – {upper}</span>
+                <span className="sensitive text-sm font-semibold text-amber-400">{lower} – {upper}</span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 Interval widens automatically when inputs are far from training data.

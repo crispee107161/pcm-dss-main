@@ -24,13 +24,14 @@ const accentStyles: Record<Accent, string> = {
   slate: 'bg-gray-100 text-gray-400',
 }
 
-function KpiCard({ label, value, sub, valueClass = 'text-gray-900', icon, accent = 'slate' }: {
+function KpiCard({ label, value, sub, valueClass = 'text-gray-900', icon, accent = 'slate', sensitive = true }: {
   label: string
   value: React.ReactNode
   sub?: string
   valueClass?: string
   icon: React.ReactNode
   accent?: Accent
+  sensitive?: boolean
 }) {
   return (
     <div className="bg-card rounded-2xl card-shadow p-5 flex flex-col gap-3"
@@ -42,7 +43,7 @@ function KpiCard({ label, value, sub, valueClass = 'text-gray-900', icon, accent
         </span>
       </div>
       <div>
-        <p className={`text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
+        <p className={`text-3xl font-bold tracking-tight tabular ${sensitive ? 'sensitive' : ''} ${valueClass}`}>{value}</p>
         {sub && (
           <span className="inline-block mt-2 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
             {sub}
@@ -148,6 +149,7 @@ export default async function MarketingDashboard() {
           value={latestModel ? 'Trained' : 'Pending'}
           valueClass={latestModel ? 'text-green-400' : 'text-yellow-400'}
           accent={latestModel ? 'green' : 'amber'}
+          sensitive={false}
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>}
         />
         <KpiCard
@@ -198,15 +200,15 @@ export default async function MarketingDashboard() {
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Purchases</p>
-                  <p className="text-xl font-bold text-gray-900">{topCategory.totalPurchases.toLocaleString()}</p>
+                  <p className="sensitive text-xl font-bold text-gray-900">{topCategory.totalPurchases.toLocaleString()}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ad Spend</p>
-                  <p className="text-xl font-bold text-gray-900">{formatPhp(topCategory.totalSpend)}</p>
+                  <p className="sensitive text-xl font-bold text-gray-900">{formatPhp(topCategory.totalSpend)}</p>
                 </div>
                 <div className="bg-green-500/10 rounded-xl p-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ads</p>
-                  <p className="text-xl font-bold text-green-400">{topCategory.adCount}</p>
+                  <p className="sensitive text-xl font-bold text-green-400">{topCategory.adCount}</p>
                 </div>
               </div>
               {categoriesWithStats.length > 1 && (
@@ -222,7 +224,7 @@ export default async function MarketingDashboard() {
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-[10px] text-gray-400 w-8 text-right">{c.totalPurchases}</span>
+                        <span className="sensitive text-[10px] text-gray-400 w-8 text-right">{c.totalPurchases}</span>
                       </div>
                     )
                   })}
@@ -236,7 +238,7 @@ export default async function MarketingDashboard() {
               style={{ boxShadow: '0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04)' }}>
               <SectionLabel>Post Engagement Summary</SectionLabel>
               <div className="flex items-end gap-3 mb-4">
-                <p className="text-4xl font-bold tracking-tight text-yellow-400">
+                <p className="sensitive text-4xl font-bold tracking-tight text-yellow-400">
                   {(avgEngagement * 100).toFixed(2)}%
                 </p>
                 <span className="text-[11px] text-gray-400 mb-1">avg engagement rate</span>
@@ -244,7 +246,7 @@ export default async function MarketingDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Total Posts</p>
-                  <p className="text-xl font-bold text-gray-900">{postCount.toLocaleString()}</p>
+                  <p className="sensitive text-xl font-bold text-gray-900">{postCount.toLocaleString()}</p>
                 </div>
                 <div className="bg-yellow-500/10 rounded-xl p-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Quality</p>

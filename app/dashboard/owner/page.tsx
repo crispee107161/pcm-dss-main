@@ -55,7 +55,7 @@ function DeltaBadge({ delta }: { delta: number | null }) {
   if (delta === null) return null
   const up = delta >= 0
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold rounded-full px-2 py-0.5 border ml-1 ${
+    <span className={`sensitive inline-flex items-center gap-0.5 text-[10px] font-bold rounded-full px-2 py-0.5 border ml-1 ${
       up ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
     }`}>
       {up ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}%
@@ -82,7 +82,7 @@ function KpiCard({ label, value, sub, delta, valueClass = 'text-gray-900', icon,
         </span>
       </div>
       <div>
-        <p className={`text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
+        <p className={`sensitive text-3xl font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
         <div className="flex items-center mt-2 flex-wrap gap-1">
           {sub && (
             <span className="inline-block text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
@@ -246,18 +246,18 @@ export default async function OwnerDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/8">
             <div className="pb-5 md:pb-0 md:pr-6">
               <p className="text-[11px] text-gray-500 mb-2">Avg. Cost Per Purchase</p>
-              <p className="text-3xl font-bold tracking-tight text-white">{formatPhp(totalSpend / totalPurchases)}</p>
+              <p className="sensitive text-3xl font-bold tracking-tight text-white">{formatPhp(totalSpend / totalPurchases)}</p>
             </div>
             <div className="py-5 md:py-0 md:px-6">
               <p className="text-[11px] text-gray-500 mb-2">Purchase Rate</p>
-              <p className="text-3xl font-bold tracking-tight text-white">
+              <p className="sensitive text-3xl font-bold tracking-tight text-white">
                 {totalReach > 0 ? ((totalPurchases / totalReach) * 100).toFixed(3) : '0'}%
               </p>
               <p className="text-[11px] text-gray-600 mt-1.5">of reached audience</p>
             </div>
             <div className="pt-5 md:pt-0 md:pl-6">
               <p className="text-[11px] text-gray-500 mb-2">Ads with Purchases</p>
-              <p className="text-3xl font-bold tracking-tight text-red-400">{adsWithPurchases}</p>
+              <p className="sensitive text-3xl font-bold tracking-tight text-red-400">{adsWithPurchases}</p>
               <p className="text-[11px] text-gray-600 mt-1.5">of {adCount} total ads</p>
             </div>
           </div>
@@ -320,15 +320,15 @@ export default async function OwnerDashboard() {
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Purchases</p>
-                <p className="text-xl font-bold text-gray-900">{formatNumber(topCampaign.purchases ?? 0)}</p>
+                <p className="sensitive text-xl font-bold text-gray-900">{formatNumber(topCampaign.purchases ?? 0)}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ad Spend</p>
-                <p className="text-xl font-bold text-gray-900">{formatPhp(topCampaign.amount_spent)}</p>
+                <p className="sensitive text-xl font-bold text-gray-900">{formatPhp(topCampaign.amount_spent)}</p>
               </div>
               <div className="bg-green-500/10 rounded-xl p-3">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Cost / Purchase</p>
-                <p className="text-xl font-bold text-green-400">
+                <p className="sensitive text-xl font-bold text-green-400">
                   {topCampaignCpp !== null ? formatPhp(topCampaignCpp) : '—'}
                 </p>
               </div>
@@ -365,11 +365,11 @@ export default async function OwnerDashboard() {
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Inserted</p>
-                <p className="text-base font-bold text-gray-900">{formatNumber(lastUpload.records_inserted)}</p>
+                <p className="sensitive text-base font-bold text-gray-900">{formatNumber(lastUpload.records_inserted)}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Updated</p>
-                <p className="text-base font-bold text-gray-900">{formatNumber(lastUpload.records_updated)}</p>
+                <p className="sensitive text-base font-bold text-gray-900">{formatNumber(lastUpload.records_updated)}</p>
               </div>
             </div>
             <p className="text-[10px] text-gray-400 mt-3">

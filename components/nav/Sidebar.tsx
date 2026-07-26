@@ -254,7 +254,7 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
         {/* h-14 matches TopBar's fixed height exactly, so the sidebar's
             right border and the TopBar's bottom border cross at the same corner. */}
         <div className="h-14 flex items-center flex-shrink-0 px-4 gap-2.5 overflow-hidden">
-          <img src="/pcm-logo.png" alt="PC Merchandise" className="w-7 h-7 object-contain flex-shrink-0" />
+          <img src="/pcm-logo.png" alt="PC Merchandise" className="w-8 h-8 object-contain flex-shrink-0" />
           <FadeText show={showText} as="div" className="min-w-0 flex-1">
             <span className="font-bold text-white text-sm leading-none whitespace-nowrap">PC Merchandise</span>
             <span className="text-gray-300 text-xs ml-1">DSS</span>

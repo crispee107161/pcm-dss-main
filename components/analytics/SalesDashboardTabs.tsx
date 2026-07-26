@@ -256,7 +256,7 @@ export default function SalesDashboardTabs({
                           <div className="font-semibold text-gray-800 text-sm max-w-xs truncate" title={ad.ad_name}>{ad.ad_name}</div>
                           <div className="text-xs text-gray-400 hidden sm:block">{formatDate(ad.reporting_starts)} – {formatDate(ad.reporting_ends)}</div>
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-right font-bold text-gray-800">{formatPHP(ad.amount_spent)}</TableCell>
+                        <TableCell className="sensitive px-4 py-3 text-right font-bold text-gray-800">{formatPHP(ad.amount_spent)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -294,7 +294,7 @@ export default function SalesDashboardTabs({
                           <div className="font-semibold text-gray-800 text-sm max-w-xs truncate" title={ad.ad_name}>{ad.ad_name}</div>
                           <div className="text-xs text-gray-400 hidden sm:block">{formatDate(ad.reporting_starts)} – {formatDate(ad.reporting_ends)}</div>
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-right font-bold text-green-400">{(ad.purchases ?? 0).toLocaleString()}</TableCell>
+                        <TableCell className="sensitive px-4 py-3 text-right font-bold text-green-400">{(ad.purchases ?? 0).toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

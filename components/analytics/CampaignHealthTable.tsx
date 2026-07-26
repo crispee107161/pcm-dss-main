@@ -185,12 +185,12 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
                           <ScoreBar score={ad.score} grade={ad.grade} />
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-right font-semibold text-gray-700 tabular-nums">
+                      <TableCell className="sensitive px-4 py-3 text-right font-semibold text-gray-700 tabular-nums">
                         {formatPHP(ad.amount_spent)}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">
                         {ad.cpa !== null
-                          ? <span className="font-semibold text-gray-700">{formatPHP(ad.cpa)}</span>
+                          ? <span className="sensitive font-semibold text-gray-700">{formatPHP(ad.cpa)}</span>
                           : <span className="text-gray-300">—</span>}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">

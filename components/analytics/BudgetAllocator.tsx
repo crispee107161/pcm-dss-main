@@ -51,7 +51,7 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
         <div className="font-semibold text-gray-800 text-sm max-w-[180px] truncate" title={row.ad_set_name}>
           {row.ad_set_name}
         </div>
-        <div className="text-[11px] text-gray-500 mt-0.5">
+        <div className="sensitive text-[11px] text-gray-500 mt-0.5">
           Hist. CPA: {row.historical_cpa !== null ? formatPHP(row.historical_cpa) : '—'} · {row.historical_purchases} past purchases
         </div>
       </TableCell>
@@ -59,11 +59,11 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
         <PctBar pct={row.pct} />
       </TableCell>
       <TableCell className="px-4 py-3 text-right">
-        <span className="font-bold text-gray-800">{formatPHP(row.allocated_spend)}</span>
+        <span className="sensitive font-bold text-gray-800">{formatPHP(row.allocated_spend)}</span>
       </TableCell>
       <TableCell className="px-4 py-3 text-right">
-        <span className="font-bold text-red-600 text-base">{point}</span>
-        <div className="text-[11px] text-amber-600 mt-0.5 tabular-nums">{lower} – {upper}</div>
+        <span className="sensitive font-bold text-red-600 text-base">{point}</span>
+        <div className="sensitive text-[11px] text-amber-600 mt-0.5 tabular-nums">{lower} – {upper}</div>
       </TableCell>
     </TableRow>
   )
@@ -137,15 +137,15 @@ export default function BudgetAllocator() {
             style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-red-900) 22%, var(--card)) 0%, var(--card) 60%, var(--background) 100%)' }}>
             <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Total Budget</p>
-              <p className="text-2xl font-bold text-white">{formatPHP(result.total_budget)}</p>
+              <p className="sensitive text-2xl font-bold text-white">{formatPHP(result.total_budget)}</p>
             </div>
             <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Purchases</p>
-              <p className="text-2xl font-bold text-red-400">{Math.round(result.total_projected_purchases)}</p>
+              <p className="sensitive text-2xl font-bold text-red-400">{Math.round(result.total_projected_purchases)}</p>
             </div>
             <div>
               <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected CPA</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="sensitive text-2xl font-bold text-white">
                 {result.total_projected_purchases > 0
                   ? formatPHP(result.total_budget / result.total_projected_purchases)
                   : '—'}

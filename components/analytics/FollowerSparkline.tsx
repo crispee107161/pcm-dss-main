@@ -23,7 +23,7 @@ export default function FollowerSparkline({ data, currentCount, netChange7d, asO
     <div className="flex flex-col h-full justify-between gap-3">
       <div>
         <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Page Followers</p>
-        <p className="text-3xl font-bold tracking-tight text-red-600 mt-3">
+        <p className="sensitive text-3xl font-bold tracking-tight text-red-600 mt-3">
           {new Intl.NumberFormat('en-PH').format(currentCount)}
         </p>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -31,7 +31,7 @@ export default function FollowerSparkline({ data, currentCount, netChange7d, asO
             {asOfDate}
           </span>
           {netChange7d !== 0 && (
-            <span className={`text-xs font-bold rounded-full px-2.5 py-0.5 border ${
+            <span className={`sensitive text-xs font-bold rounded-full px-2.5 py-0.5 border ${
               isPositive
                 ? 'bg-green-500/10 border-green-500/30 text-green-400'
                 : 'bg-red-500/10 border-red-500/30 text-red-400'

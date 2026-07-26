@@ -509,6 +509,13 @@
   to { transform: rotate(360deg); }
 }
 
+/* Sensitive-data blur toggle — hides amounts/figures without disturbing chart shapes or labels */
+[data-blur-sensitive='true'] .sensitive {
+  filter: blur(6px);
+  user-select: none;
+  transition: filter 0.15s ease;
+}
+
 /* prefers-reduced-motion: cut all durations except functional loading indicators */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
