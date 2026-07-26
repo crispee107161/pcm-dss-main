@@ -63,5 +63,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: 'jwt',
+    // Internal business dashboard handling ad-spend/financial data —
+    // keep sessions to a working day rather than NextAuth's 30-day default.
+    maxAge: 60 * 60 * 8,
   },
 })

@@ -43,8 +43,10 @@ export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
       const reporting_starts = parseDate(row['Reporting starts'], 'Reporting starts')
       const reporting_ends = parseDate(row['Reporting ends'], 'Reporting ends')
 
-      const ad_name = (row['Ad name'] ?? '').trim()
-      const ad_set_name = (row['Ad set name'] ?? '').trim()
+      // Capped to keep a single malicious/garbage field from ballooning the
+      // LLM prompts these values later get interpolated into (chat.ts, keywords.ts).
+      const ad_name = (row['Ad name'] ?? '').trim().slice(0, 200)
+      const ad_set_name = (row['Ad set name'] ?? '').trim().slice(0, 200)
       const attribution_setting = (row['Attribution setting'] ?? row['Attribution Setting'] ?? '').trim()
 
       const reach = parseIntOrNull(row['Reach'])

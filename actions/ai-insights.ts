@@ -1,6 +1,7 @@
 'use server'
 
 import { auth } from '@/lib/auth'
+import { rateLimit } from '@/lib/rate-limit'
 
 export interface InsightData {
   totalSpend: number
@@ -18,9 +19,15 @@ export interface InsightData {
   avgEngagement?: number | null
 }
 
+const INSIGHTS_LIMIT = 20
+const INSIGHTS_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
+
 export async function generateAIInsights(data: InsightData): Promise<string> {
   const session = await auth()
   if (!session?.user) return 'Unauthorized'
+
+  const { allowed, retryAfterSeconds } = rateLimit(`ai-insights:${session.user.id}`, INSIGHTS_LIMIT, INSIGHTS_WINDOW_MS)
+  if (!allowed) return `Too many requests. Try again in ${retryAfterSeconds}s.`
 
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return 'AI insights unavailable — add GROQ_API_KEY to your environment variables.'

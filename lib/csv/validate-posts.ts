@@ -31,8 +31,10 @@ export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] 
       if (isNaN(publish_time.getTime())) throw new Error(`Invalid Publish time: ${publishRaw}`)
 
       const post_type = (row['Post type'] ?? '').trim()
-      const title = row['Title']?.trim() || null
-      const description = row['Description']?.trim() || null
+      // Capped to keep a single malicious/garbage field from ballooning the
+      // LLM prompts these values later get interpolated into (chat.ts, keywords.ts).
+      const title = row['Title']?.trim().slice(0, 200) || null
+      const description = row['Description']?.trim().slice(0, 2000) || null
       const permalink = (row['Permalink'] ?? row['Post link'] ?? '').trim()
 
       const reach = parseIntOrZero(row['Reach'])
