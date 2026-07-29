@@ -1,11 +1,12 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { runBudgetAllocation, type AllocateState } from '@/actions/allocate'
 import type { AdSetAllocation } from '@/lib/stats/budget-allocator'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 
 function formatPHP(v: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(v)
@@ -71,6 +72,7 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
 
 export default function BudgetAllocator() {
   const [state, formAction, isPending] = useActionState<AllocateState, FormData>(runBudgetAllocation, null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const result = state && 'result' in state ? state.result : null
   const error  = state && 'error'  in state ? state.error  : null
@@ -83,12 +85,13 @@ export default function BudgetAllocator() {
 
       <form action={formAction} className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[180px] max-w-xs">
-          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">
+          <label htmlFor="budget-allocator-total" className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">
             Total Budget (PHP)
           </label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">₱</span>
             <Input
+              id="budget-allocator-total"
               name="budget"
               type="number"
               min="1"
@@ -154,11 +157,6 @@ export default function BudgetAllocator() {
               <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Ad Sets</p>
               <p className="text-2xl font-bold text-foreground">{result.allocations.length}</p>
             </div>
-            <div className="self-end ml-auto hidden sm:block">
-              <p className="text-[11px] text-gray-400">
-                {modelLabel(result.model_type)} · R² = {(result.model_r_squared * 100).toFixed(1)}%
-              </p>
-            </div>
           </div>
 
           {/* Allocation table */}
@@ -181,9 +179,22 @@ export default function BudgetAllocator() {
             </Table>
           </div>
 
-          <p className="text-[11px] text-gray-400">
-            Allocation weighted by historical purchase efficiency (purchases ÷ spend) per ad set. Projected purchases use the {modelLabel(result.model_type)} model with reach, messaging, and link clicks scaled from historical per-peso ratios (global average used as fallback when an ad set has no historical data for a metric). Approximate 80% prediction intervals shown below each purchase count (constant-width, based on model RSE).
-          </p>
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+            <CollapsibleTrigger className="text-xs font-medium text-gray-400 hover:text-gray-600 flex items-center gap-1.5 cursor-pointer select-none focus-visible:outline-none">
+              <svg
+                className={`w-3 h-3 flex-shrink-0 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              See the model behind this
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <p className="text-[11px] text-gray-400">
+                {modelLabel(result.model_type)} model · R² = {(result.model_r_squared * 100).toFixed(1)}%. Allocation weighted by historical purchase efficiency (purchases ÷ spend) per ad set. Projected purchases use reach, messaging, and link clicks scaled from historical per-peso ratios (global average used as fallback when an ad set has no historical data for a metric). Approximate 80% prediction intervals shown below each purchase count (constant-width, based on model RSE).
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       )}
     </div>

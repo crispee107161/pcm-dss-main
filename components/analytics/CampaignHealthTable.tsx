@@ -17,6 +17,11 @@ function formatPHP(v: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(v)
 }
 
+function formatConvRate(rate: number): string {
+  if (rate <= 0) return '—'
+  return `1 per ${Math.round(1 / rate).toLocaleString()}`
+}
+
 function ScoreBar({ score, grade }: { score: number; grade: ScoredAd['grade'] }) {
   const style = GRADE_STYLES[grade]
   return (
@@ -167,8 +172,16 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
                 return (
                   <Fragment key={ad.id}>
                     <TableRow
-                      className="border-t border-gray-100 hover:bg-red-500/10 cursor-pointer transition-[background-color]"
+                      className="border-t border-gray-100 hover:bg-secondary cursor-pointer transition-[background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      tabIndex={0}
+                      aria-expanded={isExpanded}
                       onClick={() => setExpandedId(isExpanded ? null : ad.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setExpandedId(isExpanded ? null : ad.id)
+                        }
+                      }}
                     >
                       <TableCell className="px-4 py-3 text-gray-400 text-xs">{i + 1}</TableCell>
                       <TableCell className="px-4 py-3">
@@ -195,13 +208,13 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">
                         {ad.purchase_rate !== null
-                          ? <span className="font-semibold text-gray-700">{(ad.purchase_rate * 100).toFixed(3)}%</span>
+                          ? <span className="font-semibold text-gray-700">{formatConvRate(ad.purchase_rate)}</span>
                           : <span className="text-gray-300">—</span>}
                       </TableCell>
                     </TableRow>
 
                     {isExpanded && (
-                      <TableRow className="border-t border-gray-100 bg-red-500/5 hover:bg-red-500/5">
+                      <TableRow className="border-t border-gray-100 bg-secondary/50 hover:bg-secondary/50">
                         <TableCell />
                         <TableCell colSpan={5} className="px-4 py-4">
                           <div className="animate-fade-slide-up grid grid-cols-1 sm:grid-cols-3 gap-4 sm:max-w-lg">

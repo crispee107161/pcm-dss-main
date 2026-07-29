@@ -75,8 +75,9 @@ function CreateUserForm() {
           <h3 className="font-semibold text-gray-700 mb-4">Create New User</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+              <label htmlFor="create-user-email" className="block text-xs font-medium text-gray-600 mb-1">Email</label>
               <Input
+                id="create-user-email"
                 name="email"
                 type="email"
                 required
@@ -85,8 +86,9 @@ function CreateUserForm() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
+              <label htmlFor="create-user-password" className="block text-xs font-medium text-gray-600 mb-1">Password</label>
               <Input
+                id="create-user-password"
                 name="password"
                 type="password"
                 required
@@ -96,9 +98,9 @@ function CreateUserForm() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+              <label htmlFor="create-user-role" className="block text-xs font-medium text-gray-600 mb-1">Role</label>
               <Select name="role" defaultValue={ROLE_OPTIONS[0].value}>
-                <SelectTrigger className="w-full border-gray-300 focus-visible:ring-ring">
+                <SelectTrigger id="create-user-role" className="w-full border-gray-300 focus-visible:ring-ring">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -169,7 +171,7 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
                 type="submit"
                 disabled={rolePending}
                 size="xs"
-                className="bg-zinc-800 hover:bg-zinc-700 text-white"
+                className="bg-neutral-800 hover:bg-neutral-700 text-white"
               >
                 {rolePending ? '…' : 'Save'}
               </Button>
@@ -207,8 +209,9 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
               className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex flex-wrap items-end gap-3">
               <input type="hidden" name="userId" value={user.id} />
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">New Password for {user.email}</label>
+                <label htmlFor={`reset-password-${user.id}`} className="block text-xs font-medium text-gray-600 mb-1">New Password for {user.email}</label>
                 <Input
+                  id={`reset-password-${user.id}`}
                   name="password"
                   type="password"
                   required

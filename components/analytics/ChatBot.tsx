@@ -103,7 +103,8 @@ export default function ChatBot() {
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="text-gray-400 hover:text-white transition-colors p-1"
+              aria-label="Close chat"
+              className="relative text-gray-400 hover:text-white transition-colors p-1 after:absolute after:-inset-[10px]"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -174,7 +175,8 @@ export default function ChatBot() {
             <button
               onClick={() => handleSend()}
               disabled={!input.trim() || loading}
-              className="w-9 h-9 flex items-center justify-center bg-neutral-700 hover:bg-neutral-600 active:bg-neutral-800 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl transition-[background-color] flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              aria-label="Send message"
+              className="relative w-9 h-9 flex items-center justify-center bg-neutral-700 hover:bg-neutral-600 active:bg-neutral-800 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl transition-[background-color] flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 after:absolute after:-inset-1"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -189,7 +191,9 @@ export default function ChatBot() {
         onClick={() => setOpen(v => !v)}
         onMouseEnter={() => iconRef.current?.startAnimation()}
         onMouseLeave={() => iconRef.current?.stopAnimation()}
-        className="fixed bottom-5 right-5 z-[60] flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 print:hidden
+        aria-label={open ? 'Close AI Assistant' : 'Open AI Assistant'}
+        aria-expanded={open}
+        className="fixed bottom-5 right-5 z-[60] flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 print:hidden after:absolute after:-inset-1
           fill-neutral-400 hover:fill-neutral-300 active:fill-neutral-500 stroke-neutral-700
           dark:fill-neutral-700 dark:hover:fill-neutral-600 dark:active:fill-neutral-800 dark:stroke-white"
         style={{

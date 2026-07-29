@@ -100,7 +100,7 @@ export default function UploadForm() {
             )}
           </div>
 
-          <ul className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
+          <ul role="status" aria-live="polite" className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
             {queue.map((entry) => (
               <li key={entry.id} className="flex items-start gap-3 px-4 py-3 bg-card">
                 {/* Status icon */}
@@ -109,7 +109,7 @@ export default function UploadForm() {
                     <span className="h-4 w-4 rounded-full border-2 border-gray-300 inline-block" />
                   )}
                   {entry.status === 'uploading' && (
-                    <Loading01Icon size={16} color="#dc2626" />
+                    <Loading01Icon size={16} color="var(--muted-foreground)" />
                   )}
                   {entry.status === 'success' && (
                     <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,7 +142,7 @@ export default function UploadForm() {
                     </div>
                   )}
                   {entry.result?.status === 'FAILED' && (
-                    <p className="text-xs text-red-600 mt-0.5">{entry.result.error_message}</p>
+                    <p role="alert" className="text-xs text-red-600 mt-0.5">{entry.result.error_message}</p>
                   )}
                 </div>
 
