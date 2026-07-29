@@ -90,7 +90,7 @@ function formatDate(d: string | null) {
 function SLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 mb-4">
-      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">{children}</p>
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap">{children}</p>
       <div className="flex-1 h-px bg-gradient-to-r from-red-100/70 to-transparent" />
     </div>
   )
@@ -193,7 +193,7 @@ export default function SalesDashboardTabs({
         <TabsContent value="overview" className="animate-fade-slide-up space-y-4">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap border-l-2 border-red-300/60 pl-2">Monthly KPI Summary</p>
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] whitespace-nowrap">Monthly KPI Summary</p>
               <div className="flex-1 h-px bg-gradient-to-r from-red-100/70 to-transparent" />
             </div>
             <MonthlyKpiCards data={monthlyKpis} />

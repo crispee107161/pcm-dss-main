@@ -125,7 +125,7 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
               }`}
             >
               {grade}
-              <span className="bg-white/60 rounded-full px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
+              <span className={`${s.bar} text-white rounded-full px-1.5 py-0.5 text-[10px] font-bold`}>{count}</span>
             </button>
           )
         })}
