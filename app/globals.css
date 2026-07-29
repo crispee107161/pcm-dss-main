@@ -10,12 +10,39 @@
     margin: 15mm 18mm;
   }
 
-  body {
+  /* `.dark` sets `color-scheme: dark` on <html> (globals.css ~line 286), and
+     that class stays on <html> during print/PDF capture since the app
+     defaults to dark theme. `color-scheme` drives the browser's native
+     canvas-fill default for any page area not explicitly painted by content
+     — e.g. the @page margin gutters — completely independent of
+     `background-color`. That's why forcing `background: white` on html/body
+     alone doesn't stop the margins from rendering dark: color-scheme
+     overrides at a lower level than author background styles. Pin it back
+     to light for print, regardless of the app's active theme.
+     (Confirmed empirically: with only `background: white`, a headless
+     Puppeteer capture still renders rgb(18,18,18) at every page edge;
+     adding `color-scheme: light` here makes it pure white.) */
+  html {
+    color-scheme: light !important;
+  }
+  html, body {
     background: white !important;
   }
 
-  /* Prevent sections from splitting across pages */
+  /* Prevent sections from splitting across pages — used sparingly (short blocks
+     only) since forcing it on every section pushes whole tall sections onto a
+     fresh page and leaves the rest of the previous page blank. */
   .print-no-break {
+    break-inside: avoid;
+  }
+
+  /* A section heading should never be left alone at the bottom of a page with
+     its content pushed to the next — keep it with at least the first line
+     of what follows. Table rows shouldn't visually split across a page break. */
+  .report-heading {
+    break-after: avoid-page;
+  }
+  table tr {
     break-inside: avoid;
   }
 
@@ -324,6 +351,61 @@
   /* Today's original recipes — a faint light-glow rim, kept unchanged. */
   --card-elevate-shadow: 0 1px 3px rgba(255,255,255,0.06), 0 4px 16px rgba(255,255,255,0.04);
   --card-elevate-shadow-ring: 0 0 0 1px rgba(255,255,255,0.04), 0 1px 3px rgba(255,255,255,0.08), 0 4px 16px rgba(255,255,255,0.06);
+}
+
+/*
+ * Print/PDF reports must always render on a fixed white page, independent of
+ * the viewer's theme. The headless Chromium instance that captures the PDF
+ * (lib/pdf/browser.ts) has no localStorage, so next-themes falls back to
+ * `defaultTheme="dark"` (see app/layout.tsx) — meaning every CSS custom
+ * property below would otherwise resolve to its `.dark` value (near-black
+ * `--muted`, near-invisible `--border`, etc.) even though the report markup
+ * itself uses hardcoded light neutral-* classes. Since CSS variables resolve
+ * to the nearest ancestor definition regardless of `.dark` on <html>, redeclaring
+ * the `:root` (light) values here on the report's own wrapper reliably pins
+ * every var()-driven color (chart axes/grid, tooltips, chart series) to light
+ * mode, with zero dependency on ancestor theme state.
+ */
+.print-report-light {
+  color-scheme: light;
+  --g-25: #FAFAFA;
+  --g-50: #F7F7F7;
+  --g-100: #F0F0F0;
+  --g-200: #E7E7E7;
+  --g-300: #CFCFCF;
+  --g-400: #9E9E9E;
+  --g-500: #737373;
+  --g-600: #5C5C5C;
+  --g-700: #363636;
+  --g-800: #242424;
+  --g-900: #171717;
+
+  --background: #FFFFFF;
+  --foreground: #171717;
+  --card: #FFFFFF;
+  --card-foreground: #171717;
+  --popover: #FFFFFF;
+  --popover-foreground: #171717;
+  --primary: #12B76A;
+  --primary-foreground: #FAFAFA;
+  --secondary: #F0F0F0;
+  --secondary-foreground: #171717;
+  --muted: #F0F0F0;
+  --muted-foreground: #5C5C5C;
+  --accent: #F0F0F0;
+  --accent-foreground: #171717;
+  --destructive: #C91313;
+  --border: var(--color-alpha-black-200);
+  --input: var(--color-alpha-black-300);
+  --ring: var(--color-alpha-black-700);
+  --chart-1: #078C52;
+  --chart-2: #175CD3;
+  --chart-3: #C91313;
+  --chart-4: #6927DA;
+  --chart-5: #B54708;
+  --status-positive: #078C52;
+  --status-warning: #B54708;
+  --status-negative: #C91313;
 }
 
 @layer base {

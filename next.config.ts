@@ -24,6 +24,10 @@ const csp = [
 const nextConfig: NextConfig = {
   // Required in Next.js 16 — returning null uses the default nanoid build ID
   generateBuildId: async () => null,
+  // Headless-Chromium PDF export (app/api/reports/[role]/pdf) — keep these as real
+  // runtime requires instead of letting webpack/nft trace and bundle them (and their
+  // large binaries) into the serverless function output.
+  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium", "puppeteer"],
   async headers() {
     return [
       {
