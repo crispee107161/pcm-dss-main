@@ -13,7 +13,10 @@ export default async function OwnerAdministrationPage() {
   const currentUserId = parseInt(session.user.id, 10)
 
   const [users, totalUploads, recentUploads] = await Promise.all([
-    prisma.user.findMany({ orderBy: { created_at: 'asc' } }),
+    prisma.user.findMany({
+      orderBy: { created_at: 'asc' },
+      select: { id: true, email: true, role: true, created_at: true },
+    }),
     prisma.uploadLog.count(),
     prisma.uploadLog.findMany({
       orderBy: { uploaded_at: 'desc' },

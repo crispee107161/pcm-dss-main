@@ -15,6 +15,12 @@ const roleRoutes: Record<Role, string> = {
 const LOGIN_ATTEMPT_LIMIT = 10
 const LOGIN_ATTEMPT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
 
+// Looser cap keyed on email alone (no IP), so an attacker who spoofs
+// x-forwarded-for to dodge the per-IP+email bucket still gets throttled
+// against a single account.
+const LOGIN_ATTEMPT_LIMIT_PER_EMAIL = 30
+const LOGIN_ATTEMPT_WINDOW_MS_PER_EMAIL = 10 * 60 * 1000
+
 export async function loginAction(
   prevState: { error: string } | null,
   formData: FormData
@@ -43,6 +49,15 @@ export async function loginAction(
   )
   if (!allowed) {
     return { error: `Too many login attempts. Try again in ${Math.ceil(retryAfterSeconds / 60)} minute(s).` }
+  }
+
+  const emailOnlyLimit = rateLimit(
+    `login-email:${email.toLowerCase()}`,
+    LOGIN_ATTEMPT_LIMIT_PER_EMAIL,
+    LOGIN_ATTEMPT_WINDOW_MS_PER_EMAIL
+  )
+  if (!emailOnlyLimit.allowed) {
+    return { error: `Too many login attempts. Try again in ${Math.ceil(emailOnlyLimit.retryAfterSeconds / 60)} minute(s).` }
   }
 
   try {

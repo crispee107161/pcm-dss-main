@@ -22,15 +22,19 @@ export interface InsightData {
 const INSIGHTS_LIMIT = 20
 const INSIGHTS_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
 
-export async function generateAIInsights(data: InsightData): Promise<string> {
+export type AIInsightResult =
+  | { ok: true; text: string }
+  | { ok: false; reason: string }
+
+export async function generateAIInsights(data: InsightData): Promise<AIInsightResult> {
   const session = await auth()
-  if (!session?.user) return 'Unauthorized'
+  if (!session?.user) return { ok: false, reason: 'Unauthorized' }
 
   const { allowed, retryAfterSeconds } = rateLimit(`ai-insights:${session.user.id}`, INSIGHTS_LIMIT, INSIGHTS_WINDOW_MS)
-  if (!allowed) return `Too many requests. Try again in ${retryAfterSeconds}s.`
+  if (!allowed) return { ok: false, reason: `Too many requests. Try again in ${retryAfterSeconds}s.` }
 
   const apiKey = process.env.GROQ_API_KEY
-  if (!apiKey) return 'AI insights unavailable — add GROQ_API_KEY to your environment variables.'
+  if (!apiKey) return { ok: false, reason: 'AI insights are not configured for this deployment.' }
 
   const systemPrompt = `You are a business analyst summarizing Facebook ad campaign performance for PC Merchandise, a small Philippine merchandise business. Write 3-4 concise, actionable sentences in plain English for a non-technical business owner. Interpret what the numbers mean and what action to take — do not just repeat raw numbers.`
 
@@ -79,9 +83,9 @@ export async function generateAIInsights(data: InsightData): Promise<string> {
     if (json.error) throw new Error(json.error.message)
     const text = json.choices?.[0]?.message?.content
     if (!text) throw new Error('empty response')
-    return text.trim()
+    return { ok: true, text: text.trim() }
   } catch (err) {
     console.error('AI insights error:', err)
-    return 'Unable to generate insights right now. Please try again in a moment.'
+    return { ok: false, reason: 'Unable to generate insights right now. Please try again in a moment.' }
   }
 }
