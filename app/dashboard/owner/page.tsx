@@ -1,8 +1,10 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { getGreeting } from '@/lib/greeting'
 import Link from 'next/link'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
+import { computeRegressionInsight } from '@/lib/insights/regression-insight'
 import FollowerSparkline from '@/components/analytics/FollowerSparkline'
 import { IconRanking, IconTrendUp, IconMetrics, IconPlay, IconCategory, IconReport } from '@/components/nav/icons'
 
@@ -137,6 +139,7 @@ export default async function OwnerDashboard() {
     follower7dRaw,
     thisWeekAgg,
     lastWeekAgg,
+    adHistory,
   ] = await Promise.all([
     prisma.ad.count(),
     prisma.ad.count({ where: { purchases: { gt: 0 } } }),
@@ -168,7 +171,18 @@ export default async function OwnerDashboard() {
       _sum: { amount_spent: true, purchases: true },
       where: { reporting_ends: { gte: twoWeeksAgo, lt: weekAgo } },
     }),
+    prisma.ad.findMany({
+      where: { purchases: { not: null } },
+      select: { reach: true, total_messaging_contacts: true, amount_spent: true },
+    }),
   ])
+
+  const regressionInsight = latestModel
+    ? computeRegressionInsight(
+        latestModel,
+        adHistory.map(a => ({ reach: a.reach ?? 0, messaging: a.total_messaging_contacts ?? 0, amount_spent: a.amount_spent })),
+      )
+    : null
 
   const totalSpend     = totalSpendAgg._sum.amount_spent ?? 0
   const totalPurchases = totalPurchasesAgg._sum.purchases ?? 0
@@ -199,15 +213,9 @@ export default async function OwnerDashboard() {
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-4">
 
       {/* Welcome */}
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
-        <div>
-          <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">Executive Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Facebook marketing performance &amp; ROI overview</p>
-        </div>
-        <div className="text-right hidden sm:block">
-          <p className="text-xs text-gray-400">Welcome back</p>
-          <p className="text-sm font-bold text-gray-800">{displayName}</p>
-        </div>
+      <div className="pb-4 border-b border-gray-200/60">
+        <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">{getGreeting()}, {displayName}</h1>
+        <p className="text-gray-400 text-sm mt-0.5">Facebook marketing performance &amp; ROI overview</p>
       </div>
 
       {/* KPI row */}
@@ -251,9 +259,9 @@ export default async function OwnerDashboard() {
             <div className="py-5 md:py-0 md:px-6">
               <p className="text-[11px] text-gray-500 mb-2">Purchase Rate</p>
               <p className="sensitive text-3xl font-bold tracking-tight text-foreground">
-                {totalReach > 0 ? ((totalPurchases / totalReach) * 100).toFixed(3) : '0'}%
+                {totalReach > 0 && totalPurchases > 0 ? `1 / ${Math.round(totalReach / totalPurchases).toLocaleString()}` : '—'}
               </p>
-              <p className="text-[11px] text-gray-600 mt-1.5">of reached audience</p>
+              <p className="text-[11px] text-gray-600 mt-1.5">people reached per purchase</p>
             </div>
             <div className="pt-5 md:pt-0 md:pl-6">
               <p className="text-[11px] text-gray-500 mb-2">Ads with Purchases</p>
@@ -394,7 +402,7 @@ export default async function OwnerDashboard() {
       <div className="bg-card rounded-2xl card-shadow p-5"
         style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
         <SectionLabel>Predictive Model Summary</SectionLabel>
-        <RegressionSummary model={latestModel} />
+        <RegressionSummary model={latestModel} insight={regressionInsight} />
       </div>
 
     </div>

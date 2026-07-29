@@ -8,6 +8,7 @@ import { SpendPurchasesChart, ReachTrendChart } from '@/components/marketing/Tre
 import { GenderPieChart, TerritoryChart } from '@/components/marketing/PageMetricsCharts'
 import CorrelationTable from '@/components/analytics/CorrelationTable'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
+import type { RegressionInsight } from '@/lib/insights/regression-insight'
 import WhatIfSimulator from '@/components/analytics/WhatIfSimulator'
 import CampaignHealthTable from '@/components/analytics/CampaignHealthTable'
 import BudgetAllocator from '@/components/analytics/BudgetAllocator'
@@ -60,6 +61,7 @@ interface RegressionModelRow {
 
 export interface SalesDashboardTabsProps {
   displayName: string
+  greeting: string
   monthlyKpis: MonthlyKpi[]
   adTrends: AdTrend[]
   spendDelta: number | null
@@ -71,6 +73,7 @@ export interface SalesDashboardTabsProps {
   scoredAds: ScoredAd[]
   spearmanRows: SpearmanRow[]
   latestModel: RegressionModelRow | null
+  regressionInsight?: RegressionInsight | null
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -140,6 +143,7 @@ type TabId = typeof TABS[number]['id']
 
 export default function SalesDashboardTabs({
   displayName,
+  greeting,
   monthlyKpis,
   adTrends,
   spendDelta,
@@ -151,6 +155,7 @@ export default function SalesDashboardTabs({
   scoredAds,
   spearmanRows,
   latestModel,
+  regressionInsight,
 }: SalesDashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
   // kept for potential analytics tracking; Tabs component manages the visual state
@@ -162,15 +167,9 @@ export default function SalesDashboardTabs({
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-4">
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
-        <div>
-          <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Campaign performance and What-If scenarios</p>
-        </div>
-        <div className="text-right hidden sm:block">
-          <p className="text-xs text-gray-400">Welcome back</p>
-          <p className="text-sm font-bold text-gray-800">{displayName}</p>
-        </div>
+      <div className="pb-4 border-b border-gray-200/60">
+        <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">{greeting}, {displayName}</h1>
+        <p className="text-gray-400 text-sm mt-0.5">Campaign performance and What-If scenarios</p>
       </div>
 
       {/* Tab bar */}
@@ -348,7 +347,7 @@ export default function SalesDashboardTabs({
 
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>Predictive Regression Model</SLabel>
-            <RegressionSummary model={latestModel as any} />
+            <RegressionSummary model={latestModel as any} insight={regressionInsight} />
           </div>
         </TabsContent>
 

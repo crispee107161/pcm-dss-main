@@ -14,7 +14,6 @@ interface MonthlyAdTrend {
   total_purchases: number
   total_reach: number
   ad_count: number
-  avg_spend_per_ad: number
 }
 
 interface MonthlyPostTrend {
@@ -44,9 +43,10 @@ export function SpendPurchasesChart({ data }: { data: MonthlyAdTrend[] }) {
         <Tooltip
           contentStyle={chartTooltipStyle}
           labelStyle={chartTooltipLabelStyle}
-          formatter={(value) => {
+          formatter={(value: unknown, name: unknown) => {
             const v = Number(value)
-            return [`₱${v.toLocaleString()}`, '']
+            if (name === 'Total Spend') return [`₱${v.toLocaleString()}`, name]
+            return [v.toLocaleString(), String(name)]
           }}
         />
         <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
@@ -64,7 +64,7 @@ export function ReachTrendChart({ data }: { data: MonthlyAdTrend[] }) {
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
         <XAxis dataKey="period" tick={chartTick(12)} />
         <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={chartTick(11)} />
-        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(v) => [Number(v).toLocaleString(), 'Reach']} />
+        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(v: unknown) => [Number(v).toLocaleString(), 'Reach']} />
         <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
         <Line dataKey="total_reach" name="Ad Reach" stroke={CHART_COLORS.violet} strokeWidth={2} dot={{ r: 4 }} />
       </LineChart>
@@ -97,30 +97,40 @@ export function PostEngagementChart({ data }: { data: MonthlyPostTrend[] }) {
 }
 
 export default function TrendCharts({ adTrends, postTrends }: Props) {
+  const hasPostData = postTrends.some(p => p.post_count > 0)
+  const emptyPostPeriods = postTrends.filter(p => p.post_count === 0).map(p => p.period)
+
   return (
     <div className="space-y-6">
       <div className="bg-card rounded-2xl card-shadow p-6">
-        <h2 className="font-semibold text-gray-800 mb-1">Ad Spend vs. Purchases by Month</h2>
-        <p className="text-xs text-gray-500 mb-4">Total ad spend (PHP) and resulting purchases per reporting period</p>
+        <h2 className="font-semibold text-gray-800 mb-1">Ad Spend vs. Purchases by Reporting Period</h2>
+        <p className="text-xs text-gray-500 mb-4">Total ad spend (PHP, left axis) and resulting purchases (right axis) — separate scales, not directly comparable by bar height</p>
         <SpendPurchasesChart data={adTrends} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-2xl card-shadow p-6">
-          <h2 className="font-semibold text-gray-800 mb-1">Ad Reach by Month</h2>
-          <p className="text-xs text-gray-500 mb-4">Total unique reach from paid ads</p>
+          <h2 className="font-semibold text-gray-800 mb-1">Ad Reach by Reporting Period</h2>
+          <p className="text-xs text-gray-500 mb-4">Total reach summed across ads — people who saw more than one ad are counted more than once</p>
           <ReachTrendChart data={adTrends} />
         </div>
 
         <div className="bg-card rounded-2xl card-shadow p-6">
           <h2 className="font-semibold text-gray-800 mb-1">Organic Post Engagement</h2>
-          <p className="text-xs text-gray-500 mb-4">Average engagement rate and post count per month</p>
-          {postTrends.length === 0 ? (
+          <p className="text-xs text-gray-500 mb-4">Average engagement rate and post count per reporting period</p>
+          {hasPostData ? (
+            <>
+              <PostEngagementChart data={postTrends} />
+              {emptyPostPeriods.length > 0 && (
+                <p className="text-xs text-gray-400 mt-3">
+                  No organic post data uploaded for {emptyPostPeriods.join(', ')}.
+                </p>
+              )}
+            </>
+          ) : (
             <div className="flex items-center justify-center h-[220px] text-gray-400 text-sm">
               No organic post data uploaded yet.
             </div>
-          ) : (
-            <PostEngagementChart data={postTrends} />
           )}
         </div>
       </div>

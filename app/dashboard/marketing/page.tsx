@@ -1,8 +1,10 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { getGreeting } from '@/lib/greeting'
 import Link from 'next/link'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
+import { computeRegressionInsight } from '@/lib/insights/regression-insight'
 import UploadHistory from '@/components/upload/UploadHistory'
 
 function formatPhp(amount: number): string {
@@ -78,6 +80,7 @@ export default async function MarketingDashboard() {
     postStats,
     adCoverage,
     categories,
+    adHistory,
   ] = await Promise.all([
     prisma.ad.count(),
     prisma.ad.count({ where: { purchases: { gt: 0 } } }),
@@ -100,7 +103,18 @@ export default async function MarketingDashboard() {
     prisma.category.findMany({
       include: { ads: { select: { purchases: true, amount_spent: true } } },
     }),
+    prisma.ad.findMany({
+      where: { purchases: { not: null } },
+      select: { reach: true, total_messaging_contacts: true, amount_spent: true },
+    }),
   ])
+
+  const regressionInsight = latestModel
+    ? computeRegressionInsight(
+        latestModel,
+        adHistory.map(a => ({ reach: a.reach ?? 0, messaging: a.total_messaging_contacts ?? 0, amount_spent: a.amount_spent })),
+      )
+    : null
 
   const avgEngagement = postStats._avg.engagement_rate
   const postCount     = postStats._count._all
@@ -123,15 +137,9 @@ export default async function MarketingDashboard() {
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-4">
 
       {/* Welcome */}
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200/60">
-        <div>
-          <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Monitor uploads, data health, and model status</p>
-        </div>
-        <div className="text-right hidden sm:block">
-          <p className="text-xs text-gray-400">Welcome back</p>
-          <p className="text-sm font-bold text-gray-800">{displayName}</p>
-        </div>
+      <div className="pb-4 border-b border-gray-200/60">
+        <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">{getGreeting()}, {displayName}</h1>
+        <p className="text-gray-400 text-sm mt-0.5">Monitor uploads, data health, and model status</p>
       </div>
 
       {/* KPI row */}
@@ -292,7 +300,7 @@ export default async function MarketingDashboard() {
       <div className="bg-card rounded-2xl card-shadow p-5"
         style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
         <SectionLabel>Current Model</SectionLabel>
-        <RegressionSummary model={latestModel} />
+        <RegressionSummary model={latestModel} insight={regressionInsight} />
       </div>
 
       {/* Recent uploads */}

@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { computeSpearmanMatrix } from '@/lib/stats/spearman'
 import { computeHealthScores } from '@/lib/stats/health-score'
 import SalesDashboardTabs from '@/components/analytics/SalesDashboardTabs'
+import { computeRegressionInsight } from '@/lib/insights/regression-insight'
+import { getGreeting } from '@/lib/greeting'
 import type { MonthlyKpi } from '@/types/index'
 
 async function getRecentTargetMonths(): Promise<{ label: string; year: number; month: number }[]> {
@@ -67,7 +69,7 @@ export default async function SalesDashboard() {
       computeSpearmanMatrix(),
       prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
       prisma.ad.findMany({
-        select: { reporting_starts: true, amount_spent: true, purchases: true, reach: true },
+        select: { reporting_starts: true, amount_spent: true, purchases: true, reach: true, total_messaging_contacts: true },
       }),
       prisma.ad.findMany({
         orderBy: { amount_spent: 'desc' },
@@ -135,9 +137,17 @@ export default async function SalesDashboard() {
     ? { ...latestModel, trained_at: latestModel.trained_at.toISOString() }
     : null
 
+  const regressionInsight = latestModel
+    ? computeRegressionInsight(
+        latestModel,
+        allAds.map(a => ({ reach: a.reach ?? 0, messaging: a.total_messaging_contacts ?? 0, amount_spent: a.amount_spent })),
+      )
+    : null
+
   return (
     <SalesDashboardTabs
       displayName={displayName}
+      greeting={getGreeting()}
       monthlyKpis={monthlyKpis}
       adTrends={adTrends}
       spendDelta={spendDelta}
@@ -149,6 +159,7 @@ export default async function SalesDashboard() {
       scoredAds={serialisedScoredAds as any}
       spearmanRows={spearmanRows}
       latestModel={serialisedModel}
+      regressionInsight={regressionInsight}
     />
   )
 }

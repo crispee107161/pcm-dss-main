@@ -1,4 +1,6 @@
 import type { SpearmanRow } from '@/types/index'
+import { computeCorrelationInsight } from '@/lib/insights/correlation-insight'
+import InsightHeader from '@/components/analytics/InsightHeader'
 
 interface CorrelationTableProps {
   rows: SpearmanRow[]
@@ -16,9 +18,9 @@ function getCellColor(value: number | null): string {
     return value > 0 ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'
   }
   if (abs >= 0.3) {
-    return value > 0 ? 'text-green-400' : 'text-red-400'
+    return value > 0 ? 'text-green-500/80' : 'text-red-500/80'
   }
-  return 'text-yellow-400'
+  return 'text-gray-400'
 }
 
 function getCellBg(value: number | null): string {
@@ -30,7 +32,7 @@ function getCellBg(value: number | null): string {
   if (abs >= 0.3) {
     return value > 0 ? 'bg-green-500/5' : 'bg-red-500/5'
   }
-  return 'bg-yellow-500/5'
+  return ''
 }
 
 function CorrelationStrengthBar({ value }: { value: number | null }) {
@@ -49,75 +51,85 @@ function CorrelationStrengthBar({ value }: { value: number | null }) {
 }
 
 export default function CorrelationTable({ rows }: CorrelationTableProps) {
+  if (rows.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500 text-sm">
+        No data available. Upload ad data to compute correlations.
+      </div>
+    )
+  }
+
+  const insight = computeCorrelationInsight(rows)
+
   return (
     <div>
-      <div className="mb-3 flex gap-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
-          Strong positive (&ge;0.5)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-full bg-yellow-400"></span>
-          Weak (&lt;0.3)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
-          Negative
-        </span>
-      </div>
+      {insight && (
+        <div className="mb-5">
+          <InsightHeader confidence={insight.confidence} headline={insight.headline} detail={insight.detail}>
+            <div className="mb-3 flex flex-wrap gap-4 text-xs text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                Strong positive (&ge;0.5)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                Strong negative (&le;-0.5)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-full bg-gray-300"></span>
+                Weak (&lt;0.3)
+              </span>
+            </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr>
-              <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">
-                Variable
-              </th>
-              <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">
-                vs. Purchases
-              </th>
-              <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">
-                Strength
-              </th>
-              <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">
-                vs. Messaging Contacts
-              </th>
-              <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">
-                Strength
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.variable}>
-                <td className="px-4 py-3 text-gray-800 font-medium border-t border-gray-100">
-                  {row.variable}
-                </td>
-                <td className={`px-4 py-3 border-t border-gray-100 ${getCellBg(row.vs_purchases)}`}>
-                  <span className={getCellColor(row.vs_purchases)}>
-                    {formatCorr(row.vs_purchases)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 border-t border-gray-100 hidden sm:table-cell">
-                  <CorrelationStrengthBar value={row.vs_purchases} />
-                </td>
-                <td className={`px-4 py-3 border-t border-gray-100 ${getCellBg(row.vs_messaging)}`}>
-                  <span className={getCellColor(row.vs_messaging)}>
-                    {formatCorr(row.vs_messaging)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 border-t border-gray-100 hidden sm:table-cell">
-                  <CorrelationStrengthBar value={row.vs_messaging} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {rows.length === 0 && (
-        <div className="text-center py-8 text-gray-500 text-sm">
-          No data available. Upload ad data to compute correlations.
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">
+                      Variable
+                    </th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">
+                      vs. Purchases
+                    </th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">
+                      Strength
+                    </th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">
+                      vs. Messaging Contacts
+                    </th>
+                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">
+                      Strength
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.variable}>
+                      <td className="px-4 py-3 text-gray-800 font-medium border-t border-gray-100">
+                        {row.variable}
+                      </td>
+                      <td className={`px-4 py-3 border-t border-gray-100 ${getCellBg(row.vs_purchases)}`}>
+                        <span className={getCellColor(row.vs_purchases)}>
+                          {formatCorr(row.vs_purchases)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 border-t border-gray-100 hidden sm:table-cell">
+                        <CorrelationStrengthBar value={row.vs_purchases} />
+                      </td>
+                      <td className={`px-4 py-3 border-t border-gray-100 ${getCellBg(row.vs_messaging)}`}>
+                        <span className={getCellColor(row.vs_messaging)}>
+                          {formatCorr(row.vs_messaging)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 border-t border-gray-100 hidden sm:table-cell">
+                        <CorrelationStrengthBar value={row.vs_messaging} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </InsightHeader>
         </div>
       )}
     </div>

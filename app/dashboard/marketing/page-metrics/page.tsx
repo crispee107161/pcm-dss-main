@@ -13,6 +13,8 @@ import {
   MovingAverageForecastChart,
 } from '@/components/marketing/PageMetricsCharts'
 import { computeHoltWintersForecast } from '@/lib/stats/forecast'
+import { computeForecastInsight } from '@/lib/insights/forecast-insight'
+import InsightHeader from '@/components/analytics/InsightHeader'
 
 function fmt(date: Date) {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(date))
@@ -95,11 +97,12 @@ export default async function PageMetricsPage() {
   const avgEngagement = postAgg._avg.engagement_rate ?? 0
   const totalPostReach = postAgg._sum.reach ?? 0
 
-  // --- Holt-Winters forecast for page views (FR-22) ---
+  // --- Holt-Winters forecast for page views ---
   const viewsForecast = computeHoltWintersForecast(
     dailyMetrics.map(d => ({ date: d.date, value: d.views })),
     7, 7
   )
+  const viewsForecastInsight = computeForecastInsight(viewsForecast, 'Page views')
   const forecastChartData = [
     ...viewsForecast.history.slice(-21).map(h => ({
       date: h.date.slice(5), // MM-DD
@@ -259,31 +262,27 @@ export default async function PageMetricsPage() {
         </section>
       )}
 
-      {/* ── SECTION 2b: 7-Day MA Forecast (FR-22) ── */}
-      {dailyMetrics.length >= 7 && (
+      {/* ── SECTION 2b: Page Views Forecast ── */}
+      {dailyMetrics.length >= 7 && viewsForecastInsight && (
         <section className="mb-10">
           <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-blue-500 rounded-full inline-block" />
-            Page Views — Holt-Winters Forecast
-            <span className="text-xs font-normal text-gray-400">(FR-22)</span>
+            Page Views — Next 7 Days
           </h2>
           <div className="bg-card rounded-2xl card-shadow p-6">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="font-medium text-gray-700 text-sm">Historical views + 7-day forecast</h3>
-              <span className="text-xs text-gray-400">
-                Level: {viewsForecast.lastLevel.toLocaleString()} views/day
-                {viewsForecast.method === 'holt-winters' ? ' · Triple exp. smoothing (α=0.3, β=0.1, γ=0.3)' : ' · Double exp. smoothing'}
-              </span>
+            <InsightHeader
+              headline={viewsForecastInsight.headline}
+              detail={viewsForecastInsight.detail}
+            >
+              <p className="text-xs text-gray-500">
+                Model: {viewsForecast.method === 'holt-winters' ? 'Holt-Winters triple exponential smoothing (α=0.3, β=0.1, γ=0.3; captures trend + weekly seasonality)' : 'Holt linear (double exponential smoothing) — upload more data to enable the full seasonal model'}.
+                Current level: {viewsForecast.lastLevel.toLocaleString()} views/day.
+              </p>
+            </InsightHeader>
+            <div className="mt-5">
+              <p className="text-xs text-gray-400 mb-2">Blue = actual daily views · Red = model fit · Orange dots = projected</p>
+              <MovingAverageForecastChart data={forecastChartData} />
             </div>
-            <p className="text-xs text-gray-400 mb-4">
-              Solid line = actual daily views · Red = H-W fitted values · Orange dots = 7-day forecast
-            </p>
-            <MovingAverageForecastChart data={forecastChartData} />
-            <p className="text-xs text-gray-400 mt-3">
-              {viewsForecast.method === 'holt-winters'
-                ? 'Holt-Winters triple exponential smoothing captures trend and weekly seasonality for a more adaptive forecast.'
-                : 'Holt linear (double exponential smoothing) used — upload more data to enable full Holt-Winters seasonal model.'}
-            </p>
           </div>
         </section>
       )}

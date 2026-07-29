@@ -1,10 +1,11 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { runWhatIfAction } from '@/actions/simulate'
 import type { SimulationOutput } from '@/types/index'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 
 type SimulationState = SimulationOutput | { error: string } | null
 
@@ -45,6 +46,7 @@ function InputField({
 
 export default function WhatIfSimulator() {
   const [state, formAction, isPending] = useActionState<SimulationState, FormData>(runWhatIfAction, null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const result = state && !('error' in state) ? (state as SimulationOutput) : null
   const error = state && 'error' in state ? (state as { error: string }).error : null
@@ -56,7 +58,7 @@ export default function WhatIfSimulator() {
   return (
     <div>
       <p className="text-xs text-gray-500 mb-3">
-        Enter hypothetical engagement values. The model applies log(1+x) transformation to account for diminishing returns.
+        Enter hypothetical engagement values to see a projected purchase count.
       </p>
 
       <form action={formAction} className="flex flex-wrap gap-3 items-end">
@@ -132,19 +134,30 @@ export default function WhatIfSimulator() {
             </div>
           )}
 
-          <div className="mt-4 pt-3 border-t border-gray-100 space-y-1">
-            <p className="text-xs text-gray-400 font-mono break-all">{result.model.equation}</p>
-            <p className="text-xs text-gray-500">
-              R² = {(result.model.r_squared * 100).toFixed(1)}% · RSE = {result.model.residual_std_error.toFixed(3)} · n = {result.model.n}
-            </p>
-            {result.training_ranges && (
-              <p className="text-xs text-gray-400">
-                Training ranges · Reach {result.training_ranges.reach[0].toLocaleString()}–{result.training_ranges.reach[1].toLocaleString()}
-                {' · '}Msgs {result.training_ranges.messaging[0].toLocaleString()}–{result.training_ranges.messaging[1].toLocaleString()}
-                {' · '}Spend {formatPhp(result.training_ranges.spend[0])}–{formatPhp(result.training_ranges.spend[1])}
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="mt-4 pt-3 border-t border-gray-100">
+            <CollapsibleTrigger className="text-xs font-medium text-gray-400 hover:text-gray-600 flex items-center gap-1.5 cursor-pointer select-none focus-visible:outline-none">
+              <svg
+                className={`w-3 h-3 flex-shrink-0 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              See the model behind this
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-1">
+              <p className="text-xs text-gray-400 font-mono break-all">{result.model.equation}</p>
+              <p className="text-xs text-gray-500">
+                R² = {(result.model.r_squared * 100).toFixed(1)}% · RSE = {result.model.residual_std_error.toFixed(3)} · n = {result.model.n}
               </p>
-            )}
-          </div>
+              {result.training_ranges && (
+                <p className="text-xs text-gray-400">
+                  Training ranges · Reach {result.training_ranges.reach[0].toLocaleString()}–{result.training_ranges.reach[1].toLocaleString()}
+                  {' · '}Msgs {result.training_ranges.messaging[0].toLocaleString()}–{result.training_ranges.messaging[1].toLocaleString()}
+                  {' · '}Spend {formatPhp(result.training_ranges.spend[0])}–{formatPhp(result.training_ranges.spend[1])}
+                </p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       )}
     </div>

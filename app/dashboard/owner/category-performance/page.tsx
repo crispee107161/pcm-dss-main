@@ -11,6 +11,11 @@ function formatNum(v: number) {
   return new Intl.NumberFormat('en-PH').format(v)
 }
 
+function formatConvRate(rate: number): string {
+  if (rate <= 0) return '—'
+  return `1 per ${Math.round(1 / rate).toLocaleString()}`
+}
+
 function GradeBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0
   return (
@@ -179,7 +184,7 @@ export default async function CategoryPerformancePage() {
                     </td>
                     <td className="px-4 py-4 text-right hidden sm:table-cell">
                       {r.purchase_rate !== null
-                        ? <span className="font-semibold text-gray-700">{(r.purchase_rate * 100).toFixed(3)}%</span>
+                        ? <span className="font-semibold text-gray-700">{formatConvRate(r.purchase_rate)}</span>
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-4 text-right text-gray-600 hidden md:table-cell">{formatNum(r.total_reach)}</td>

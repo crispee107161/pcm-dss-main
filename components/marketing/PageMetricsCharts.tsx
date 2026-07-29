@@ -169,7 +169,7 @@ export function MovingAverageForecastChart({ data }: { data: ForecastChartPoint[
         />
         <Line
           dataKey="ma"
-          name="H-W Fitted"
+          name="Model Fit"
           stroke={CHART_COLORS.red}
           strokeWidth={2}
           dot={false}
@@ -177,7 +177,7 @@ export function MovingAverageForecastChart({ data }: { data: ForecastChartPoint[
         />
         <Line
           dataKey="forecast"
-          name="H-W Forecast"
+          name="Projected"
           stroke={CHART_COLORS.orange}
           strokeWidth={2}
           strokeDasharray="6 3"
