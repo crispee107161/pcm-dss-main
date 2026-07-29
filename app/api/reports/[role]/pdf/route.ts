@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { launchBrowser } from '@/lib/pdf/browser'
+import { rateLimit } from '@/lib/rate-limit'
 import type { Role } from '@/types/index'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
+const PDF_EXPORT_LIMIT = 5
+const PDF_EXPORT_WINDOW_MS = 60_000
 
 const ROLE_TO_PATH: Record<Role, string> = {
   BUSINESS_OWNER: 'owner',
   MARKETING_MANAGER: 'marketing',
   SALES_DIRECTOR: 'sales',
+}
+
+function resolveAppOrigin(request: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  // Local dev fallback only — production should always set one of the above
+  // so headless Chromium never navigates using an attacker-influenced Host header.
+  return new URL(request.url).origin
 }
 
 const ROLE_REPORT_TITLE: Record<string, string> = {
@@ -33,15 +48,33 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const origin = new URL(request.url).origin
+  // This launches a full Chromium process per request — by far the most
+  // expensive endpoint in the app — so it needs its own, tighter limit
+  // rather than relying on a shared bucket.
+  const { allowed, retryAfterSeconds } = rateLimit(`pdf-export:${session.user.id}`, PDF_EXPORT_LIMIT, PDF_EXPORT_WINDOW_MS)
+  if (!allowed) {
+    return NextResponse.json(
+      { error: `Too many PDF export requests. Try again in ${retryAfterSeconds}s.` },
+      { status: 429 },
+    )
+  }
+
+  const origin = resolveAppOrigin(request)
   const printUrl = `${origin}/print/${role}/report?pdf=1`
   const cookieHeader = request.headers.get('cookie') ?? ''
 
-  const browser = await launchBrowser()
+  let browser: Awaited<ReturnType<typeof launchBrowser>>
+  try {
+    browser = await launchBrowser()
+  } catch (err) {
+    console.error('PDF export: failed to launch browser:', err)
+    return NextResponse.json({ error: 'PDF export is temporarily unavailable' }, { status: 503 })
+  }
+
   try {
     const page = await browser.newPage()
     await page.setExtraHTTPHeaders({ cookie: cookieHeader })
-    await page.goto(printUrl, { waitUntil: 'networkidle0' })
+    await page.goto(printUrl, { waitUntil: 'networkidle0', timeout: 30_000 })
     await page.emulateMediaType('print')
 
     // Page size and margins come solely from the `@page` rule in globals.css
@@ -58,6 +91,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         'Content-Disposition': `attachment; filename="${buildFilename(role)}"`,
       },
     })
+  } catch (err) {
+    console.error('PDF export: failed to render report:', err)
+    return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })
   } finally {
     await browser.close()
   }

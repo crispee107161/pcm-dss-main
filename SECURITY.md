@@ -101,6 +101,25 @@ All four sit in **developer tooling**, not code that runs when the deployed app 
 
 ---
 
+### 3.6 Server-Side Request Forgery / Rate Limiting — PDF export route (Medium) — **Fixed**
+
+**Location:** `app/api/reports/[role]/pdf/route.ts`, `lib/pdf/browser.ts`
+
+**Issue:** The PDF export route launches a headless Chromium instance server-side and navigates it to `${origin}/print/${role}/report?pdf=1`, forwarding the request's `Cookie` header so the print page renders as the authenticated user. Three problems:
+1. `origin` was derived from `new URL(request.url).origin`, which is built from the incoming `Host`/`x-forwarded-host` header. An attacker who can influence that header could make server-side Chromium navigate to an arbitrary origin while still carrying the session cookie — a Host-header-driven SSRF/cookie-forwarding path. Impact was bounded (the path segment itself is validated against a fixed role enum, and only the attacker's own cookie would be exposed), but the fix removes the class entirely rather than relying on that bound.
+2. The route had no rate limit, despite being by far the most expensive endpoint in the app (one full Chromium process launched per request) — trivially exhaustible by any authenticated user, both a DoS and a hosting-cost vector.
+3. `launchBrowser()` was not wrapped in error handling; a launch failure (missing binary, OOM, cold-start failure in the serverless environment) would escape unlogged as a bare 500.
+
+**Fix:**
+- Origin now resolves from `NEXT_PUBLIC_APP_URL` (or `VERCEL_PROJECT_PRODUCTION_URL` on Vercel) first, falling back to the request origin only when neither is set (local dev). Documented in `.env.example`.
+- Added a dedicated rate-limit bucket (`pdf-export:${userId}`, 5 requests / 60s) via the existing `lib/rate-limit.ts`, independent from the other action-level buckets.
+- `launchBrowser()` and the render/`page.pdf()` path are now both wrapped in try/catch with server-side logging, returning a generic 503/500 to the client instead of an unhandled exception.
+- Added `export const runtime = 'nodejs'` and `export const maxDuration = 60`, plus an explicit 30s timeout on `page.goto`, so a hung print page fails fast instead of silently consuming the whole function budget.
+
+Note: Section 5's "no `child_process` usage anywhere in application code" no longer holds — Puppeteer spawns a Chromium child process by design for this feature. That line has been corrected below rather than left inaccurate.
+
+---
+
 ## 4. Prior Fixes Verified Still In Place
 
 The codebase includes its own audit trail (`.claude/SECURITY_FIXES.md`) documenting two earlier review passes. As part of this assessment, each claimed fix was independently re-checked against the current source rather than taken on faith:
@@ -128,7 +147,7 @@ The previously logged `OPEN-001` ("no rate limiting on any endpoint") is now sta
 
 - **A01 Broken Access Control** — Role checks are enforced at three independent layers: edge `middleware.ts` (redirects based on JWT role claim before the request reaches any route), each dashboard's server-rendered `page.tsx`/`layout.tsx` (`auth()` + explicit role comparison + `redirect()`), and every mutating Server Action itself (e.g., `requireOwner()` in `actions/admin.ts`, explicit role checks in `actions/upload.ts` and `actions/keywords.ts`). Because the third layer exists, a lower-privileged role cannot reach owner-only functionality even by calling the Server Action directly and bypassing the UI/middleware entirely — each action independently re-verifies the caller's role server-side.
 - **A02 Cryptographic Failures** — Passwords are hashed with `bcryptjs` at cost factors 10–12, verified with `bcrypt.compare`. No plaintext password comparison anywhere in the codebase.
-- **A03 Injection** — All database access goes through Prisma's typed query builder. A full-codebase search for `$queryRaw`/`$executeRaw` returned zero matches — no string-concatenated SQL exists. A search for `dangerouslySetInnerHTML` also returned zero matches — no XSS sink where user-controlled data could be rendered as raw HTML. No `eval`, `new Function`, or `child_process` usage anywhere in application code.
+- **A03 Injection** — All database access goes through Prisma's typed query builder. A full-codebase search for `$queryRaw`/`$executeRaw` returned zero matches — no string-concatenated SQL exists. A search for `dangerouslySetInnerHTML` also returned zero matches — no XSS sink where user-controlled data could be rendered as raw HTML. No `eval` or `new Function` usage anywhere in application code. The one exception is the PDF export route (Section 3.6), which deliberately spawns a Chromium child process via Puppeteer to render reports — a reviewed, rate-limited, and origin-pinned exception, not an oversight.
 - **A04 Insecure Design** — The AI chat and insights features explicitly wrap untrusted, database-sourced text (ad names, post captions from uploaded CSVs) with "treat this as data, not instructions" framing before sending it to the Groq API — a deliberate mitigation against prompt injection via uploaded file content, which is a more advanced consideration than most systems this size bother with.
 - **A05 Security Misconfiguration** — `next.config.ts` sets a Content-Security-Policy, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, HSTS, `Referrer-Policy`, and `Permissions-Policy`.
 - **A07 Identification and Authentication Failures** — Session `maxAge` is reduced to 8 hours (rather than NextAuth's 30-day default) given the sensitivity of ad-spend and sales data. Login brute-force throttling exists (Section 3.3). Self-role-modification is blocked — an owner cannot demote, delete, or reset their own account via the admin panel, preventing accidental lockout.
