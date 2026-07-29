@@ -24,21 +24,13 @@ export function ReportHeader({
   )
 }
 
-export function FrTag({ code }: { code: string }) {
-  return (
-    <span className="ml-2 align-middle text-[10px] font-medium text-neutral-400 border border-neutral-300 rounded px-1.5 py-0.5 uppercase tracking-wide">
-      {code}
-    </span>
-  )
-}
-
 export function ReportSection({
-  title, frCode, children, noBreak = true,
-}: { title: string; frCode?: string; children: ReactNode; noBreak?: boolean }) {
+  title, children, noBreak = false,
+}: { title: string; children: ReactNode; noBreak?: boolean }) {
   return (
     <section className={noBreak ? 'print-no-break' : undefined}>
-      <h2 className="text-xs font-bold text-neutral-900 uppercase tracking-wider pb-2 border-b border-neutral-100">
-        {title}{frCode && <FrTag code={frCode} />}
+      <h2 className="report-heading text-xs font-bold text-neutral-900 uppercase tracking-wider pb-2 border-b border-neutral-100">
+        {title}
       </h2>
       <div className="pt-4">{children}</div>
     </section>
