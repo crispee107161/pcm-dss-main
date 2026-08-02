@@ -28,6 +28,14 @@ const nextConfig: NextConfig = {
   // runtime requires instead of letting webpack/nft trace and bundle them (and their
   // large binaries) into the serverless function output.
   serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium", "puppeteer"],
+  // serverExternalPackages alone keeps the package un-bundled, but Next's build-time
+  // file tracing still decides what actually gets copied into the deployed function —
+  // and it doesn't reliably pick up @sparticuz/chromium's compressed binary under
+  // node_modules/@sparticuz/chromium/bin, since that file is loaded via a runtime fs
+  // path rather than a statically-analyzable import. Force it in explicitly.
+  outputFileTracingIncludes: {
+    "/api/reports/[role]/pdf": ["./node_modules/@sparticuz/chromium/bin/**/*"],
+  },
   async headers() {
     return [
       {
