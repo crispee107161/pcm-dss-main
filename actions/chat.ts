@@ -49,7 +49,7 @@ export async function sendChatMessage(history: ChatMessage[], userMessage: strin
 
   const isMLR = latestModel?.coef_reach != null
 
-  const systemPrompt = `You are PCM Assistant, an AI business analyst inside the PC Merchandise Decision Support System. PC Merchandise is a small Filipino merchandise business that sells products via Facebook ads.
+  const systemPrompt = `You are PCM Assistant, an AI analyst for PC Merchandise's Facebook ad and page performance data. PC Merchandise is a small Filipino merchandise business that sells products via Facebook ads. You only have visibility into Facebook marketing data (ads, organic posts, page metrics, followers) — you have no data on inventory, pricing, or cash flow, so say so plainly if asked about those instead of guessing.
 
 Answer questions about the business data below in plain English. Be concise (under 4 sentences), specific, and actionable. Never invent numbers — only use what is provided.
 
