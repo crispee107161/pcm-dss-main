@@ -16,17 +16,13 @@ export async function upsertPageViewers(
       returning_viewers: record.returning_viewers,
     }
 
-    await prisma.pageViewers.upsert({
-      where: { date: record.date },
-      create: { date: record.date, ...update },
-      update,
-    })
-
     if (!existing) {
+      await prisma.pageViewers.create({ data: { date: record.date, ...update } })
       counts.inserted++
     } else if (isUnchanged(existing, update)) {
       counts.unchanged++
     } else {
+      await prisma.pageViewers.update({ where: { date: record.date }, data: update })
       counts.updated++
     }
   }

@@ -16,17 +16,13 @@ export async function upsertPageMetric(
 
     const update = { [column]: row.value } as Partial<Record<PageMetricColumn, number>>
 
-    await prisma.pageMetricDaily.upsert({
-      where: { date },
-      create: { date, ...update },
-      update,
-    })
-
     if (!existing) {
+      await prisma.pageMetricDaily.create({ data: { date, ...update } })
       counts.inserted++
     } else if (isUnchanged(existing, update)) {
       counts.unchanged++
     } else {
+      await prisma.pageMetricDaily.update({ where: { date }, data: update })
       counts.updated++
     }
   }

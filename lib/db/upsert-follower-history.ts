@@ -15,17 +15,13 @@ export async function upsertFollowerHistory(
       daily_change: record.daily_change,
     }
 
-    await prisma.followerHistory.upsert({
-      where: { date: record.date },
-      create: { date: record.date, ...update },
-      update,
-    })
-
     if (!existing) {
+      await prisma.followerHistory.create({ data: { date: record.date, ...update } })
       counts.inserted++
     } else if (isUnchanged(existing, update)) {
       counts.unchanged++
     } else {
+      await prisma.followerHistory.update({ where: { date: record.date }, data: update })
       counts.updated++
     }
   }

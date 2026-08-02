@@ -14,15 +14,15 @@ export async function upsertDemographics(
       })
       const update = { distribution: row.distribution }
 
-      await prisma.followerGender.upsert({
-        where: { gender: row.gender },
-        create: { gender: row.gender, ...update },
-        update,
-      })
-
-      if (!existing) counts.inserted++
-      else if (isUnchanged(existing, update)) counts.unchanged++
-      else counts.updated++
+      if (!existing) {
+        await prisma.followerGender.create({ data: { gender: row.gender, ...update } })
+        counts.inserted++
+      } else if (isUnchanged(existing, update)) {
+        counts.unchanged++
+      } else {
+        await prisma.followerGender.update({ where: { gender: row.gender }, data: update })
+        counts.updated++
+      }
     }
   } else {
     for (const row of result.rows) {
@@ -31,15 +31,15 @@ export async function upsertDemographics(
       })
       const update = { distribution: row.distribution }
 
-      await prisma.followerTerritory.upsert({
-        where: { territory: row.territory },
-        create: { territory: row.territory, ...update },
-        update,
-      })
-
-      if (!existing) counts.inserted++
-      else if (isUnchanged(existing, update)) counts.unchanged++
-      else counts.updated++
+      if (!existing) {
+        await prisma.followerTerritory.create({ data: { territory: row.territory, ...update } })
+        counts.inserted++
+      } else if (isUnchanged(existing, update)) {
+        counts.unchanged++
+      } else {
+        await prisma.followerTerritory.update({ where: { territory: row.territory }, data: update })
+        counts.updated++
+      }
     }
   }
 

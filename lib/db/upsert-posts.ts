@@ -24,17 +24,13 @@ export async function upsertPosts(records: PostRecord[]): Promise<UpsertCounts> 
       engagement_rate: record.engagement_rate,
     }
 
-    await prisma.facebookPost.upsert({
-      where: { post_id: record.post_id },
-      create: { post_id: record.post_id, ...update },
-      update,
-    })
-
     if (!existing) {
+      await prisma.facebookPost.create({ data: { post_id: record.post_id, ...update } })
       counts.inserted++
     } else if (isUnchanged(existing, update)) {
       counts.unchanged++
     } else {
+      await prisma.facebookPost.update({ where: { post_id: record.post_id }, data: update })
       counts.updated++
     }
   }

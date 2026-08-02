@@ -29,17 +29,13 @@ export async function upsertAds(records: AdRecord[]): Promise<UpsertCounts> {
       purchases: record.purchases,
     }
 
-    await prisma.ad.upsert({
-      where: { ad_name_reporting_starts: key },
-      create: { ...key, ...update },
-      update,
-    })
-
     if (!existing) {
+      await prisma.ad.create({ data: { ...key, ...update } })
       counts.inserted++
     } else if (isUnchanged(existing, update)) {
       counts.unchanged++
     } else {
+      await prisma.ad.update({ where: { ad_name_reporting_starts: key }, data: update })
       counts.updated++
     }
   }
