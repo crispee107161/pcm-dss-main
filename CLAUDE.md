@@ -22,11 +22,13 @@ npx prisma migrate deploy    # Apply migrations (prod)
 npx prisma db seed           # Seed 3 users + initial data (requires SEED_*_PASSWORD env vars)
 npx prisma studio            # Visual DB browser
 
+# Tests
+npm test                     # Run all tests (lib/db, lib/stats)
+npm run test:watch           # Watch mode
+
 # Synthetic data
 python generate_synthetic_data.py   # Regenerate all synthetic CSV files in data/
 ```
-
-No test runner is configured — there are no test files in this project.
 
 ## Architecture
 
