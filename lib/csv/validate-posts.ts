@@ -12,6 +12,7 @@ export interface PostRecord {
   comments: number
   shares: number
   views: number
+  /** Percentage, 0-100 (e.g. 4.2 means 4.2%). Already scaled — do not multiply by 100 again. */
   engagement_rate: number
 }
 

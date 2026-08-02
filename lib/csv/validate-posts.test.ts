@@ -28,7 +28,7 @@ describe('validatePostsRows', () => {
     expect(a.publish_time.getTime()).toBe(b.publish_time.getTime())
   })
 
-  it('computes engagement_rate from reactions, comments, and shares over reach', () => {
+  it('computes engagement_rate as a percentage (0-100), not a ratio', () => {
     const [record] = validatePostsRows([baseRow()])
     expect(record.engagement_rate).toBeCloseTo(8, 5)
   })

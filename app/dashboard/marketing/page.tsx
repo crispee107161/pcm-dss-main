@@ -18,6 +18,9 @@ function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
 }
 
+const STRONG_ENGAGEMENT_PCT = 5
+const AVERAGE_ENGAGEMENT_PCT = 2
+
 type Accent = 'red' | 'green' | 'amber' | 'slate'
 const accentStyles: Record<Accent, string> = {
   red:   'bg-red-500/10 text-red-400',
@@ -162,7 +165,7 @@ export default async function MarketingDashboard() {
         />
         <KpiCard
           label="Avg Engagement"
-          value={avgEngagement !== null ? `${(avgEngagement * 100).toFixed(2)}%` : '—'}
+          value={avgEngagement !== null ? `${avgEngagement.toFixed(2)}%` : '—'}
           sub={postCount > 0 ? `across ${postCount} posts` : undefined}
           valueClass="text-yellow-400"
           accent="amber"
@@ -247,7 +250,7 @@ export default async function MarketingDashboard() {
               <SectionLabel>Post Engagement Summary</SectionLabel>
               <div className="flex items-end gap-3 mb-4">
                 <p className="sensitive text-4xl font-bold tracking-tight text-yellow-400">
-                  {(avgEngagement * 100).toFixed(2)}%
+                  {avgEngagement.toFixed(2)}%
                 </p>
                 <span className="text-[11px] text-gray-400 mb-1">avg engagement rate</span>
               </div>
@@ -259,16 +262,16 @@ export default async function MarketingDashboard() {
                 <div className="bg-yellow-500/10 rounded-xl p-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Quality</p>
                   <p className={`text-xl font-bold ${
-                    avgEngagement >= 0.05 ? 'text-green-400'
-                    : avgEngagement >= 0.02 ? 'text-yellow-400'
+                    avgEngagement >= STRONG_ENGAGEMENT_PCT ? 'text-green-400'
+                    : avgEngagement >= AVERAGE_ENGAGEMENT_PCT ? 'text-yellow-400'
                     : 'text-red-400'
                   }`}>
-                    {avgEngagement >= 0.05 ? 'Strong' : avgEngagement >= 0.02 ? 'Average' : 'Low'}
+                    {avgEngagement >= STRONG_ENGAGEMENT_PCT ? 'Strong' : avgEngagement >= AVERAGE_ENGAGEMENT_PCT ? 'Average' : 'Low'}
                   </p>
                 </div>
               </div>
               <p className="text-[10px] text-gray-400 mt-3">
-                Engagement rate = (reactions + comments + shares) / reach. Strong ≥ 5%, Average 2–5%, Low &lt; 2%.
+                Engagement rate = (reactions + comments + shares) / reach × 100. Strong ≥ {STRONG_ENGAGEMENT_PCT}%, Average {AVERAGE_ENGAGEMENT_PCT}–{STRONG_ENGAGEMENT_PCT}%, Low &lt; {AVERAGE_ENGAGEMENT_PCT}%.
               </p>
             </div>
           )}

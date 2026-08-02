@@ -64,6 +64,7 @@ model FacebookPost {
   comments        Int       @default(0)
   shares          Int       @default(0)
   views           Int       @default(0)
+  /// Percentage, 0-100 (e.g. 4.2 means 4.2%). Already scaled — do not multiply by 100 again.
   engagement_rate Float
   category_id     Int?
   category        Category? @relation(fields: [category_id], references: [id])
