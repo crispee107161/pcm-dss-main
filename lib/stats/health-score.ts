@@ -43,7 +43,11 @@ export function computeHealthScores(ads: AdForHealth[]): ScoredAd[] {
   function normalize(val: number, min: number, max: number, invert = false): number {
     if (max === min) return invert ? 0 : 100
     const n = (val - min) / (max - min)
-    return Math.round((invert ? 1 - n : n) * 100)
+    const score = Math.round((invert ? 1 - n : n) * 100)
+    // val can exceed max (or fall below min for the inverted/CPA case) since
+    // max/min are a 95th-percentile cap, not the true range — clamp so a
+    // single above-cap ad can't push a score past 100 or below 0.
+    return Math.max(0, Math.min(100, score))
   }
 
   function toGrade(score: number): ScoredAd['grade'] {

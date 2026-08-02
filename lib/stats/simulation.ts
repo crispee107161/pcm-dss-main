@@ -5,7 +5,7 @@ import type { SimulationOutput } from '@/types/index'
 const N_ITER = 1000
 
 // Box-Muller transform — generates a standard normal sample
-function randNormal(): number {
+export function randNormal(): number {
   const u1 = Math.random()
   const u2 = Math.random()
   return Math.sqrt(-2 * Math.log(Math.max(u1, 1e-10))) * Math.cos(2 * Math.PI * u2)

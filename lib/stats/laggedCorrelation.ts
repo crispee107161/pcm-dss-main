@@ -12,7 +12,7 @@ function diffDays(a: Date, b: Date): number {
   return Math.round((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-function expandAndAggregate(ads: Array<{
+export function expandAndAggregate(ads: Array<{
   reporting_starts: Date
   reporting_ends: Date
   reach: number | null
@@ -50,7 +50,7 @@ function expandAndAggregate(ads: Array<{
 }
 
 // Two-tailed p-value via Fisher z-transform → normal approximation
-function pearsonPValue(r: number, n: number): number {
+export function pearsonPValue(r: number, n: number): number {
   if (n <= 3 || Math.abs(r) >= 1) return n <= 3 ? 1 : 0
   const z = 0.5 * Math.log((1 + r) / (1 - r))
   const se = 1 / Math.sqrt(n - 3)
