@@ -1,3 +1,5 @@
+import { parseIsoLocalAsManila } from './timezone'
+
 export interface AdRecord {
   reporting_starts: Date
   reporting_ends: Date
@@ -30,7 +32,12 @@ function parseDate(value: string | undefined, fieldName: string): Date {
   if (!value || value.trim() === '') {
     throw new Error(`Missing required date field: ${fieldName}`)
   }
-  const date = new Date(value.trim())
+  const trimmed = value.trim()
+  // Pure ISO date (YYYY-MM-DD) is UTC-midnight per the ECMAScript spec — safe as-is.
+  // Anything with a time component but no zone is ambiguous, so anchor it explicitly.
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+    ? new Date(`${trimmed}T00:00:00Z`)
+    : parseIsoLocalAsManila(trimmed.replace(' ', 'T'))
   if (isNaN(date.getTime())) {
     throw new Error(`Invalid date for ${fieldName}: ${value}`)
   }

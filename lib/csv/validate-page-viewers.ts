@@ -1,3 +1,6 @@
+import { MONTH_INDEX } from './month-names'
+import { parseIsoLocalAsManila } from './timezone'
+
 export interface PageViewersRecord {
   date: Date
   total_viewers: number | null
@@ -6,12 +9,19 @@ export interface PageViewersRecord {
 }
 
 /**
- * Dates in Viewers.csv are formatted as "August 19" (no year) → append " 2025".
+ * Dates in Viewers.csv are formatted as "August 19" (no year) → assume 2025.
  * Last row has "undefined" for Total Viewers → treat as null.
  */
 function parseViewerDate(raw: string): Date {
   const cleaned = raw.trim().replace(/^"|"$/g, '')
-  const d = new Date(`${cleaned} 2025`)
+  const match = cleaned.match(/^([A-Za-z]+)\s+(\d{1,2})$/)
+  const month = match ? MONTH_INDEX[match[1]] : undefined
+  if (!match || month === undefined) {
+    throw new Error(`Could not parse viewer date: "${raw}"`)
+  }
+  const day = match[2].padStart(2, '0')
+  const monthStr = String(month + 1).padStart(2, '0')
+  const d = parseIsoLocalAsManila(`2025-${monthStr}-${day}T00:00:00`)
   if (isNaN(d.getTime())) {
     throw new Error(`Could not parse viewer date: "${raw}"`)
   }

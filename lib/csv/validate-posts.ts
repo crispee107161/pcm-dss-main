@@ -1,3 +1,5 @@
+import { parseIsoLocalAsManila } from './timezone'
+
 export interface PostRecord {
   post_id: string
   publish_time: Date
@@ -19,6 +21,18 @@ function parseIntOrZero(value: string | undefined): number {
   return isNaN(parsed) ? 0 : parsed
 }
 
+/** "Publish time" is exported as "MM/DD/YYYY HH:MM" with no timezone marker. */
+function parsePublishTime(raw: string): Date {
+  const trimmed = raw.trim()
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/)
+  if (!match) {
+    // Unrecognized format — fall back to the platform parser rather than fail outright.
+    return new Date(trimmed)
+  }
+  const [, mm, dd, yyyy, hh, min] = match
+  return parseIsoLocalAsManila(`${yyyy}-${mm}-${dd}T${hh}:${min}:00`)
+}
+
 export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] {
   return rows.map((row, index) => {
     try {
@@ -27,7 +41,7 @@ export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] 
 
       const publishRaw = row['Publish time'] ?? ''
       if (!publishRaw.trim()) throw new Error('Missing Publish time')
-      const publish_time = new Date(publishRaw.trim())
+      const publish_time = parsePublishTime(publishRaw)
       if (isNaN(publish_time.getTime())) throw new Error(`Invalid Publish time: ${publishRaw}`)
 
       const post_type = (row['Post type'] ?? '').trim()
