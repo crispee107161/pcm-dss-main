@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import {
   addKeyword, deleteKeyword, suggestKeywords, addKeywordsBulk,
   type KeywordSuggestion,
@@ -13,12 +13,23 @@ interface Keyword { id: number; word: string }
 interface Category { id: number; name: string; keywords: Keyword[] }
 interface Props { categories: Category[] }
 
+// Client-side pacing so repeated clicks can't stack requests faster than
+// Groq's per-minute token quota can absorb them.
+const ANALYZE_COOLDOWN_SECONDS = 60
+
 export default function KeywordsClient({ categories }: Props) {
   const [suggestions, setSuggestions] = useState<KeywordSuggestion[]>([])
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [isAnalyzing, startAnalyze] = useTransition()
   const [isAdding, startAdd] = useTransition()
+  const [cooldown, setCooldown] = useState(0)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setInterval(() => setCooldown(c => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(timer)
+  }, [cooldown > 0])
 
   function key(categoryId: number, word: string) { return `${categoryId}:${word}` }
 
@@ -27,14 +38,23 @@ export default function KeywordsClient({ categories }: Props) {
     setSuggestions([])
     setDismissed(new Set())
     startAnalyze(async () => {
-      try {
-        const result = await suggestKeywords()
-        setSuggestions(result)
-        if (result.length === 0) {
+      const result = await suggestKeywords()
+      if (result.ok) {
+        setSuggestions(result.suggestions)
+        if (result.suggestions.length === 0) {
           setAnalyzeError('No new suggestions found — your existing keywords may already cover the content well.')
         }
-      } catch (e: unknown) {
-        setAnalyzeError(e instanceof Error ? e.message : 'Failed to analyze content')
+        // A successful call still spent Groq tokens, so pace the next one too.
+        setCooldown(ANALYZE_COOLDOWN_SECONDS)
+        return
+      }
+
+      setAnalyzeError(result.reason)
+      // Only pace future clicks when this attempt actually consumed AI
+      // quota — pre-flight failures (auth, missing config, no data yet)
+      // shouldn't lock the user out of retrying immediately.
+      if (result.retryable) {
+        setCooldown(result.retryAfterSeconds ?? ANALYZE_COOLDOWN_SECONDS)
       }
     })
   }
@@ -100,9 +120,9 @@ export default function KeywordsClient({ categories }: Props) {
           </div>
           <button
             onClick={handleAnalyze}
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || cooldown > 0}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-green-600 active:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
-            style={{ boxShadow: !isAnalyzing ? '0 4px 14px rgba(18,183,106,0.25)' : undefined }}
+            style={{ boxShadow: !isAnalyzing && cooldown === 0 ? '0 4px 14px rgba(18,183,106,0.25)' : undefined }}
           >
             {isAnalyzing ? (
               <>
@@ -112,6 +132,8 @@ export default function KeywordsClient({ categories }: Props) {
                 </svg>
                 Analyzing…
               </>
+            ) : cooldown > 0 ? (
+              `Wait ${cooldown}s`
             ) : (
               <>
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

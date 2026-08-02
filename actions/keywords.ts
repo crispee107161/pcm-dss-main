@@ -8,11 +8,31 @@ import { rateLimit } from '@/lib/rate-limit'
 const SUGGEST_KEYWORDS_LIMIT = 10
 const SUGGEST_KEYWORDS_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
 
+// Keeps the Groq prompt small enough to stay well under the model's
+// tokens-per-minute quota even across several Analyze clicks in a row.
+const MAX_TITLES_PER_CATEGORY = 8
+const MAX_TITLE_LENGTH = 60
+// Existing keywords are echoed back to Groq so it won't re-suggest them; cap
+// this list so it can't grow unbounded as more suggestions get accepted over time.
+const MAX_EXISTING_KEYWORDS_SHOWN = 20
+
+function truncateTitle(title: string): string {
+  if (title.length <= MAX_TITLE_LENGTH) return title
+  return `${Array.from(title).slice(0, MAX_TITLE_LENGTH).join('')}…`
+}
+
 export interface KeywordSuggestion {
   categoryId: number
   categoryName: string
   keywords: string[]
 }
+
+// `retryable: true` means the request actually reached Groq (or was blocked
+// by our own quota) — only those cases should trigger the client cooldown.
+// Pre-flight failures (auth, missing config, not enough data) are not.
+export type SuggestKeywordsResult =
+  | { ok: true; suggestions: KeywordSuggestion[] }
+  | { ok: false; reason: string; retryable: boolean; retryAfterSeconds?: number }
 
 export async function addKeyword(formData: FormData): Promise<void> {
   const session = await auth()
@@ -45,19 +65,28 @@ export async function addKeyword(formData: FormData): Promise<void> {
   revalidatePath('/dashboard/marketing/keywords')
 }
 
-export async function suggestKeywords(): Promise<KeywordSuggestion[]> {
+export async function suggestKeywords(): Promise<SuggestKeywordsResult> {
   const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') throw new Error('Unauthorized')
+  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
+    return { ok: false, reason: 'Unauthorized', retryable: false }
+  }
 
   const { allowed, retryAfterSeconds } = rateLimit(
     `suggest-keywords:${session.user.id}`,
     SUGGEST_KEYWORDS_LIMIT,
     SUGGEST_KEYWORDS_WINDOW_MS
   )
-  if (!allowed) throw new Error(`Too many requests. Try again in ${retryAfterSeconds}s.`)
+  if (!allowed) {
+    return {
+      ok: false,
+      reason: `Too many requests. Try again in ${retryAfterSeconds}s.`,
+      retryable: true,
+      retryAfterSeconds,
+    }
+  }
 
   const apiKey = process.env.GROQ_API_KEY
-  if (!apiKey) throw new Error('GROQ_API_KEY not configured')
+  if (!apiKey) return { ok: false, reason: 'AI suggestions are not configured for this deployment.', retryable: false }
 
   const [categories, categorizedPosts, categorizedAds] = await Promise.all([
     prisma.category.findMany({ include: { keywords: true }, orderBy: { name: 'asc' } }),
@@ -72,27 +101,37 @@ export async function suggestKeywords(): Promise<KeywordSuggestion[]> {
   ])
 
   if (categorizedPosts.length + categorizedAds.length < 3) {
-    throw new Error('Not enough categorized content yet. Categorize at least a few posts or ads first.')
+    return {
+      ok: false,
+      reason: 'Not enough categorized content yet. Categorize at least a few posts or ads first.',
+      retryable: false,
+    }
   }
 
-  // Group up to 20 titles per category
+  // Group up to MAX_TITLES_PER_CATEGORY truncated titles per category
   const byCategory: Record<number, string[]> = {}
   for (const p of categorizedPosts) {
     if (!p.category_id || !p.title) continue
     byCategory[p.category_id] ??= []
-    if (byCategory[p.category_id].length < 20) byCategory[p.category_id].push(p.title)
+    if (byCategory[p.category_id].length < MAX_TITLES_PER_CATEGORY) {
+      byCategory[p.category_id].push(truncateTitle(p.title))
+    }
   }
   for (const a of categorizedAds) {
     if (!a.category_id) continue
     byCategory[a.category_id] ??= []
-    if (byCategory[a.category_id].length < 20) byCategory[a.category_id].push(a.ad_name)
+    if (byCategory[a.category_id].length < MAX_TITLES_PER_CATEGORY) {
+      byCategory[a.category_id].push(truncateTitle(a.ad_name))
+    }
   }
 
   const activeCategories = categories.filter(c => byCategory[c.id]?.length > 0)
-  if (activeCategories.length === 0) throw new Error('No categorized content found.')
+  if (activeCategories.length === 0) {
+    return { ok: false, reason: 'No categorized content found.', retryable: false }
+  }
 
   const categoryBlocks = activeCategories.map(cat => {
-    const existingKws = cat.keywords.map(k => k.word).join(', ') || 'none'
+    const existingKws = cat.keywords.slice(-MAX_EXISTING_KEYWORDS_SHOWN).map(k => k.word).join(', ') || 'none'
     const titles = (byCategory[cat.id] ?? []).map(t => `  - ${t}`).join('\n')
     return `Category: "${cat.name}" (id: ${cat.id})\nExisting keywords (do NOT suggest these): ${existingKws}\nSample titles:\n${titles}`
   }).join('\n\n')
@@ -117,28 +156,56 @@ Rules:
 Return ONLY valid JSON, no explanation:
 {"suggestions":[{"categoryId":1,"keywords":["word1","word2"]},{"categoryId":2,"keywords":["word1","word2"]}]}`
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 600,
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-    }),
-  })
+  let res: Response
+  try {
+    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 600,
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+      }),
+    })
+  } catch {
+    return { ok: false, reason: 'Unable to reach the AI service right now. Please try again in a moment.', retryable: true }
+  }
 
-  const data = await res.json()
-  if (data.error) throw new Error(data.error.message ?? 'Groq API error')
+  if (res.status === 429) {
+    const headerRetry = parseInt(res.headers.get('retry-after') ?? '', 10)
+    const retryAfterSeconds = Number.isFinite(headerRetry) && headerRetry > 0 ? headerRetry : 60
+    return {
+      ok: false,
+      reason: `AI suggestions are cooling down after recent use — please try again in ${retryAfterSeconds}s.`,
+      retryable: true,
+      retryAfterSeconds,
+    }
+  }
+
+  let data: { error?: { message?: string; code?: string }; choices?: Array<{ message?: { content?: string } }> }
+  try {
+    data = await res.json()
+  } catch {
+    return { ok: false, reason: 'Unable to parse AI response. Please try again.', retryable: true }
+  }
+
+  if (data.error) {
+    return { ok: false, reason: data.error.message ?? 'Groq API error', retryable: true }
+  }
 
   const text = data.choices?.[0]?.message?.content
-  if (!text) throw new Error('No response from AI')
+  if (!text) return { ok: false, reason: 'No response from AI', retryable: true }
 
   let parsed: { suggestions: Array<{ categoryId: number; keywords: string[] }> }
-  try { parsed = JSON.parse(text) } catch { throw new Error('Invalid response from AI') }
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    return { ok: false, reason: 'Invalid response from AI', retryable: true }
+  }
 
-  return parsed.suggestions
+  const suggestions = parsed.suggestions
     .map(s => {
       const cat = categories.find(c => c.id === s.categoryId)
       if (!cat) return null
@@ -149,6 +216,8 @@ Return ONLY valid JSON, no explanation:
       return filtered.length > 0 ? { categoryId: cat.id, categoryName: cat.name, keywords: filtered } : null
     })
     .filter((s): s is KeywordSuggestion => s !== null)
+
+  return { ok: true, suggestions }
 }
 
 export async function addKeywordsBulk(items: { word: string; categoryId: number }[]): Promise<void> {
