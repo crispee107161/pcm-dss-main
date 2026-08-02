@@ -1,34 +1,34 @@
 import { prisma } from '@/lib/prisma'
 import type { FollowerHistoryRecord } from '@/lib/csv/validate-follower-history'
+import { emptyCounts, isUnchanged, type UpsertCounts } from '@/lib/db/upsert-counts'
 
 export async function upsertFollowerHistory(
   records: FollowerHistoryRecord[]
-): Promise<{ inserted: number; updated: number }> {
-  let inserted = 0
-  let updated = 0
+): Promise<UpsertCounts> {
+  const counts = emptyCounts()
 
   for (const record of records) {
     const existing = await prisma.followerHistory.findUnique({ where: { date: record.date } })
 
+    const update = {
+      followers:    record.followers,
+      daily_change: record.daily_change,
+    }
+
     await prisma.followerHistory.upsert({
       where: { date: record.date },
-      create: {
-        date:         record.date,
-        followers:    record.followers,
-        daily_change: record.daily_change,
-      },
-      update: {
-        followers:    record.followers,
-        daily_change: record.daily_change,
-      },
+      create: { date: record.date, ...update },
+      update,
     })
 
-    if (existing) {
-      updated++
+    if (!existing) {
+      counts.inserted++
+    } else if (isUnchanged(existing, update)) {
+      counts.unchanged++
     } else {
-      inserted++
+      counts.updated++
     }
   }
 
-  return { inserted, updated }
+  return counts
 }

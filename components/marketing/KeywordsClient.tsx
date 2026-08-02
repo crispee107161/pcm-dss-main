@@ -20,6 +20,7 @@ const ANALYZE_COOLDOWN_SECONDS = 60
 export default function KeywordsClient({ categories }: Props) {
   const [suggestions, setSuggestions] = useState<KeywordSuggestion[]>([])
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+  const [added, setAdded] = useState<Set<string>>(new Set())
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [isAnalyzing, startAnalyze] = useTransition()
   const [isAdding, startAdd] = useTransition()
@@ -37,6 +38,7 @@ export default function KeywordsClient({ categories }: Props) {
     setAnalyzeError(null)
     setSuggestions([])
     setDismissed(new Set())
+    setAdded(new Set())
     startAnalyze(async () => {
       const result = await suggestKeywords()
       if (result.ok) {
@@ -68,7 +70,7 @@ export default function KeywordsClient({ categories }: Props) {
   }
 
   function activeFor(s: KeywordSuggestion) {
-    return s.keywords.filter(k => !dismissed.has(key(s.categoryId, k)))
+    return s.keywords.filter(k => !dismissed.has(key(s.categoryId, k)) && !added.has(key(s.categoryId, k)))
   }
 
   function handleAddCategory(categoryId: number) {
@@ -78,7 +80,7 @@ export default function KeywordsClient({ categories }: Props) {
     if (!items.length) return
     startAdd(async () => {
       await addKeywordsBulk(items)
-      setDismissed(prev => {
+      setAdded(prev => {
         const next = new Set(prev)
         items.forEach(i => next.add(key(categoryId, i.word)))
         return next
@@ -91,7 +93,11 @@ export default function KeywordsClient({ categories }: Props) {
     if (!items.length) return
     startAdd(async () => {
       await addKeywordsBulk(items)
-      dismissAll()
+      setAdded(prev => {
+        const next = new Set(prev)
+        items.forEach(i => next.add(key(i.categoryId, i.word)))
+        return next
+      })
     })
   }
 
@@ -160,14 +166,23 @@ export default function KeywordsClient({ categories }: Props) {
           <div className="animate-fade-slide-up p-6 space-y-5">
             {suggestions.map(s => {
               const active = activeFor(s)
-              if (active.length === 0) return (
-                <div key={s.categoryId} className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-xs text-gray-400">{s.categoryName} — all added</span>
-                </div>
-              )
+              if (active.length === 0) {
+                const addedCount = s.keywords.filter(k => added.has(key(s.categoryId, k))).length
+                const dismissedCount = s.keywords.filter(k => dismissed.has(key(s.categoryId, k))).length
+                const label = addedCount > 0 && dismissedCount > 0
+                  ? `${s.categoryName} — ${addedCount} added, ${dismissedCount} dismissed`
+                  : addedCount > 0
+                    ? `${s.categoryName} — all added`
+                    : `${s.categoryName} — all dismissed`
+                return (
+                  <div key={s.categoryId} className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-xs text-gray-400">{label}</span>
+                  </div>
+                )
+              }
               return (
                 <div key={s.categoryId}>
                   <div className="flex items-center justify-between mb-2">

@@ -156,10 +156,11 @@ model UploadLog {
   upload_type      UploadType
   filename         String
   status           UploadStatus
-  records_inserted Int          @default(0)
-  records_updated  Int          @default(0)
-  error_message    String?
-  uploaded_at      DateTime     @default(now())
+  records_inserted  Int          @default(0)
+  records_updated   Int          @default(0)
+  records_unchanged Int          @default(0)
+  error_message     String?
+  uploaded_at       DateTime     @default(now())
 }
 
 // T3 — Facebook Posts (Organic)
@@ -322,6 +323,7 @@ export interface UploadResult {
   upload_type: UploadType
   records_inserted: number
   records_updated: number
+  records_unchanged: number  // existing row, but every written field already matched
   error_message?: string
   retrained: boolean  // true if regression was auto-retrained after this upload
 }

@@ -1,36 +1,35 @@
 import { prisma } from '@/lib/prisma'
 import type { PageViewersRecord } from '@/lib/csv/validate-page-viewers'
+import { emptyCounts, isUnchanged, type UpsertCounts } from '@/lib/db/upsert-counts'
 
 export async function upsertPageViewers(
   records: PageViewersRecord[]
-): Promise<{ inserted: number; updated: number }> {
-  let inserted = 0
-  let updated = 0
+): Promise<UpsertCounts> {
+  const counts = emptyCounts()
 
   for (const record of records) {
     const existing = await prisma.pageViewers.findUnique({ where: { date: record.date } })
 
+    const update = {
+      total_viewers:     record.total_viewers,
+      new_viewers:       record.new_viewers,
+      returning_viewers: record.returning_viewers,
+    }
+
     await prisma.pageViewers.upsert({
       where: { date: record.date },
-      create: {
-        date:              record.date,
-        total_viewers:     record.total_viewers,
-        new_viewers:       record.new_viewers,
-        returning_viewers: record.returning_viewers,
-      },
-      update: {
-        total_viewers:     record.total_viewers,
-        new_viewers:       record.new_viewers,
-        returning_viewers: record.returning_viewers,
-      },
+      create: { date: record.date, ...update },
+      update,
     })
 
-    if (existing) {
-      updated++
+    if (!existing) {
+      counts.inserted++
+    } else if (isUnchanged(existing, update)) {
+      counts.unchanged++
     } else {
-      inserted++
+      counts.updated++
     }
   }
 
-  return { inserted, updated }
+  return counts
 }

@@ -374,18 +374,22 @@ export default async function OwnerDashboard() {
                 Success
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">When</p>
                 <p className="text-base font-bold text-gray-900">{timeAgo(lastUpload.uploaded_at)}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Inserted</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Added</p>
                 <p className="sensitive text-base font-bold text-gray-900">{formatNumber(lastUpload.records_inserted)}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Updated</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Changed</p>
                 <p className="sensitive text-base font-bold text-gray-900">{formatNumber(lastUpload.records_updated)}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Unchanged</p>
+                <p className="sensitive text-base font-bold text-gray-900">{formatNumber(lastUpload.records_unchanged)}</p>
               </div>
             </div>
             <p className="text-[10px] text-gray-400 mt-3">

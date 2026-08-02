@@ -39,6 +39,7 @@ export async function uploadCSV(
       upload_type: 'ADS_CSV',
       records_inserted: 0,
       records_updated: 0,
+      records_unchanged: 0,
       error_message: 'Unauthorized: you must be logged in',
       retrained: false,
     }
@@ -50,6 +51,7 @@ export async function uploadCSV(
       upload_type: 'ADS_CSV',
       records_inserted: 0,
       records_updated: 0,
+      records_unchanged: 0,
       error_message: 'Forbidden: only Marketing Managers can upload CSV files',
       retrained: false,
     }
@@ -62,6 +64,7 @@ export async function uploadCSV(
       upload_type: 'ADS_CSV',
       records_inserted: 0,
       records_updated: 0,
+      records_unchanged: 0,
       error_message: 'No file provided',
       retrained: false,
     }
@@ -74,6 +77,7 @@ export async function uploadCSV(
       upload_type: 'ADS_CSV',
       records_inserted: 0,
       records_updated: 0,
+      records_unchanged: 0,
       error_message: 'File too large. Maximum allowed size is 10 MB.',
       retrained: false,
     }
@@ -89,6 +93,7 @@ export async function uploadCSV(
 
     let records_inserted = 0
     let records_updated = 0
+    let records_unchanged = 0
     let retrained = false
 
     // --- Page metric files (UTF-16 LE with sep=, header) ---
@@ -96,9 +101,10 @@ export async function uploadCSV(
       detectedType = 'PAGE_METRIC_CSV'
       const parsed   = parsePageMetricBuffer(buffer)
       const validated = validatePageMetricResult(parsed)
-      const { inserted, updated } = await upsertPageMetric(validated)
-      records_inserted = inserted
-      records_updated  = updated
+      const { inserted, updated, unchanged } = await upsertPageMetric(validated)
+      records_inserted  = inserted
+      records_updated   = updated
+      records_unchanged = unchanged
 
     } else {
       // --- Standard CSV files ---
@@ -108,34 +114,42 @@ export async function uploadCSV(
 
       if (csvType === 'ADS_CSV') {
         const adRecords = validateAdsRows(rows)
-        const { inserted, updated } = await upsertAds(adRecords)
-        records_inserted = inserted
-        records_updated  = updated
+        const { inserted, updated, unchanged } = await upsertAds(adRecords)
+        records_inserted  = inserted
+        records_updated   = updated
+        records_unchanged = unchanged
         retrained = await maybeRetrainRegression()
 
       } else if (csvType === 'POSTS_CSV') {
         const postRecords = validatePostsRows(rows)
-        const { inserted, updated } = await upsertPosts(postRecords)
-        records_inserted = inserted
-        records_updated  = updated
+        const { inserted, updated, unchanged } = await upsertPosts(postRecords)
+        records_inserted  = inserted
+        records_updated   = updated
+        records_unchanged = unchanged
 
       } else if (csvType === 'FOLLOWER_HISTORY_CSV') {
         const records = validateFollowerHistoryRows(rows)
-        const { inserted, updated } = await upsertFollowerHistory(records)
-        records_inserted = inserted
-        records_updated  = updated
+        const { inserted, updated, unchanged } = await upsertFollowerHistory(records)
+        records_inserted  = inserted
+        records_updated   = updated
+        records_unchanged = unchanged
 
       } else if (csvType === 'PAGE_VIEWERS_CSV') {
         const records = validatePageViewersRows(rows)
-        const { inserted, updated } = await upsertPageViewers(records)
-        records_inserted = inserted
-        records_updated  = updated
+        const { inserted, updated, unchanged } = await upsertPageViewers(records)
+        records_inserted  = inserted
+        records_updated   = updated
+        records_unchanged = unchanged
 
       } else if (csvType === 'DEMOGRAPHICS_CSV') {
         const result = validateDemographicsRows(headers, rows)
-        const { inserted, updated } = await upsertDemographics(result)
-        records_inserted = inserted
-        records_updated  = updated
+        const { inserted, updated, unchanged } = await upsertDemographics(result)
+        records_inserted  = inserted
+        records_updated   = updated
+        records_unchanged = unchanged
+
+      } else {
+        throw new Error(`Unsupported CSV type: ${csvType}`)
       }
     }
 
@@ -147,6 +161,7 @@ export async function uploadCSV(
         status: 'SUCCESS',
         records_inserted,
         records_updated,
+        records_unchanged,
         error_message: null,
       },
     })
@@ -162,6 +177,7 @@ export async function uploadCSV(
       upload_type: detectedType,
       records_inserted,
       records_updated,
+      records_unchanged,
       retrained,
     }
   } catch (err) {
@@ -177,6 +193,7 @@ export async function uploadCSV(
           status: 'FAILED',
           records_inserted: 0,
           records_updated: 0,
+          records_unchanged: 0,
           error_message: internalMessage,
         },
       })
@@ -189,6 +206,7 @@ export async function uploadCSV(
       upload_type: detectedType,
       records_inserted: 0,
       records_updated: 0,
+      records_unchanged: 0,
       error_message: clientMessage,
       retrained: false,
     }

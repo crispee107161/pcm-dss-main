@@ -53,8 +53,9 @@ export default function UploadHistory({ logs }: UploadHistoryProps) {
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">Date</TableHead>
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">Filename</TableHead>
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">Type</TableHead>
-          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Inserted</TableHead>
-          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Updated</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Added</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Changed</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Unchanged</TableHead>
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">Status</TableHead>
         </TableRow>
       </TableHeader>
@@ -75,6 +76,9 @@ export default function UploadHistory({ logs }: UploadHistoryProps) {
             </TableCell>
             <TableCell className="px-4 py-3 text-gray-700 text-center hidden sm:table-cell">
               {log.records_updated}
+            </TableCell>
+            <TableCell className="px-4 py-3 text-gray-400 text-center hidden sm:table-cell">
+              {log.records_unchanged}
             </TableCell>
             <TableCell className="px-4 py-3">
               <StatusBadge status={log.status} />

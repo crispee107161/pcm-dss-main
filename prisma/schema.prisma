@@ -44,9 +44,10 @@ model UploadLog {
   upload_type      UploadType
   filename         String
   status           UploadStatus
-  records_inserted Int          @default(0)
-  records_updated  Int          @default(0)
-  error_message    String?
+  records_inserted  Int          @default(0)
+  records_updated   Int          @default(0)
+  records_unchanged Int          @default(0)
+  error_message     String?
   uploaded_at      DateTime     @default(now())
 }
 

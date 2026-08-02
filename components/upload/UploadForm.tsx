@@ -30,9 +30,10 @@ export default function UploadForm() {
   const pendingCount  = queue.filter((f) => f.status === 'pending').length
   const successCount  = queue.filter((f) => f.status === 'success').length
   const failedCount   = queue.filter((f) => f.status === 'failed').length
-  const totalInserted = queue.reduce((s, f) => s + (f.result?.records_inserted ?? 0), 0)
-  const totalUpdated  = queue.reduce((s, f) => s + (f.result?.records_updated ?? 0), 0)
-  const retrainCount  = queue.filter((f) => f.result?.retrained).length
+  const totalInserted  = queue.reduce((s, f) => s + (f.result?.records_inserted ?? 0), 0)
+  const totalUpdated   = queue.reduce((s, f) => s + (f.result?.records_updated ?? 0), 0)
+  const totalUnchanged = queue.reduce((s, f) => s + (f.result?.records_unchanged ?? 0), 0)
+  const retrainCount   = queue.filter((f) => f.result?.retrained).length
   const isDone        = queue.length > 0 && pendingCount === 0 && !isPending
 
   useEffect(() => {
@@ -70,6 +71,9 @@ export default function UploadForm() {
         </p>
         <p className="text-gray-400 text-xs mt-1">
           Select multiple files at once — Ads, Posts, Page Metrics, and more
+        </p>
+        <p className="text-gray-400 text-xs mt-1">
+          Records are matched by date, so re-uploading the same file is safe and never creates duplicates.
         </p>
         <input
           ref={fileInputRef}
@@ -128,9 +132,19 @@ export default function UploadForm() {
                   <p className="text-sm text-gray-700 truncate font-medium">{entry.file.name}</p>
                   {entry.result?.status === 'SUCCESS' && (
                     <div className="flex flex-wrap gap-1.5 mt-1 items-center">
-                      <span className="text-xs text-gray-500">
-                        +{entry.result.records_inserted} inserted, ~{entry.result.records_updated} updated
-                      </span>
+                      {entry.result.records_inserted === 0 && entry.result.records_updated === 0 ? (
+                        <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200">
+                          Already up to date
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-gray-500">
+                          {[
+                            entry.result.records_inserted > 0 && `${entry.result.records_inserted} added`,
+                            entry.result.records_updated > 0 && `${entry.result.records_updated} changed`,
+                            entry.result.records_unchanged > 0 && `${entry.result.records_unchanged} already up to date`,
+                          ].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
                       <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200">
                         {UPLOAD_TYPE_LABELS[entry.result.upload_type] ?? entry.result.upload_type}
                       </Badge>
@@ -224,7 +238,13 @@ export default function UploadForm() {
               </p>
               {successCount > 0 && (
                 <p className="text-sm text-gray-600 mt-0.5">
-                  {totalInserted} records inserted, {totalUpdated} records updated
+                  {totalInserted === 0 && totalUpdated === 0
+                    ? 'No changes — your data was already current.'
+                    : [
+                        totalInserted > 0 && `${totalInserted} records added`,
+                        totalUpdated > 0 && `${totalUpdated} updated`,
+                        totalUnchanged > 0 && `${totalUnchanged} already up to date`,
+                      ].filter(Boolean).join(', ')}
                 </p>
               )}
               {retrainCount > 0 && (

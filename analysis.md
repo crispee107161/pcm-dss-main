@@ -37,7 +37,7 @@ PC Merchandise DSS is a role-based analytics dashboard for Facebook ad campaign 
 | Table | Purpose | Key Fields |
 |---|---|---|
 | `User` | Auth + role | `email`, `password_hash`, `role` (MARKETING_MANAGER \| SALES_DIRECTOR \| BUSINESS_OWNER) |
-| `UploadLog` | Audit trail for every CSV upload | `upload_type`, `status`, `records_inserted`, `records_updated`, `error_message` |
+| `UploadLog` | Audit trail for every CSV upload | `upload_type`, `status`, `records_inserted`, `records_updated`, `records_unchanged`, `error_message` |
 | `Ad` | Core Facebook Ads data | `ad_name`, `ad_set_name`, `reporting_starts/ends`, `reach`, `impressions`, `link_clicks`, `amount_spent`, `purchases`, `total_messaging_contacts`, `cost_per_result`, `category_id` |
 | `FacebookPost` | Organic post metrics | `post_id`, `publish_time`, `post_type`, `reach`, `reactions`, `comments`, `shares`, `views`, `engagement_rate`, `category_id` |
 | `Category` | Ad/post categorization | `name` |

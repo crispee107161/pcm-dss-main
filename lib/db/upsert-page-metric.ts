@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import type { PageMetricParseResult } from '@/lib/csv/validate-page-metric'
+import type { PageMetricColumn } from '@/lib/csv/parse'
+import { emptyCounts, isUnchanged, type UpsertCounts } from '@/lib/db/upsert-counts'
 
 export async function upsertPageMetric(
   result: PageMetricParseResult
-): Promise<{ inserted: number; updated: number }> {
-  let inserted = 0
-  let updated = 0
+): Promise<UpsertCounts> {
+  const counts = emptyCounts()
   const { column, rows } = result
 
   for (const row of rows) {
@@ -13,23 +14,22 @@ export async function upsertPageMetric(
 
     const existing = await prisma.pageMetricDaily.findUnique({ where: { date } })
 
+    const update = { [column]: row.value } as Partial<Record<PageMetricColumn, number>>
+
     await prisma.pageMetricDaily.upsert({
       where: { date },
-      create: {
-        date,
-        [column]: row.value,
-      },
-      update: {
-        [column]: row.value,
-      },
+      create: { date, ...update },
+      update,
     })
 
-    if (existing) {
-      updated++
+    if (!existing) {
+      counts.inserted++
+    } else if (isUnchanged(existing, update)) {
+      counts.unchanged++
     } else {
-      inserted++
+      counts.updated++
     }
   }
 
-  return { inserted, updated }
+  return counts
 }

@@ -13,6 +13,7 @@ export interface UploadResult {
   upload_type: UploadType
   records_inserted: number
   records_updated: number
+  records_unchanged: number
   error_message?: string
   retrained: boolean
 }
