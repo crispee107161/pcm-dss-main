@@ -7,7 +7,7 @@
  * machine. PC Merchandise is a Philippines business, so anchor every
  * ambiguous timestamp to Asia/Manila (+08:00) instead of the server clock.
  */
-const MANILA_OFFSET = '+08:00'
+export const MANILA_OFFSET = '+08:00'
 
 /** Parse an ISO-shaped "YYYY-MM-DDTHH:MM:SS" string (no zone) as PH local time. */
 export function parseIsoLocalAsManila(isoLocal: string): Date {

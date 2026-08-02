@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
+import DateRangeFilter from '@/components/ui/DateRangeFilter'
 import {
   DailyMetricsChart,
   ViewsClicksChart,
@@ -13,7 +14,17 @@ import {
 } from '@/components/marketing/PageMetricsCharts'
 import { computeHoltWintersForecast } from '@/lib/stats/forecast'
 import { computeForecastInsight } from '@/lib/insights/forecast-insight'
+import {
+  computeDailyActivityInsight,
+  computeViewsClicksInsight,
+  computeFollowerGrowthInsight,
+  computeViewerMixInsight,
+  computeGenderInsight,
+  computeTerritoryInsight,
+  computePostTypeInsight,
+} from '@/lib/insights/page-metrics-insight'
 import InsightHeader from '@/components/analytics/InsightHeader'
+import { manilaDayRange } from '@/lib/date-range'
 
 function fmt(date: Date) {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(date))
@@ -31,14 +42,33 @@ function StatCard({ label, value, sub, color = 'text-gray-900' }: {
   )
 }
 
-export default async function SalesPageMetricsPage() {
+function EmptyCard({ message }: { message: string }) {
+  return (
+    <div className="bg-card rounded-2xl border border-dashed border-gray-300 p-8 text-center">
+      <p className="text-gray-400 text-sm">{message}</p>
+    </div>
+  )
+}
+
+export default async function SalesPageMetricsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>
+}) {
   const session = await auth()
   if (!session?.user || session.user.role !== 'SALES_DIRECTOR') {
     redirect('/login')
   }
 
+  const { from, to } = await searchParams
+  const range = manilaDayRange(from, to)
+  const dateWhere = { where: range ? { date: range } : undefined }
+  const postWhere = { where: range ? { publish_time: range } : undefined }
+  const noDataMessage = range ? 'No data in the selected period.' : undefined
+
   const [
     dailyMetrics,
+    dailyMetricsAll,
     followerHistory,
     pageViewers,
     genderData,
@@ -47,18 +77,23 @@ export default async function SalesPageMetricsPage() {
     postAgg,
     typeBreakdown,
   ] = await Promise.all([
-    prisma.pageMetricDaily.findMany({ orderBy: { date: 'asc' } }),
-    prisma.followerHistory.findMany({ orderBy: { date: 'asc' } }),
-    prisma.pageViewers.findMany({ orderBy: { date: 'asc' } }),
+    prisma.pageMetricDaily.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
+    // Unfiltered — the forecast always trains on the full uploaded history.
+    prisma.pageMetricDaily.findMany({ orderBy: { date: 'asc' }, select: { date: true, views: true } }),
+    prisma.followerHistory.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
+    prisma.pageViewers.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
+    // No date column on these snapshot tables — always all-time.
     prisma.followerGender.findMany({ orderBy: { distribution: 'desc' } }),
     prisma.followerTerritory.findMany({ orderBy: { distribution: 'desc' } }),
-    prisma.facebookPost.count(),
+    prisma.facebookPost.count(postWhere),
     prisma.facebookPost.aggregate({
+      ...postWhere,
       _sum: { reach: true, reactions: true, comments: true, shares: true, views: true },
       _avg: { engagement_rate: true },
     }),
     prisma.facebookPost.groupBy({
       by: ['post_type'],
+      ...postWhere,
       _count: { id: true },
       _avg: { engagement_rate: true },
       orderBy: { _count: { id: 'desc' } },
@@ -80,8 +115,16 @@ export default async function SalesPageMetricsPage() {
   const avgEngagement = postAgg._avg.engagement_rate ?? 0
   const totalPostReach = postAgg._sum.reach ?? 0
 
+  const dailyActivityInsight = computeDailyActivityInsight(dailyMetrics)
+  const viewsClicksInsight   = computeViewsClicksInsight(dailyMetrics)
+  const followerGrowthInsight = computeFollowerGrowthInsight(followerHistory)
+  const viewerMixInsight     = computeViewerMixInsight(pageViewers)
+  const genderInsight        = computeGenderInsight(genderData)
+  const territoryInsight     = computeTerritoryInsight(territoryData)
+  const postTypeInsight      = computePostTypeInsight(typeBreakdown)
+
   const viewsForecast = computeHoltWintersForecast(
-    dailyMetrics.map(d => ({ date: d.date, value: d.views })),
+    dailyMetricsAll.map(d => ({ date: d.date, value: d.views })),
     7, 7
   )
   const viewsForecastInsight = computeForecastInsight(viewsForecast, 'Page views')
@@ -119,7 +162,9 @@ export default async function SalesPageMetricsPage() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="Page Metrics" description="Facebook page-level performance: follows, views, interactions, demographics" />
 
-      {!hasAnyData && postCount === 0 && (
+      <DateRangeFilter from={from} to={to} className="mb-6" />
+
+      {range === null && !hasAnyData && postCount === 0 && (
         <div className="bg-card rounded-2xl card-shadow p-12 text-center mb-8">
           <div className="text-4xl mb-4">📊</div>
           <h2 className="text-gray-700 font-semibold mb-2">No page data available yet</h2>
@@ -147,6 +192,9 @@ export default async function SalesPageMetricsPage() {
             <div className="bg-card rounded-2xl card-shadow overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100">
                 <h3 className="font-medium text-gray-700 text-sm">Performance by Post Type</h3>
+                {postTypeInsight && (
+                  <p className="text-xs text-gray-500 mt-1">{postTypeInsight.headline}. {postTypeInsight.detail}</p>
+                )}
               </div>
               <table className="w-full text-sm">
                 <thead>
@@ -171,7 +219,7 @@ export default async function SalesPageMetricsPage() {
         </section>
       )}
 
-      {dailyMetrics.length > 0 && (
+      {dailyMetrics.length > 0 ? (
         <section className="mb-10">
           <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-amber-400 rounded-full inline-block" />
@@ -188,18 +236,36 @@ export default async function SalesPageMetricsPage() {
             <div className="bg-card rounded-2xl card-shadow p-6">
               <h3 className="font-medium text-gray-700 mb-1 text-sm">Follows, Interactions & Visits</h3>
               <p className="text-xs text-gray-400 mb-4">Daily counts over the uploaded period</p>
-              <DailyMetricsChart data={dailyChartData} />
+              {dailyActivityInsight && (
+                <InsightHeader headline={dailyActivityInsight.headline} detail={dailyActivityInsight.detail} />
+              )}
+              <div className="mt-4">
+                <DailyMetricsChart data={dailyChartData} />
+              </div>
             </div>
             <div className="bg-card rounded-2xl card-shadow p-6">
               <h3 className="font-medium text-gray-700 mb-1 text-sm">Page Views & Link Clicks</h3>
               <p className="text-xs text-gray-400 mb-4">Views (left axis) vs. link clicks (right axis)</p>
-              <ViewsClicksChart data={dailyChartData} />
+              {viewsClicksInsight && (
+                <InsightHeader headline={viewsClicksInsight.headline} detail={viewsClicksInsight.detail} />
+              )}
+              <div className="mt-4">
+                <ViewsClicksChart data={dailyChartData} />
+              </div>
             </div>
           </div>
         </section>
-      )}
+      ) : noDataMessage ? (
+        <section className="mb-10">
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-amber-400 rounded-full inline-block" />
+            Daily Page Activity
+          </h2>
+          <EmptyCard message={noDataMessage} />
+        </section>
+      ) : null}
 
-      {dailyMetrics.length >= 7 && viewsForecastInsight && (
+      {dailyMetricsAll.length >= 7 && viewsForecastInsight && (
         <section className="mb-10">
           <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-blue-500 rounded-full inline-block" />
@@ -213,6 +279,7 @@ export default async function SalesPageMetricsPage() {
               <p className="text-xs text-gray-500">
                 Model: {viewsForecast.method === 'holt-winters' ? 'Holt-Winters triple exponential smoothing (trend + weekly seasonality)' : 'Holt linear (double exponential smoothing) — upload more data to enable the full seasonal model'}.
                 Current level: {viewsForecast.lastLevel.toLocaleString()} views/day.
+                Trained on all uploaded history, not the selected date range.
               </p>
             </InsightHeader>
             <div className="mt-5">
@@ -223,7 +290,7 @@ export default async function SalesPageMetricsPage() {
         </section>
       )}
 
-      {followerHistory.length > 0 && (
+      {followerHistory.length > 0 ? (
         <section className="mb-10">
           <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-red-500 rounded-full inline-block" />
@@ -245,12 +312,25 @@ export default async function SalesPageMetricsPage() {
           <div className="bg-card rounded-2xl card-shadow p-6">
             <h3 className="font-medium text-gray-700 mb-1 text-sm">Follower Count & Daily Change</h3>
             <p className="text-xs text-gray-400 mb-4">Total followers (left) and day-over-day change (right)</p>
-            <FollowerHistoryChart data={followerChartData} />
+            {followerGrowthInsight && (
+              <InsightHeader headline={followerGrowthInsight.headline} detail={followerGrowthInsight.detail} />
+            )}
+            <div className="mt-4">
+              <FollowerHistoryChart data={followerChartData} />
+            </div>
           </div>
         </section>
-      )}
+      ) : noDataMessage ? (
+        <section className="mb-10">
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-red-500 rounded-full inline-block" />
+            Follower Growth
+          </h2>
+          <EmptyCard message={noDataMessage} />
+        </section>
+      ) : null}
 
-      {pageViewers.length > 0 && (
+      {pageViewers.length > 0 ? (
         <section className="mb-10">
           <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-violet-500 rounded-full inline-block" />
@@ -270,10 +350,23 @@ export default async function SalesPageMetricsPage() {
           <div className="bg-card rounded-2xl card-shadow p-6">
             <h3 className="font-medium text-gray-700 mb-1 text-sm">New vs. Returning Viewers</h3>
             <p className="text-xs text-gray-400 mb-4">Stacked daily viewer counts</p>
-            <ViewersChart data={viewerChartData} />
+            {viewerMixInsight && (
+              <InsightHeader headline={viewerMixInsight.headline} detail={viewerMixInsight.detail} />
+            )}
+            <div className="mt-4">
+              <ViewersChart data={viewerChartData} />
+            </div>
           </div>
         </section>
-      )}
+      ) : noDataMessage ? (
+        <section className="mb-10">
+          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-violet-500 rounded-full inline-block" />
+            Page Viewers
+          </h2>
+          <EmptyCard message={noDataMessage} />
+        </section>
+      ) : null}
 
       {(genderData.length > 0 || territoryData.length > 0) && (
         <section className="mb-10">
@@ -281,6 +374,7 @@ export default async function SalesPageMetricsPage() {
             <span className="w-1.5 h-5 bg-red-400 rounded-full inline-block" />
             Audience Demographics
           </h2>
+          <p className="text-xs text-gray-400 -mt-3 mb-4">Current audience snapshot — not affected by the date filter above.</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {genderData.length > 0 && (
               <div className="bg-card rounded-2xl card-shadow p-6">
@@ -295,6 +389,11 @@ export default async function SalesPageMetricsPage() {
                     </div>
                   ))}
                 </div>
+                {genderInsight && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <InsightHeader headline={genderInsight.headline} detail={genderInsight.detail} />
+                  </div>
+                )}
               </div>
             )}
             {territoryData.length > 0 && (
@@ -302,6 +401,11 @@ export default async function SalesPageMetricsPage() {
                 <h3 className="font-medium text-gray-700 mb-1 text-sm">Top Territories</h3>
                 <p className="text-xs text-gray-400 mb-2">Followers by country/region</p>
                 <TerritoryChart data={territoryData} />
+                {territoryInsight && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <InsightHeader headline={territoryInsight.headline} detail={territoryInsight.detail} />
+                  </div>
+                )}
               </div>
             )}
           </div>
