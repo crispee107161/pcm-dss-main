@@ -19,7 +19,7 @@ const TONE_CLASSES: Record<InsightTone, {
   app: {
     emptyLabel: 'text-gray-500',
     theadBg: 'bg-gray-50',
-    th: 'text-gray-500',
+    th: 'text-gray-600',
     borderT: 'border-gray-100',
     nCol: 'text-gray-500',
     rowLabel: 'text-gray-800',
@@ -74,9 +74,10 @@ interface LaggedCorrelationPanelProps {
   data: LaggedCorrelationOutput
   disclosure?: InsightDisclosure
   tone?: InsightTone
+  showTable?: boolean
 }
 
-export default function LaggedCorrelationPanel({ data, disclosure = 'collapsible', tone = 'app' }: LaggedCorrelationPanelProps) {
+export default function LaggedCorrelationPanel({ data, disclosure = 'collapsible', tone = 'app', showTable = true }: LaggedCorrelationPanelProps) {
   const t = TONE_CLASSES[tone]
 
   if (!data.has_data) {
@@ -98,16 +99,8 @@ export default function LaggedCorrelationPanel({ data, disclosure = 'collapsible
     ? `${bestMetricLabel} is the strongest predictor at this lag.${isSignificant ? '' : ' This pattern may be coincidence — more data would help confirm it.'}`
     : 'Upload more ad data across a longer date range to detect a lag pattern.'
 
-  return (
-    <div className="space-y-4">
-      <InsightHeader
-        confidence={data.best_r === null ? 'low' : isSignificant ? 'high' : 'low'}
-        headline={headline}
-        detail={detail}
-        mathLabel="See the correlation numbers"
-        disclosure={disclosure}
-        tone={tone}
-      >
+  const table = (
+    <>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -152,6 +145,19 @@ export default function LaggedCorrelationPanel({ data, disclosure = 'collapsible
         <p>Pearson r is computed by expanding each ad campaign to daily rows (metrics distributed proportionally) then pairing day-D metrics with day-(D+N) purchases.</p>
         <p><strong>✓</strong> = statistically significant (p &lt; 0.05). Green = positive relationship, Red = negative.</p>
       </div>
+    </>
+  )
+
+  return (
+    <div className="space-y-4">
+      <InsightHeader
+        confidence={data.best_r === null ? 'low' : isSignificant ? 'high' : 'low'}
+        headline={headline}
+        detail={detail}
+        disclosure={disclosure}
+        tone={tone}
+      >
+        {showTable ? table : null}
       </InsightHeader>
     </div>
   )

@@ -17,7 +17,7 @@ const CONFIDENCE_META: Record<Confidence, { dot: string; label: string }> = {
 // so they use Tailwind's untouched neutral-* scale instead of this app's
 // theme-dependent gray-* dual ramp (see components/reports/ReportPrimitives.tsx)
 const TONE_CLASSES: Record<InsightTone, { label: string; heading: string; detail: string; border: string; trigger: string }> = {
-  app:   { label: 'text-gray-500',    heading: 'text-gray-900',    detail: 'text-gray-600',    border: 'border-gray-100',    trigger: 'text-gray-400 hover:text-gray-600' },
+  app:   { label: 'text-gray-600',    heading: 'text-gray-900',    detail: 'text-gray-600',    border: 'border-gray-100',    trigger: 'text-gray-500 hover:text-gray-700' },
   print: { label: 'text-neutral-500', heading: 'text-neutral-900', detail: 'text-neutral-600', border: 'border-neutral-100', trigger: 'text-neutral-400 hover:text-neutral-600' },
 }
 
@@ -63,7 +63,7 @@ export default function InsightHeader({
       {children && (
         disclosure === 'always' ? (
           <div className={`mt-4 pt-3 border-t ${t.border}`}>
-            <p className={`text-xs font-medium uppercase tracking-wider mb-3 ${t.label}`}>{mathLabel}</p>
+            {mathLabel && <p className={`text-xs font-medium uppercase tracking-wider mb-3 ${t.label}`}>{mathLabel}</p>}
             {children}
           </div>
         ) : (

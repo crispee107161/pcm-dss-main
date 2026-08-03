@@ -65,9 +65,9 @@ function MetricGrid({ variant, items }: {
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {items.map(({ label, value, sub, tone }) => (
         <div key={label} className="bg-gray-50 rounded-xl p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
+          <p className="text-xs text-gray-600 uppercase tracking-wider">{label}</p>
           <p className={`text-xl font-bold mt-1 ${colorFor(tone)}`}>{value}</p>
-          {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+          {sub && <p className="text-xs text-gray-600 mt-0.5">{sub}</p>}
         </div>
       ))}
     </div>
@@ -83,7 +83,7 @@ interface ReportViewProps {
 export default function ReportView({ variant, role, data }: ReportViewProps) {
   const meta = ROLE_META[role]
   const isPrint = variant === 'print'
-  const th = isPrint ? reportTh : 'text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-3 py-3 bg-gray-50'
+  const th = isPrint ? reportTh : 'text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-3 py-3 bg-gray-50'
   const thRight = isPrint ? reportThRight : `${th.replace('text-left', 'text-right')}`
   const td = isPrint ? reportTd : 'px-3 py-2.5 text-gray-700 border-t border-gray-100'
   const tdRight = isPrint ? reportTdRight : `${td} text-right`
@@ -98,9 +98,11 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
           generatedLabel={`Generated ${formatDate(data.generatedAt)}`}
         />
       ) : (
-        <div className="bg-gradient-to-r from-red-700 to-red-500 rounded-2xl p-8 text-white">
+        // always-dark banner: neutral-* stays constant in both themes, unlike the app's
+        // theme-dependent gray-* ramp (see InsightHeader.tsx) — intentional, not a convention slip
+        <div className="bg-gradient-to-r from-neutral-800 to-neutral-600 rounded-2xl p-8 text-white">
           <h1 className="text-2xl font-bold">PC Merchandise — {meta.title}</h1>
-          <p className="text-red-100 mt-1 text-sm">Generated: {formatDate(data.generatedAt)} · Data Period: Sep 2025 – Jan 2026</p>
+          <p className="text-neutral-300 mt-1 text-sm">Generated: {formatDate(data.generatedAt)} · Data Period: Sep 2025 – Jan 2026</p>
         </div>
       )}
 
@@ -148,7 +150,7 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
       )}
 
       <Section variant={variant} title="Time-Lagged Correlation">
-        <LaggedCorrelationPanel data={data.lagData} disclosure="always" tone={isPrint ? 'print' : 'app'} />
+        <LaggedCorrelationPanel data={data.lagData} disclosure="always" tone={isPrint ? 'print' : 'app'} showTable={false} />
       </Section>
 
       <Section variant={variant} title="Monthly Ad Performance">
