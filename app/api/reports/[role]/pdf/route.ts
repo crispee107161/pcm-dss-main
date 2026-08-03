@@ -27,7 +27,7 @@ function resolveAppOrigin(request: NextRequest): string {
 const ROLE_REPORT_TITLE: Record<string, string> = {
   owner: 'Business Performance Report',
   marketing: 'Marketing Performance Report',
-  sales: 'Sales Performance Report',
+  sales: 'Advertising Efficiency Report',
 }
 
 function buildFilename(role: string): string {

@@ -5,7 +5,7 @@ interface DailyPoint {
   reach: number
   messaging: number
   amount_spent: number
-  purchases: number
+  inquiries: number
 }
 
 function diffDays(a: Date, b: Date): number {
@@ -18,7 +18,7 @@ export function expandAndAggregate(ads: Array<{
   reach: number | null
   total_messaging_contacts: number | null
   amount_spent: number
-  purchases: number | null
+  inquiries: number | null
 }>): Map<string, DailyPoint> {
   const map = new Map<string, DailyPoint>()
 
@@ -30,18 +30,18 @@ export function expandAndAggregate(ads: Array<{
     const dailyReach = (ad.reach ?? 0) / days
     const dailyMessaging = (ad.total_messaging_contacts ?? 0) / days
     const dailySpend = ad.amount_spent / days
-    const dailyPurchases = (ad.purchases ?? 0) / days
+    const dailyInquiries = (ad.inquiries ?? 0) / days
 
     for (let i = 0; i < days; i++) {
       const d = new Date(start)
       d.setDate(d.getDate() + i)
       const key = d.toISOString().slice(0, 10)
 
-      const existing = map.get(key) ?? { reach: 0, messaging: 0, amount_spent: 0, purchases: 0 }
+      const existing = map.get(key) ?? { reach: 0, messaging: 0, amount_spent: 0, inquiries: 0 }
       existing.reach += dailyReach
       existing.messaging += dailyMessaging
       existing.amount_spent += dailySpend
-      existing.purchases += dailyPurchases
+      existing.inquiries += dailyInquiries
       map.set(key, existing)
     }
   }
@@ -72,7 +72,7 @@ function computeLaggedPearson(
   const reachX: number[] = []
   const messagingX: number[] = []
   const spendX: number[] = []
-  const purchasesY: number[] = []
+  const inquiriesY: number[] = []
 
   for (const dateStr of dates) {
     const d = new Date(dateStr)
@@ -85,19 +85,19 @@ function computeLaggedPearson(
       reachX.push(today.reach)
       messagingX.push(today.messaging)
       spendX.push(today.amount_spent)
-      purchasesY.push(future.purchases)
+      inquiriesY.push(future.inquiries)
     }
   }
 
-  if (purchasesY.length < 3) {
-    return { reach_r: null, messaging_r: null, spend_r: null, n: purchasesY.length }
+  if (inquiriesY.length < 3) {
+    return { reach_r: null, messaging_r: null, spend_r: null, n: inquiriesY.length }
   }
 
   return {
-    reach_r: pearsonCorrelation(reachX, purchasesY),
-    messaging_r: pearsonCorrelation(messagingX, purchasesY),
-    spend_r: pearsonCorrelation(spendX, purchasesY),
-    n: purchasesY.length,
+    reach_r: pearsonCorrelation(reachX, inquiriesY),
+    messaging_r: pearsonCorrelation(messagingX, inquiriesY),
+    spend_r: pearsonCorrelation(spendX, inquiriesY),
+    n: inquiriesY.length,
   }
 }
 

@@ -52,7 +52,7 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
   if (!model) {
     return (
       <div className={`text-center py-8 text-sm ${t.label}`}>
-        No regression model trained yet. Upload at least 10 ad records with purchase data.
+        No regression model trained yet. Upload at least 10 ad records with inquiry data.
       </div>
     )
   }
@@ -120,7 +120,7 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
               <ul className="space-y-1 text-xs">
                 {insight.marginalEffects.map(e => (
                   <li key={e.label}>
-                    {e.label} {e.deltaInputLabel} &rarr; {e.deltaPurchases >= 0 ? '+' : ''}{e.deltaPurchases.toFixed(2)} purchases
+                    {e.label} {e.deltaInputLabel} &rarr; {e.deltaInquiries >= 0 ? '+' : ''}{e.deltaInquiries.toFixed(2)} inquiries
                   </li>
                 ))}
               </ul>
@@ -128,7 +128,7 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
           )}
 
           <p className={`text-xs ${t.footnote}`}>
-            Model trained {formatDate(model.trained_at)} using {model.n} records with known purchase outcomes.
+            Model trained {formatDate(model.trained_at)} using {model.n} records with known inquiry outcomes.
           </p>
         </div>
   )

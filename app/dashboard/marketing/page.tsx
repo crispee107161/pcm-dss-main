@@ -76,7 +76,7 @@ export default async function MarketingDashboard() {
 
   const [
     adCount,
-    adsWithPurchases,
+    adsWithInquiries,
     latestModel,
     recentUploads,
     totalUploads,
@@ -86,7 +86,7 @@ export default async function MarketingDashboard() {
     adHistory,
   ] = await Promise.all([
     prisma.ad.count(),
-    prisma.ad.count({ where: { purchases: { gt: 0 } } }),
+    prisma.ad.count({ where: { inquiries: { gt: 0 } } }),
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
     prisma.uploadLog.findMany({
       orderBy: { uploaded_at: 'desc' },
@@ -104,10 +104,10 @@ export default async function MarketingDashboard() {
       _count: { _all: true },
     }),
     prisma.category.findMany({
-      include: { ads: { select: { purchases: true, amount_spent: true } } },
+      include: { ads: { select: { inquiries: true, amount_spent: true } } },
     }),
     prisma.ad.findMany({
-      where: { purchases: { not: null } },
+      where: { inquiries: { not: null } },
       select: { reach: true, total_messaging_contacts: true, amount_spent: true },
     }),
   ])
@@ -127,12 +127,12 @@ export default async function MarketingDashboard() {
   const categoriesWithStats = categories
     .map(cat => ({
       name: cat.name,
-      totalPurchases: cat.ads.reduce((s, a) => s + (a.purchases ?? 0), 0),
+      totalInquiries: cat.ads.reduce((s, a) => s + (a.inquiries ?? 0), 0),
       totalSpend: cat.ads.reduce((s, a) => s + a.amount_spent, 0),
       adCount: cat.ads.length,
     }))
-    .filter(c => c.totalPurchases > 0)
-    .sort((a, b) => b.totalPurchases - a.totalPurchases)
+    .filter(c => c.totalInquiries > 0)
+    .sort((a, b) => b.totalInquiries - a.totalInquiries)
 
   const topCategory = categoriesWithStats[0] ?? null
 
@@ -152,7 +152,7 @@ export default async function MarketingDashboard() {
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
         />
         <KpiCard
-          label="With Purchases" value={adsWithPurchases} valueClass="text-green-600 dark:text-green-400" accent="green"
+          label="With Inquiries" value={adsWithInquiries} valueClass="text-green-600 dark:text-green-400" accent="green"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
         />
         <KpiCard
@@ -201,7 +201,7 @@ export default async function MarketingDashboard() {
           {topCategory && (
             <div className="bg-card rounded-2xl card-shadow p-5"
               style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
-              <SectionLabel>Top Category by Purchases</SectionLabel>
+              <SectionLabel>Top Category by Inquiries</SectionLabel>
               <div className="flex items-start justify-between gap-3 mb-4">
                 <p className="text-sm font-bold text-gray-800">{topCategory.name}</p>
                 <span className="flex-shrink-0 text-[10px] font-semibold bg-green-500/10 border border-green-500/30 text-green-400 rounded-full px-2.5 py-0.5">
@@ -210,8 +210,8 @@ export default async function MarketingDashboard() {
               </div>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Purchases</p>
-                  <p className="sensitive text-xl font-bold text-gray-900">{topCategory.totalPurchases.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Inquiries</p>
+                  <p className="sensitive text-xl font-bold text-gray-900">{topCategory.totalInquiries.toLocaleString()}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ad Spend</p>
@@ -225,8 +225,8 @@ export default async function MarketingDashboard() {
               {categoriesWithStats.length > 1 && (
                 <div className="space-y-1.5">
                   {categoriesWithStats.slice(0, 4).map((c, i) => {
-                    const pct = topCategory.totalPurchases > 0
-                      ? (c.totalPurchases / topCategory.totalPurchases) * 100
+                    const pct = topCategory.totalInquiries > 0
+                      ? (c.totalInquiries / topCategory.totalInquiries) * 100
                       : 0
                     return (
                       <div key={c.name} className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export default async function MarketingDashboard() {
                         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="sensitive text-[10px] text-gray-400 w-8 text-right">{c.totalPurchases}</span>
+                        <span className="sensitive text-[10px] text-gray-400 w-8 text-right">{c.totalInquiries}</span>
                       </div>
                     )
                   })}

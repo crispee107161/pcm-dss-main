@@ -1,7 +1,7 @@
 export interface TrendPeriodPoint {
   period: string
   total_spend: number
-  total_purchases: number
+  total_inquiries: number
 }
 
 export type Confidence = 'medium' | 'low'
@@ -23,30 +23,30 @@ export function computeTrendInsight(
   const spendDelta = prev.total_spend > 0
     ? ((curr.total_spend - prev.total_spend) / prev.total_spend) * 100
     : null
-  const purchaseDelta = prev.total_purchases > 0
-    ? ((curr.total_purchases - prev.total_purchases) / prev.total_purchases) * 100
+  const inquiryDelta = prev.total_inquiries > 0
+    ? ((curr.total_inquiries - prev.total_inquiries) / prev.total_inquiries) * 100
     : null
 
-  if (spendDelta === null || purchaseDelta === null) {
+  if (spendDelta === null || inquiryDelta === null) {
     return {
       confidence: 'low',
       headline: `Not enough data to compare ${prev.period} and ${curr.period}`,
-      detail: 'Upload more ad data with purchase outcomes to see a period-over-period trend.',
+      detail: 'Upload more ad data with inquiry counts to see a period-over-period trend.',
     }
   }
 
-  const prevCpa = prev.total_purchases > 0 ? prev.total_spend / prev.total_purchases : null
-  const currCpa = curr.total_purchases > 0 ? curr.total_spend / curr.total_purchases : null
+  const prevCpi = prev.total_inquiries > 0 ? prev.total_spend / prev.total_inquiries : null
+  const currCpi = curr.total_inquiries > 0 ? curr.total_spend / curr.total_inquiries : null
 
   const spendDir = spendDelta >= 0 ? 'up' : 'down'
-  const purchaseDir = purchaseDelta >= 0 ? 'up' : 'down'
-  const headline = `Spend is ${spendDir} ${Math.abs(spendDelta).toFixed(0)}%, purchases are ${purchaseDir} ${Math.abs(purchaseDelta).toFixed(0)}% from ${prev.period} to ${curr.period}`
+  const inquiryDir = inquiryDelta >= 0 ? 'up' : 'down'
+  const headline = `Spend is ${spendDir} ${Math.abs(spendDelta).toFixed(0)}%, inquiries are ${inquiryDir} ${Math.abs(inquiryDelta).toFixed(0)}% from ${prev.period} to ${curr.period}`
 
   const detailParts: string[] = []
-  if (prevCpa !== null && currCpa !== null) {
-    const cpaWord = currCpa > prevCpa ? 'up from' : currCpa < prevCpa ? 'down from' : 'about the same as'
+  if (prevCpi !== null && currCpi !== null) {
+    const cpiWord = currCpi > prevCpi ? 'up from' : currCpi < prevCpi ? 'down from' : 'about the same as'
     detailParts.push(
-      `Each purchase cost ₱${Math.round(currCpa).toLocaleString()} in ${curr.period}, ${cpaWord} ₱${Math.round(prevCpa).toLocaleString()} in ${prev.period}.`
+      `Each inquiry cost ₱${Math.round(currCpi).toLocaleString()} in ${curr.period}, ${cpiWord} ₱${Math.round(prevCpi).toLocaleString()} in ${prev.period}.`
     )
   }
   if (!isConsecutive) {

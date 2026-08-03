@@ -53,12 +53,12 @@ export default function WhatIfSimulator() {
 
   const lower = result ? Math.max(0, Math.round(result.interval_lower)) : null
   const upper = result ? Math.max(0, Math.round(result.interval_upper)) : null
-  const point = result ? Math.max(0, Math.round(result.projected_purchases)) : null
+  const point = result ? Math.max(0, Math.round(result.projected_inquiries)) : null
 
   return (
     <div>
       <p className="text-xs text-gray-500 mb-3">
-        Enter hypothetical engagement values to see a projected purchase count.
+        Enter hypothetical engagement values to see a projected inquiry count.
       </p>
 
       <form action={formAction} className="flex flex-wrap gap-3 items-end">
@@ -106,10 +106,10 @@ export default function WhatIfSimulator() {
             <div className="text-gray-500 text-2xl hidden sm:block pt-4">&rarr;</div>
 
             <div>
-              <p className="text-gray-400 text-xs mb-1">Predicted Purchases</p>
+              <p className="text-gray-400 text-xs mb-1">Predicted Inquiries</p>
               <p className="sensitive text-4xl font-bold text-green-400">
                 {point}
-                <span className="text-base font-normal text-gray-400 ml-1">purchases</span>
+                <span className="text-base font-normal text-gray-400 ml-1">inquiries</span>
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-xs text-gray-400">80% prediction interval:</span>

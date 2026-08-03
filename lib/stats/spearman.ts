@@ -89,7 +89,7 @@ export async function computeSpearmanMatrix(): Promise<SpearmanRow[]> {
   const reach = ads.map((a) => a.reach)
   const impressions = ads.map((a) => a.impressions ?? null)
   const link_clicks = ads.map((a) => a.link_clicks)
-  const purchases = ads.map((a) => a.purchases)
+  const inquiries = ads.map((a) => a.inquiries)
   const messaging = ads.map((a) => a.total_messaging_contacts)
 
   const predictors: { name: string; values: (number | null)[] }[] = [
@@ -101,7 +101,7 @@ export async function computeSpearmanMatrix(): Promise<SpearmanRow[]> {
 
   return predictors.map(({ name, values }) => ({
     variable: name,
-    vs_purchases: spearmanFiltered(values, purchases),
+    vs_inquiries: spearmanFiltered(values, inquiries),
     vs_messaging: spearmanFiltered(values, messaging),
   }))
 }

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import MonthlyKpiCards from '@/components/kpi/MonthlyKpiCards'
-import { SpendPurchasesChart, ReachTrendChart } from '@/components/marketing/TrendCharts'
+import { SpendInquiriesChart, ReachTrendChart } from '@/components/marketing/TrendCharts'
 import { GenderPieChart, TerritoryChart } from '@/components/marketing/PageMetricsCharts'
 import CorrelationTable from '@/components/analytics/CorrelationTable'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
@@ -20,7 +20,7 @@ import type { ScoredAd } from '@/lib/stats/health-score'
 interface AdTrend {
   period: string
   total_spend: number
-  total_purchases: number
+  total_inquiries: number
   total_reach: number
   ad_count: number
   avg_spend_per_ad: number
@@ -34,10 +34,10 @@ interface TopSpendRow {
   reporting_ends: string | null
 }
 
-interface TopPurchasesRow {
+interface TopInquiriesRow {
   ad_name: string
   ad_set_name: string
-  purchases: number | null
+  inquiries: number | null
   reporting_starts: string | null
   reporting_ends: string | null
 }
@@ -65,9 +65,9 @@ export interface SalesDashboardTabsProps {
   monthlyKpis: MonthlyKpi[]
   adTrends: AdTrend[]
   spendDelta: number | null
-  purchaseDelta: number | null
+  inquiryDelta: number | null
   topSpend: TopSpendRow[]
-  topPurchases: TopPurchasesRow[]
+  topInquiries: TopInquiriesRow[]
   genderData: GenderRow[]
   territoryData: TerritoryRow[]
   scoredAds: ScoredAd[]
@@ -147,9 +147,9 @@ export default function SalesDashboardTabs({
   monthlyKpis,
   adTrends,
   spendDelta,
-  purchaseDelta,
+  inquiryDelta,
   topSpend,
-  topPurchases,
+  topInquiries,
   genderData,
   territoryData,
   scoredAds,
@@ -202,16 +202,16 @@ export default function SalesDashboardTabs({
           {lastTwo.length === 2 && (
             <div className={`${cardClass} p-5 flex flex-wrap gap-6`} style={cardStyle}>
               <DeltaBadge value={spendDelta} label={`${lastTwo[0].period} → ${lastTwo[1].period} · Spend`} />
-              <DeltaBadge value={purchaseDelta} label={`${lastTwo[0].period} → ${lastTwo[1].period} · Purchases`} />
+              <DeltaBadge value={inquiryDelta} label={`${lastTwo[0].period} → ${lastTwo[1].period} · Inquiries`} />
             </div>
           )}
 
           {adTrends.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div className={`${cardClass} p-5`} style={cardStyle}>
-                <SLabel>Ad Spend vs. Purchases</SLabel>
-                <p className="text-xs text-gray-400 -mt-2 mb-4">Total spend (PHP) and resulting purchases per period</p>
-                <SpendPurchasesChart data={adTrends} />
+                <SLabel>Ad Spend vs. Inquiries</SLabel>
+                <p className="text-xs text-gray-400 -mt-2 mb-4">Total spend (PHP) and resulting inquiries per period</p>
+                <SpendInquiriesChart data={adTrends} />
               </div>
               <div className={`${cardClass} p-5`} style={cardStyle}>
                 <SLabel>Ad Reach by Month</SLabel>
@@ -265,16 +265,16 @@ export default function SalesDashboardTabs({
 
             <div className={`${cardClass} overflow-hidden`} style={cardStyle}>
               <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-                <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top Campaigns by Purchases</p>
+                <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top Campaigns by Inquiries</p>
                 <div className="flex-1 h-px bg-gray-100" />
               </div>
-              {topPurchases.length === 0 ? (
+              {topInquiries.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                   <svg className="w-8 h-8 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <p className="text-sm font-semibold text-gray-500 mb-0.5">No purchase data</p>
-                  <p className="text-xs text-gray-400">Purchase conversions will appear here once uploaded.</p>
+                  <p className="text-sm font-semibold text-gray-500 mb-0.5">No inquiry data</p>
+                  <p className="text-xs text-gray-400">Inquiry counts will appear here once ad data is uploaded.</p>
                 </div>
               ) : (
                 <Table>
@@ -282,18 +282,18 @@ export default function SalesDashboardTabs({
                     <TableRow className="bg-gray-50/70">
                       <TableHead className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3 w-10">#</TableHead>
                       <TableHead className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3">Ad Name</TableHead>
-                      <TableHead className="text-right text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3">Purchases</TableHead>
+                      <TableHead className="text-right text-[11px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-4 py-3">Inquiries</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {topPurchases.map((ad, i) => (
+                    {topInquiries.map((ad, i) => (
                       <TableRow key={i} className="hover:bg-red-500/10 border-t border-gray-100 transition-[background-color]">
                         <TableCell className="px-4 py-3"><RankBadge rank={i + 1} /></TableCell>
                         <TableCell className="px-4 py-3">
                           <div className="font-semibold text-gray-800 text-sm max-w-xs truncate" title={ad.ad_name}>{ad.ad_name}</div>
                           <div className="text-xs text-gray-400 hidden sm:block">{formatDate(ad.reporting_starts)} – {formatDate(ad.reporting_ends)}</div>
                         </TableCell>
-                        <TableCell className="sensitive px-4 py-3 text-right font-bold text-green-400">{(ad.purchases ?? 0).toLocaleString()}</TableCell>
+                        <TableCell className="sensitive px-4 py-3 text-right font-bold text-green-400">{(ad.inquiries ?? 0).toLocaleString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -305,7 +305,7 @@ export default function SalesDashboardTabs({
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>Campaign Health Scores</SLabel>
             <p className="text-xs text-gray-400 -mt-2 mb-4">
-              Composite 0–100 score per ad: CPA efficiency (50%), conversion rate (35%), reach (15%). Click a row for the breakdown.
+              Composite 0–100 score per ad: CPI efficiency (50%), inquiry rate (35%), reach (15%). Click a row for the breakdown.
             </p>
             <CampaignHealthTable ads={scoredAds} />
           </div>
@@ -355,14 +355,14 @@ export default function SalesDashboardTabs({
         <TabsContent value="simulator" className="animate-fade-slide-up space-y-4">
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>What-If Simulator</SLabel>
-            <p className="text-xs text-gray-400 -mt-2 mb-4">Enter hypothetical inputs to predict how many purchases they may generate.</p>
+            <p className="text-xs text-gray-400 -mt-2 mb-4">Enter hypothetical inputs to predict how many inquiries they may generate.</p>
             <WhatIfSimulator />
           </div>
 
           <div className={`${cardClass} p-5`} style={cardStyle}>
             <SLabel>Budget Allocation Recommender</SLabel>
             <p className="text-xs text-gray-400 -mt-2 mb-4">
-              Distribute a total budget across your best-performing ad sets, weighted by historical purchase efficiency.
+              Distribute a total budget across your best-performing ad sets, weighted by historical inquiry efficiency.
             </p>
             <BudgetAllocator />
           </div>

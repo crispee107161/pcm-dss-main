@@ -3,13 +3,13 @@ import { fitMLR, predictFromModel } from './regression'
 
 describe('fitMLR', () => {
   it('recovers exact coefficients from noise-free data', () => {
-    // Ground truth: purchases = 10 + 2*reach + 3*messaging + 5*spend
+    // Ground truth: inquiries = 10 + 2*reach + 3*messaging + 5*spend
     // Each row isolates one predictor so the system solves exactly (r_squared = 1).
     const data = [
-      { reach: 1, messaging: 0, amount_spent: 0, purchases: 12 }, // 10 + 2*1
-      { reach: 0, messaging: 1, amount_spent: 0, purchases: 13 }, // 10 + 3*1
-      { reach: 0, messaging: 0, amount_spent: 1, purchases: 15 }, // 10 + 5*1
-      { reach: 0, messaging: 0, amount_spent: 0, purchases: 10 }, // intercept only
+      { reach: 1, messaging: 0, amount_spent: 0, inquiries: 12 }, // 10 + 2*1
+      { reach: 0, messaging: 1, amount_spent: 0, inquiries: 13 }, // 10 + 3*1
+      { reach: 0, messaging: 0, amount_spent: 1, inquiries: 15 }, // 10 + 5*1
+      { reach: 0, messaging: 0, amount_spent: 0, inquiries: 10 }, // intercept only
     ]
 
     const result = fitMLR(data)

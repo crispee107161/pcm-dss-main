@@ -20,7 +20,7 @@ function KpiCardSkeleton() {
   )
 }
 
-// Mirrors the ROI Summary / Data Coverage style card: a header row followed
+// Mirrors the Efficiency Summary / Data Coverage style card: a header row followed
 // by a few evenly-spaced label+value stats.
 function StatsCardSkeleton() {
   return (
@@ -146,7 +146,7 @@ export default function DashboardLoading() {
         {Array.from({ length: 4 }).map((_, i) => <KpiCardSkeleton key={i} />)}
       </div>
 
-      {/* ROI Summary / Data Coverage */}
+      {/* Efficiency Summary / Data Coverage */}
       <StatsCardSkeleton />
 
       {/* Quick Navigation (2/3) + Follower Sparkline (1/3) */}

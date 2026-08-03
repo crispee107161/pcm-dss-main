@@ -145,7 +145,7 @@ function BadgePanel() {
         </DemoCard>
         <DemoCard title="Alongside other elements" description="Badges used with text and cards.">
           <div className="flex items-center gap-2 w-full">
-            <span className="text-sm font-medium">Summer Sale Campaign</span>
+            <span className="text-sm font-medium">Summer Promo Campaign</span>
             <Badge>Active</Badge>
           </div>
           <div className="flex items-center gap-2 w-full">
@@ -205,7 +205,7 @@ function CardPanel() {
           </Card>
           <Card size="sm" className="w-56">
             <CardHeader>
-              <CardTitle>Total Purchases</CardTitle>
+              <CardTitle>Total Inquiries</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-foreground">168</p>
@@ -303,22 +303,22 @@ function TablePanel() {
                   <TableHead>Ad Name</TableHead>
                   <TableHead>Period</TableHead>
                   <TableHead className="text-right">Spend (PHP)</TableHead>
-                  <TableHead className="text-right">Purchases</TableHead>
+                  <TableHead className="text-right">Inquiries</TableHead>
                   <TableHead className="text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {[
-                  { name: 'Summer Sale Campaign',  period: 'Sep 2025', spend: '₱12,400', purchases: 42, status: 'Active' },
-                  { name: 'New Arrivals — Laptops', period: 'Dec 2025', spend: '₱8,200',  purchases: 28, status: 'Ended'  },
-                  { name: 'Promo: Year-End Deals',  period: 'Jan 2026', spend: '₱15,000', purchases: 63, status: 'Active' },
-                  { name: 'Back-to-School Bundle',  period: 'Aug 2025', spend: '₱9,750',  purchases: 35, status: 'Ended'  },
+                  { name: 'Summer Promo Campaign',  period: 'Sep 2025', spend: '₱12,400', inquiries: 42, status: 'Active' },
+                  { name: 'New Arrivals — Laptops', period: 'Dec 2025', spend: '₱8,200',  inquiries: 28, status: 'Ended'  },
+                  { name: 'Promo: Year-End Deals',  period: 'Jan 2026', spend: '₱15,000', inquiries: 63, status: 'Active' },
+                  { name: 'Back-to-School Bundle',  period: 'Aug 2025', spend: '₱9,750',  inquiries: 35, status: 'Ended'  },
                 ].map((row) => (
                   <TableRow key={row.name}>
                     <TableCell className="font-medium">{row.name}</TableCell>
                     <TableCell className="text-muted-foreground">{row.period}</TableCell>
                     <TableCell className="text-right">{row.spend}</TableCell>
-                    <TableCell className="text-right text-primary font-semibold">{row.purchases}</TableCell>
+                    <TableCell className="text-right text-primary font-semibold">{row.inquiries}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={row.status === 'Active' ? 'default' : 'secondary'}>
                         {row.status}
@@ -381,7 +381,7 @@ function DialogPanel() {
               <div className="space-y-3 py-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="d-name">Campaign Name</Label>
-                  <Input id="d-name" placeholder="Summer Sale..." />
+                  <Input id="d-name" placeholder="Summer Promo..." />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="d-budget">Budget (PHP)</Label>

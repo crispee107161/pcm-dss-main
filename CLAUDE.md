@@ -25,9 +25,6 @@ npx prisma studio            # Visual DB browser
 # Tests
 npm test                     # Run all tests (lib/db, lib/stats)
 npm run test:watch           # Watch mode
-
-# Synthetic data
-python generate_synthetic_data.py   # Regenerate all synthetic CSV files in data/
 ```
 
 ## Architecture

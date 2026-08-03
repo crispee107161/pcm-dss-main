@@ -97,7 +97,7 @@ export default async function SalesCampaignRankingsPage({
   }
   const adWhere = (from || to) ? { reporting_starts: dateFilter } : {}
 
-  const [topSpend, topPurchases, topReach, totalAds, totalSpend, adsWithPurchases] = await Promise.all([
+  const [topSpend, topInquiries, topReach, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
     prisma.ad.findMany({
       where: adWhere,
       orderBy: { amount_spent: 'desc' },
@@ -105,10 +105,10 @@ export default async function SalesCampaignRankingsPage({
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
-      where: { ...adWhere, purchases: { gt: 0 } },
-      orderBy: { purchases: 'desc' },
+      where: { ...adWhere, inquiries: { gt: 0 } },
+      orderBy: { inquiries: 'desc' },
       take: 10,
-      select: { ad_name: true, ad_set_name: true, purchases: true, reporting_starts: true, reporting_ends: true },
+      select: { ad_name: true, ad_set_name: true, inquiries: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { ...adWhere, reach: { not: null } },
@@ -118,7 +118,7 @@ export default async function SalesCampaignRankingsPage({
     }),
     prisma.ad.count({ where: adWhere }),
     prisma.ad.aggregate({ where: adWhere, _sum: { amount_spent: true } }),
-    prisma.ad.count({ where: { ...adWhere, purchases: { gt: 0 } } }),
+    prisma.ad.count({ where: { ...adWhere, inquiries: { gt: 0 } } }),
   ])
 
   const bySpend: RankRow[] = topSpend.map(a => ({
@@ -129,10 +129,10 @@ export default async function SalesCampaignRankingsPage({
     reportingEnds: a.reporting_ends,
   }))
 
-  const byPurchases: RankRow[] = topPurchases.map(a => ({
+  const byInquiries: RankRow[] = topInquiries.map(a => ({
     name: a.ad_name,
     adSetName: a.ad_set_name,
-    value: a.purchases ?? 0,
+    value: a.inquiries ?? 0,
     reportingStarts: a.reporting_starts,
     reportingEnds: a.reporting_ends,
   }))
@@ -151,7 +151,7 @@ export default async function SalesCampaignRankingsPage({
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Campaign Rankings"
-        description="Top 10 ads ranked by spend, purchases, and reach"
+        description="Top 10 ads ranked by spend, inquiries, and reach"
       />
       <DateRangeFilter from={from} to={to} className="mb-6" />
 
@@ -165,8 +165,8 @@ export default async function SalesCampaignRankingsPage({
           <p className="text-2xl font-bold text-red-400 mt-1">{formatPHP(totalSpendValue)}</p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5 col-span-2 md:col-span-1">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Purchases</p>
-          <p className="text-2xl font-bold text-green-400 mt-1">{adsWithPurchases}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Inquiries</p>
+          <p className="text-2xl font-bold text-green-400 mt-1">{adsWithInquiries}</p>
         </div>
       </div>
 
@@ -180,9 +180,9 @@ export default async function SalesCampaignRankingsPage({
 
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800">Top by Purchases</h2>
+            <h2 className="font-semibold text-gray-800">Top by Inquiries</h2>
           </div>
-          <RankingTable rows={byPurchases} valueLabel="Purchases" formatValue={v => v.toLocaleString()} />
+          <RankingTable rows={byInquiries} valueLabel="Inquiries" formatValue={v => v.toLocaleString()} />
         </div>
 
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">

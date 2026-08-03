@@ -37,7 +37,7 @@ interface TrainingData {
   reach: number
   messaging: number
   amount_spent: number
-  purchases: number
+  inquiries: number
 }
 
 interface FitResult {
@@ -68,10 +68,10 @@ function fmt(v: number): string {
   return v >= 0 ? `+${v.toFixed(4)}` : v.toFixed(4)
 }
 
-// Plain OLS: Purchases = β₀ + β₁·Reach + β₂·MessagingContacts + β₃·Spend
+// Plain OLS: Inquiries = β₀ + β₁·Reach + β₂·MessagingContacts + β₃·Spend
 function fitPlainMLR(data: TrainingData[]): FitResult {
   const n = data.length
-  const y = data.map(d => d.purchases)
+  const y = data.map(d => d.inquiries)
   const X = data.map(d => [1, d.reach, d.messaging, d.amount_spent])
   const p = 4
 
@@ -108,7 +108,7 @@ function fitPlainMLR(data: TrainingData[]): FitResult {
     modelType: 'plain_mlr',
     intercept, coef_reach, coef_messaging, coef_amount_spent,
     r_squared, adj_r_squared, residual_std_error, n,
-    equation: `Purchases = ${intercept.toFixed(4)} ${fmt(coef_reach)}·Reach ${fmt(coef_messaging)}·Msgs ${fmt(coef_amount_spent)}·Spend`,
+    equation: `Inquiries = ${intercept.toFixed(4)} ${fmt(coef_reach)}·Reach ${fmt(coef_messaging)}·Msgs ${fmt(coef_amount_spent)}·Spend`,
   }
 }
 
@@ -135,7 +135,7 @@ export function predictFromModel(
 
 // ─── Public exports ───────────────────────────────────────────────────────────
 
-export function fitMLR(data: { reach: number; messaging: number; amount_spent: number; purchases: number }[]): MLRResult {
+export function fitMLR(data: { reach: number; messaging: number; amount_spent: number; inquiries: number }[]): MLRResult {
   const result = fitPlainMLR(data)
   return {
     intercept: result.intercept,
@@ -150,14 +150,14 @@ export function fitMLR(data: { reach: number; messaging: number; amount_spent: n
 }
 
 export async function maybeRetrainRegression(): Promise<boolean> {
-  const ads = await prisma.ad.findMany({ where: { purchases: { not: null } } })
+  const ads = await prisma.ad.findMany({ where: { inquiries: { not: null } } })
   if (ads.length < 10) return false
 
   const data: TrainingData[] = ads.map(a => ({
     reach: a.reach ?? 0,
     messaging: a.total_messaging_contacts ?? 0,
     amount_spent: a.amount_spent,
-    purchases: a.purchases as number,
+    inquiries: a.inquiries as number,
   }))
 
   const result = fitPlainMLR(data)

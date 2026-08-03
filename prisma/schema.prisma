@@ -85,12 +85,12 @@ model Ad {
   total_messaging_contacts Int?
   results                  Int?
   cost_per_result          Float?
-  purchases                Int?
+  inquiries                Int?
   category_id              Int?
   category                 Category? @relation(fields: [category_id], references: [id])
   created_at               DateTime  @default(now())
 
-  @@unique([ad_name, reporting_starts])
+  @@unique([ad_name, ad_set_name, reporting_starts])
 }
 
 model Category {
@@ -133,7 +133,7 @@ model SimulationResult {
   reach_input         Float?
   messaging_input     Float?
   amount_spent_input  Float
-  projected_purchases Float
+  projected_inquiries Float
   interval_lower      Float?
   interval_upper      Float?
   model_id            Int

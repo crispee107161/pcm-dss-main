@@ -41,7 +41,7 @@ function PctBar({ pct }: { pct: number }) {
 }
 
 function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
-  const point = Math.round(row.projected_purchases)
+  const point = Math.round(row.projected_inquiries)
   const lower = Math.round(row.interval_lower)
   const upper = Math.round(row.interval_upper)
 
@@ -53,7 +53,7 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
           {row.ad_set_name}
         </div>
         <div className="sensitive text-[11px] text-gray-500 mt-0.5">
-          Hist. CPA: {row.historical_cpa !== null ? formatPHP(row.historical_cpa) : '—'} · {row.historical_purchases} past purchases
+          Hist. CPI: {row.historical_cpi !== null ? formatPHP(row.historical_cpi) : '—'} · {row.historical_inquiries} past inquiries
         </div>
       </TableCell>
       <TableCell className="px-4 py-3">
@@ -80,7 +80,7 @@ export default function BudgetAllocator() {
   return (
     <div className="space-y-5">
       <p className="text-xs text-gray-500">
-        Enter a total budget. The system distributes it across your top ad sets, weighted by their historical purchase efficiency (purchases per peso spent), then projects purchases using the regression model.
+        Enter a total budget. The system distributes it across your top ad sets, weighted by their historical inquiry efficiency (inquiries per peso spent), then projects inquiries using the regression model.
       </p>
 
       <form action={formAction} className="flex flex-wrap items-end gap-3">
@@ -142,14 +142,14 @@ export default function BudgetAllocator() {
               <p className="sensitive text-2xl font-bold text-foreground">{formatPHP(result.total_budget)}</p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Purchases</p>
-              <p className="sensitive text-2xl font-bold text-green-700 dark:text-green-400">{Math.round(result.total_projected_purchases)}</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Inquiries</p>
+              <p className="sensitive text-2xl font-bold text-green-700 dark:text-green-400">{Math.round(result.total_projected_inquiries)}</p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected CPA</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected CPI</p>
               <p className="sensitive text-2xl font-bold text-foreground">
-                {result.total_projected_purchases > 0
-                  ? formatPHP(result.total_budget / result.total_projected_purchases)
+                {result.total_projected_inquiries > 0
+                  ? formatPHP(result.total_budget / result.total_projected_inquiries)
                   : '—'}
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function BudgetAllocator() {
                   <TableHead className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Ad Set</TableHead>
                   <TableHead className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Share</TableHead>
                   <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Allocated</TableHead>
-                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Proj. Purchases</TableHead>
+                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Proj. Inquiries</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -191,7 +191,7 @@ export default function BudgetAllocator() {
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
               <p className="text-[11px] text-gray-400">
-                {modelLabel(result.model_type)} model · R² = {(result.model_r_squared * 100).toFixed(1)}%. Allocation weighted by historical purchase efficiency (purchases ÷ spend) per ad set. Projected purchases use reach, messaging, and link clicks scaled from historical per-peso ratios (global average used as fallback when an ad set has no historical data for a metric). Approximate 80% prediction intervals shown below each purchase count (constant-width, based on model RSE).
+                {modelLabel(result.model_type)} model · R² = {(result.model_r_squared * 100).toFixed(1)}%. Allocation weighted by historical inquiry efficiency (inquiries ÷ spend) per ad set. Projected inquiries use reach, messaging, and link clicks scaled from historical per-peso ratios (global average used as fallback when an ad set has no historical data for a metric). Approximate 80% prediction intervals shown below each inquiry count (constant-width, based on model RSE).
               </p>
             </CollapsibleContent>
           </Collapsible>

@@ -19,7 +19,7 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
     prisma.ad.findMany({
       select: {
         ad_name: true, reporting_starts: true, reporting_ends: true,
-        amount_spent: true, purchases: true,
+        amount_spent: true, inquiries: true,
         reach: true, impressions: true, link_clicks: true, category_id: true,
       },
     }),
@@ -36,7 +36,7 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
     prisma.pageMetricDaily.findMany({ orderBy: { date: 'asc' } }),
     computeLaggedCorrelations(),
     prisma.ad.findMany({
-      where: { purchases: { not: null } },
+      where: { inquiries: { not: null } },
       select: { reach: true, total_messaging_contacts: true, amount_spent: true },
     }),
   ])
@@ -44,11 +44,11 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
   const catMap = Object.fromEntries(categories.map(c => [c.id, c.name]))
 
   const totalSpend = allAds.reduce((s, a) => s + a.amount_spent, 0)
-  const totalPurchases = allAds.reduce((s, a) => s + (a.purchases ?? 0), 0)
+  const totalInquiries = allAds.reduce((s, a) => s + (a.inquiries ?? 0), 0)
   const totalReach = allAds.reduce((s, a) => s + (a.reach ?? 0), 0)
   const totalImpressions = allAds.reduce((s, a) => s + a.impressions, 0)
   const totalLinkClicks = allAds.reduce((s, a) => s + (a.link_clicks ?? 0), 0)
-  const cpa = totalPurchases > 0 ? totalSpend / totalPurchases : null
+  const cpi = totalInquiries > 0 ? totalSpend / totalInquiries : null
   const ctr = totalImpressions > 0 ? totalLinkClicks / totalImpressions : null
   const cpc = totalLinkClicks > 0 ? totalSpend / totalLinkClicks : null
   const frequency = totalReach > 0 ? totalImpressions / totalReach : null
@@ -61,8 +61,8 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
     : null
 
   const top5Ads = [...allAds]
-    .filter(a => (a.purchases ?? 0) > 0)
-    .sort((a, b) => (b.purchases ?? 0) - (a.purchases ?? 0))
+    .filter(a => (a.inquiries ?? 0) > 0)
+    .sort((a, b) => (b.inquiries ?? 0) - (a.inquiries ?? 0))
     .slice(0, 5)
 
   const monthlyData = REPORT_TARGET_PERIODS.map(({ label, year, month }) => {
@@ -75,7 +75,7 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
     return {
       period: label,
       spend: ads.reduce((s, a) => s + a.amount_spent, 0),
-      purchases: ads.reduce((s, a) => s + (a.purchases ?? 0), 0),
+      inquiries: ads.reduce((s, a) => s + (a.inquiries ?? 0), 0),
       reach: ads.reduce((s, a) => s + (a.reach ?? 0), 0),
       ad_count: ads.length,
     }
@@ -120,7 +120,7 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
 
   return {
     generatedAt: new Date(),
-    totalSpend, totalPurchases, totalReach, totalImpressions, totalLinkClicks, cpa,
+    totalSpend, totalInquiries, totalReach, totalImpressions, totalLinkClicks, cpi,
     ctr, cpc, frequency, campaignStart, campaignEnd,
     top5Ads,
     monthlyData,

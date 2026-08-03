@@ -128,10 +128,10 @@ export default async function OwnerDashboard() {
 
   const [
     adCount,
-    adsWithPurchases,
+    adsWithInquiries,
     latestModel,
     totalSpendAgg,
-    totalPurchasesAgg,
+    totalInquiriesAgg,
     totalReachAgg,
     latestFollower,
     topCampaign,
@@ -142,17 +142,17 @@ export default async function OwnerDashboard() {
     adHistory,
   ] = await Promise.all([
     prisma.ad.count(),
-    prisma.ad.count({ where: { purchases: { gt: 0 } } }),
+    prisma.ad.count({ where: { inquiries: { gt: 0 } } }),
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
     prisma.ad.aggregate({ _sum: { amount_spent: true } }),
-    prisma.ad.aggregate({ _sum: { purchases: true } }),
+    prisma.ad.aggregate({ _sum: { inquiries: true } }),
     prisma.ad.aggregate({ _sum: { reach: true } }),
     prisma.followerHistory.findFirst({ orderBy: { date: 'desc' } }),
     prisma.ad.findFirst({
-      where: { purchases: { gt: 0 }, amount_spent: { gt: 0 } },
+      where: { inquiries: { gt: 0 }, amount_spent: { gt: 0 } },
       orderBy: [
         { cost_per_result: { sort: 'asc', nulls: 'last' } },
-        { purchases: 'desc' },
+        { inquiries: 'desc' },
       ],
     }),
     prisma.uploadLog.findFirst({
@@ -164,15 +164,15 @@ export default async function OwnerDashboard() {
       take: 7,
     }),
     prisma.ad.aggregate({
-      _sum: { amount_spent: true, purchases: true },
+      _sum: { amount_spent: true, inquiries: true },
       where: { reporting_ends: { gte: weekAgo, lte: anchor } },
     }),
     prisma.ad.aggregate({
-      _sum: { amount_spent: true, purchases: true },
+      _sum: { amount_spent: true, inquiries: true },
       where: { reporting_ends: { gte: twoWeeksAgo, lt: weekAgo } },
     }),
     prisma.ad.findMany({
-      where: { purchases: { not: null } },
+      where: { inquiries: { not: null } },
       select: { reach: true, total_messaging_contacts: true, amount_spent: true },
     }),
   ])
@@ -185,16 +185,16 @@ export default async function OwnerDashboard() {
     : null
 
   const totalSpend     = totalSpendAgg._sum.amount_spent ?? 0
-  const totalPurchases = totalPurchasesAgg._sum.purchases ?? 0
+  const totalInquiries = totalInquiriesAgg._sum.inquiries ?? 0
   const totalReach     = totalReachAgg._sum.reach ?? 0
 
   // Week-over-week deltas
   const thisWeekSpend     = thisWeekAgg._sum.amount_spent ?? 0
-  const thisWeekPurchases = thisWeekAgg._sum.purchases ?? 0
+  const thisWeekInquiries = thisWeekAgg._sum.inquiries ?? 0
   const lastWeekSpend     = lastWeekAgg._sum.amount_spent ?? 0
-  const lastWeekPurchases = lastWeekAgg._sum.purchases ?? 0
+  const lastWeekInquiries = lastWeekAgg._sum.inquiries ?? 0
   const spendDelta        = calcDelta(thisWeekSpend, lastWeekSpend)
-  const purchasesDelta    = calcDelta(thisWeekPurchases, lastWeekPurchases)
+  const inquiriesDelta    = calcDelta(thisWeekInquiries, lastWeekInquiries)
 
   // Follower sparkline data (ascending order for chart)
   const follower7d       = [...follower7dRaw].reverse()
@@ -204,9 +204,9 @@ export default async function OwnerDashboard() {
     followers: f.followers,
   }))
 
-  // Top campaign cost per purchase
-  const topCampaignCpp = topCampaign && topCampaign.purchases && topCampaign.purchases > 0
-    ? topCampaign.amount_spent / topCampaign.purchases
+  // Top campaign cost per inquiry
+  const topCampaignCpi = topCampaign && topCampaign.inquiries && topCampaign.inquiries > 0
+    ? topCampaign.amount_spent / topCampaign.inquiries
     : null
 
   return (
@@ -215,7 +215,7 @@ export default async function OwnerDashboard() {
       {/* Welcome */}
       <div className="pb-4 border-b border-gray-200/60">
         <h1 className="text-xl font-extrabold font-heading text-gray-900 tracking-tight">{getGreeting()}, {displayName}</h1>
-        <p className="text-gray-400 text-sm mt-0.5">Facebook marketing performance &amp; ROI overview</p>
+        <p className="text-gray-400 text-sm mt-0.5">Facebook content performance & advertising efficiency overview</p>
       </div>
 
       {/* KPI row */}
@@ -227,8 +227,8 @@ export default async function OwnerDashboard() {
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
         />
         <KpiCard
-          label="Total Purchases" value={formatNumber(totalPurchases)} sub="from ads"
-          delta={purchasesDelta}
+          label="Total Inquiries" value={formatNumber(totalInquiries)} sub="from ads"
+          delta={inquiriesDelta}
           valueClass="text-green-600 dark:text-green-400" accent="green"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
         />
@@ -244,28 +244,28 @@ export default async function OwnerDashboard() {
         />
       </div>
 
-      {/* ROI summary */}
-      {totalPurchases > 0 && (
+      {/* Efficiency summary */}
+      {totalInquiries > 0 && (
         <div className="rounded-2xl p-6 bg-card card-shadow">
           <div className="flex items-center justify-between mb-6">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.12em]">ROI Summary</p>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.12em]">Efficiency Summary</p>
             <span className="text-xs text-gray-500 bg-secondary rounded-full px-3 py-1 border border-gray-100">All time</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
             <div className="pb-5 md:pb-0 md:pr-6">
-              <p className="text-[11px] text-gray-500 mb-2">Avg. Cost Per Purchase</p>
-              <p className="sensitive text-3xl font-bold tracking-tight text-foreground">{formatPhp(totalSpend / totalPurchases)}</p>
+              <p className="text-[11px] text-gray-500 mb-2">Avg. Cost Per Inquiry</p>
+              <p className="sensitive text-3xl font-bold tracking-tight text-foreground">{formatPhp(totalSpend / totalInquiries)}</p>
             </div>
             <div className="py-5 md:py-0 md:px-6">
-              <p className="text-[11px] text-gray-500 mb-2">Purchase Rate</p>
+              <p className="text-[11px] text-gray-500 mb-2">Inquiry Rate</p>
               <p className="sensitive text-3xl font-bold tracking-tight text-foreground">
-                {totalReach > 0 && totalPurchases > 0 ? `1 / ${Math.round(totalReach / totalPurchases).toLocaleString()}` : '—'}
+                {totalReach > 0 && totalInquiries > 0 ? `1 / ${Math.round(totalReach / totalInquiries).toLocaleString()}` : '—'}
               </p>
-              <p className="text-[11px] text-gray-600 mt-1.5">people reached per purchase</p>
+              <p className="text-[11px] text-gray-600 mt-1.5">people reached per inquiry</p>
             </div>
             <div className="pt-5 md:pt-0 md:pl-6">
-              <p className="text-[11px] text-gray-500 mb-2">Ads with Purchases</p>
-              <p className="sensitive text-3xl font-bold tracking-tight text-green-600 dark:text-green-400">{adsWithPurchases}</p>
+              <p className="text-[11px] text-gray-500 mb-2">Ads with Inquiries</p>
+              <p className="sensitive text-3xl font-bold tracking-tight text-green-600 dark:text-green-400">{adsWithInquiries}</p>
               <p className="text-[11px] text-gray-600 mt-1.5">of {adCount} total ads</p>
             </div>
           </div>
@@ -330,22 +330,22 @@ export default async function OwnerDashboard() {
                 {topCampaign.ad_name}
               </p>
               <span className="flex-shrink-0 text-[10px] font-semibold bg-green-500/10 border border-green-500/30 text-green-400 rounded-full px-2.5 py-0.5">
-                Best ROI
+                Most Efficient Campaign
               </span>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Purchases</p>
-                <p className="sensitive text-xl font-bold text-gray-900">{formatNumber(topCampaign.purchases ?? 0)}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Inquiries</p>
+                <p className="sensitive text-xl font-bold text-gray-900">{formatNumber(topCampaign.inquiries ?? 0)}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ad Spend</p>
                 <p className="sensitive text-xl font-bold text-gray-900">{formatPhp(topCampaign.amount_spent)}</p>
               </div>
               <div className="bg-green-500/10 rounded-xl p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Cost / Purchase</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Cost / Inquiry</p>
                 <p className="sensitive text-xl font-bold text-green-400">
-                  {topCampaignCpp !== null ? formatPhp(topCampaignCpp) : '—'}
+                  {topCampaignCpi !== null ? formatPhp(topCampaignCpi) : '—'}
                 </p>
               </div>
             </div>

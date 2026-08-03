@@ -26,7 +26,7 @@ export async function getMonthlyKpis(): Promise<MonthlyKpi[]> {
     kpis.push({
       period: target.label,
       total_spend: ads.reduce((sum, a) => sum + a.amount_spent, 0),
-      total_purchases: ads.reduce((sum, a) => sum + (a.purchases ?? 0), 0),
+      total_inquiries: ads.reduce((sum, a) => sum + (a.inquiries ?? 0), 0),
       total_reach: ads.reduce((sum, a) => sum + (a.reach ?? 0), 0),
       ad_count: ads.length,
     })
@@ -37,22 +37,22 @@ export async function getMonthlyKpis(): Promise<MonthlyKpi[]> {
 
 export interface CampaignRankings {
   bySpend: Array<{ name: string; adSetName: string; value: number; reportingStarts: Date | null; reportingEnds: Date | null }>
-  byPurchases: Array<{ name: string; adSetName: string; value: number; reportingStarts: Date | null; reportingEnds: Date | null }>
+  byInquiries: Array<{ name: string; adSetName: string; value: number; reportingStarts: Date | null; reportingEnds: Date | null }>
   byReach: Array<{ name: string; adSetName: string; value: number; reportingStarts: Date | null; reportingEnds: Date | null }>
 }
 
 export async function getCampaignRankings(): Promise<CampaignRankings> {
-  const [topSpend, topPurchases, topReach] = await Promise.all([
+  const [topSpend, topInquiries, topReach] = await Promise.all([
     prisma.ad.findMany({
       orderBy: { amount_spent: 'desc' },
       take: 10,
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
-      where: { purchases: { not: null } },
-      orderBy: { purchases: 'desc' },
+      where: { inquiries: { not: null } },
+      orderBy: { inquiries: 'desc' },
       take: 10,
-      select: { ad_name: true, ad_set_name: true, purchases: true, reporting_starts: true, reporting_ends: true },
+      select: { ad_name: true, ad_set_name: true, inquiries: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { reach: { not: null } },
@@ -70,10 +70,10 @@ export async function getCampaignRankings(): Promise<CampaignRankings> {
       reportingStarts: a.reporting_starts,
       reportingEnds: a.reporting_ends,
     })),
-    byPurchases: topPurchases.map(a => ({
+    byInquiries: topInquiries.map(a => ({
       name: a.ad_name ?? 'Unknown',
       adSetName: a.ad_set_name ?? '',
-      value: a.purchases ?? 0,
+      value: a.inquiries ?? 0,
       reportingStarts: a.reporting_starts,
       reportingEnds: a.reporting_ends,
     })),

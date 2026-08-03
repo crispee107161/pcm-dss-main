@@ -27,9 +27,9 @@ const ROLE_META: Record<ReportRole, { title: string; footerLabel: string; descri
     description: 'Comprehensive marketing performance summary with forecasts and model insights',
   },
   sales: {
-    title: 'Sales Performance Report',
+    title: 'Advertising Efficiency Report',
     footerLabel: 'Sales Director Dashboard',
-    description: 'Sales performance and campaign effectiveness summary with forecasts and model insights',
+    description: 'Advertising efficiency and campaign effectiveness summary with forecasts and model insights',
   },
 }
 
@@ -108,9 +108,9 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
       <Section variant={variant} title="Executive Summary" noBreak>
         <MetricGrid variant={variant} items={[
           { label: 'Total Ad Spend', value: formatPHP(data.totalSpend), sub: '3-month period', tone: 'negative' },
-          { label: 'Total Purchases', value: data.totalPurchases.toLocaleString(), sub: 'from ads', tone: 'positive' },
+          { label: 'Total Inquiries', value: data.totalInquiries.toLocaleString(), sub: 'from ads', tone: 'positive' },
           { label: 'Total Ad Reach', value: data.totalReach.toLocaleString(), sub: 'unique people', tone: 'neutral' },
-          { label: 'Cost per Purchase', value: data.cpa ? formatPHP(data.cpa) : '—', sub: 'avg CPA', tone: 'neutral' },
+          { label: 'Cost per Inquiry', value: data.cpi ? formatPHP(data.cpi) : '—', sub: 'avg CPI', tone: 'neutral' },
         ]} />
       </Section>
 
@@ -130,7 +130,7 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
       </Section>
 
       {data.top5Ads.length > 0 && (
-        <Section variant={variant} title="Top 5 Ads by Purchases">
+        <Section variant={variant} title="Top 5 Ads by Inquiries">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -139,21 +139,21 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
                   <th className={th}>Ad Name</th>
                   <th className={`${th} hidden sm:table-cell`}>Period</th>
                   <th className={thRight}>Spend</th>
-                  <th className={thRight}>Purchases</th>
-                  <th className={`${thRight} hidden sm:table-cell`}>CPA</th>
+                  <th className={thRight}>Inquiries</th>
+                  <th className={`${thRight} hidden sm:table-cell`}>CPI</th>
                 </tr>
               </thead>
               <tbody>
                 {data.top5Ads.map((ad, i) => {
-                  const pur = ad.purchases ?? 0
+                  const inq = ad.inquiries ?? 0
                   return (
                     <tr key={i} className={isPrint ? undefined : 'hover:bg-gray-50'}>
                       <td className={td}>{i + 1}</td>
                       <td className={`${td} font-medium max-w-[200px] truncate`}>{ad.ad_name}</td>
                       <td className={`${td} text-xs whitespace-nowrap hidden sm:table-cell`}>{formatDate(ad.reporting_starts)}</td>
                       <td className={tdRight}>{formatPHP(ad.amount_spent)}</td>
-                      <td className={`${tdRight} text-green-600 font-semibold`}>{pur}</td>
-                      <td className={`${tdRight} hidden sm:table-cell`}>{pur > 0 ? formatPHP(ad.amount_spent / pur) : '—'}</td>
+                      <td className={`${tdRight} text-green-600 font-semibold`}>{inq}</td>
+                      <td className={`${tdRight} hidden sm:table-cell`}>{inq > 0 ? formatPHP(ad.amount_spent / inq) : '—'}</td>
                     </tr>
                   )
                 })}
@@ -175,9 +175,9 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
                 <th className={th}>Period</th>
                 <th className={`${thRight} hidden sm:table-cell`}>Ads Run</th>
                 <th className={thRight}>Total Spend</th>
-                <th className={thRight}>Purchases</th>
+                <th className={thRight}>Inquiries</th>
                 <th className={`${thRight} hidden sm:table-cell`}>Reach</th>
-                <th className={`${thRight} hidden sm:table-cell`}>CPA</th>
+                <th className={`${thRight} hidden sm:table-cell`}>CPI</th>
               </tr>
             </thead>
             <tbody>
@@ -186,14 +186,14 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
                   <td className={`${td} font-medium`}>{row.period}</td>
                   <td className={`${tdRight} hidden sm:table-cell`}>{row.ad_count}</td>
                   <td className={`${tdRight} font-medium`}>{formatPHP(row.spend)}</td>
-                  <td className={`${tdRight} text-green-600 font-semibold`}>{row.purchases}</td>
+                  <td className={`${tdRight} text-green-600 font-semibold`}>{row.inquiries}</td>
                   <td className={`${tdRight} hidden sm:table-cell`}>{row.reach.toLocaleString()}</td>
-                  <td className={`${tdRight} hidden sm:table-cell`}>{row.purchases > 0 ? formatPHP(row.spend / row.purchases) : '—'}</td>
+                  <td className={`${tdRight} hidden sm:table-cell`}>{row.inquiries > 0 ? formatPHP(row.spend / row.inquiries) : '—'}</td>
                 </tr>
               ))}
               {(() => {
                 const mSpend = data.monthlyData.reduce((s, r) => s + r.spend, 0)
-                const mPurchases = data.monthlyData.reduce((s, r) => s + r.purchases, 0)
+                const mInquiries = data.monthlyData.reduce((s, r) => s + r.inquiries, 0)
                 const mReach = data.monthlyData.reduce((s, r) => s + r.reach, 0)
                 const mCount = data.monthlyData.reduce((s, r) => s + r.ad_count, 0)
                 return (
@@ -201,9 +201,9 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
                     <td className={td}>Total</td>
                     <td className={`${tdRight} hidden sm:table-cell`}>{mCount}</td>
                     <td className={`${tdRight} text-red-600`}>{formatPHP(mSpend)}</td>
-                    <td className={`${tdRight} text-green-600`}>{mPurchases}</td>
+                    <td className={`${tdRight} text-green-600`}>{mInquiries}</td>
                     <td className={`${tdRight} hidden sm:table-cell`}>{mReach.toLocaleString()}</td>
-                    <td className={`${tdRight} hidden sm:table-cell`}>{mPurchases > 0 ? formatPHP(mSpend / mPurchases) : '—'}</td>
+                    <td className={`${tdRight} hidden sm:table-cell`}>{mInquiries > 0 ? formatPHP(mSpend / mInquiries) : '—'}</td>
                   </tr>
                 )
               })()}
@@ -270,18 +270,18 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
               No ad data available yet. The Marketing Manager needs to upload Facebook Ads Manager CSV data.
             </li>
           )}
-          {data.cpa && (
+          {data.cpi && (
             <li className="flex gap-2">
               <span className={isPrint ? 'text-neutral-400 mt-0.5' : 'text-red-400 mt-0.5'}>•</span>
-              Average cost per purchase across all campaigns: <strong className={isPrint ? 'text-neutral-900' : ''}>{formatPHP(data.cpa)}</strong>
+              Average cost per inquiry across all campaigns: <strong className={isPrint ? "text-neutral-900" : ""}>{formatPHP(data.cpi)}</strong>
             </li>
           )}
           {data.lagData.has_data && (
             <li className="flex gap-2">
               <span className={isPrint ? 'text-neutral-400 mt-0.5' : 'text-red-400 mt-0.5'}>•</span>
               {data.lagData.best_r !== null && data.lagData.best_metric
-                ? <>Purchases peak <strong className={isPrint ? 'text-neutral-900' : ''}>{data.lagData.best_lag} day{data.lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics change — strongest driver is {data.lagData.best_metric.toLowerCase()}.</>
-                : 'No clear time-lag pattern found yet between ad metrics and purchases.'}
+                ? <>Inquiries peak <strong className={isPrint ? 'text-neutral-900' : ''}>{data.lagData.best_lag} day{data.lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics change — strongest driver is {data.lagData.best_metric.toLowerCase()}.</>
+                : 'No clear time-lag pattern found yet between ad metrics and inquiries.'}
             </li>
           )}
           {data.regressionInsight && (

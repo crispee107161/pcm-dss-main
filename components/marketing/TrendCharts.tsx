@@ -11,7 +11,7 @@ import { CHART_GRID_STROKE, CHART_TICK_FILL, chartTick, CHART_COLORS } from '@/l
 interface MonthlyAdTrend {
   period: string
   total_spend: number
-  total_purchases: number
+  total_inquiries: number
   total_reach: number
   ad_count: number
 }
@@ -32,14 +32,14 @@ function formatPHP(v: number) {
   return `₱${(v / 1000).toFixed(0)}k`
 }
 
-export function SpendPurchasesChart({ data }: { data: MonthlyAdTrend[] }) {
+export function SpendInquiriesChart({ data }: { data: MonthlyAdTrend[] }) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
         <XAxis dataKey="period" tick={chartTick(12)} />
         <YAxis yAxisId="spend" tickFormatter={formatPHP} tick={chartTick(11)} />
-        <YAxis yAxisId="purchases" orientation="right" tick={chartTick(11)} />
+        <YAxis yAxisId="inquiries" orientation="right" tick={chartTick(11)} />
         <Tooltip
           contentStyle={chartTooltipStyle}
           labelStyle={chartTooltipLabelStyle}
@@ -51,7 +51,7 @@ export function SpendPurchasesChart({ data }: { data: MonthlyAdTrend[] }) {
         />
         <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
         <Bar yAxisId="spend" dataKey="total_spend" name="Total Spend" fill={CHART_COLORS.blue} radius={[4, 4, 0, 0]} />
-        <Bar yAxisId="purchases" dataKey="total_purchases" name="Purchases" fill={CHART_COLORS.green} radius={[4, 4, 0, 0]} />
+        <Bar yAxisId="inquiries" dataKey="total_inquiries" name="Inquiries" fill={CHART_COLORS.green} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -103,9 +103,9 @@ export default function TrendCharts({ adTrends, postTrends }: Props) {
   return (
     <div className="space-y-6">
       <div className="bg-card rounded-2xl card-shadow p-6">
-        <h2 className="font-semibold text-gray-800 mb-1">Ad Spend vs. Purchases by Reporting Period</h2>
-        <p className="text-xs text-gray-500 mb-4">Total ad spend (PHP, left axis) and resulting purchases (right axis) — separate scales, not directly comparable by bar height</p>
-        <SpendPurchasesChart data={adTrends} />
+        <h2 className="font-semibold text-gray-800 mb-1">Ad Spend vs. Inquiries by Reporting Period</h2>
+        <p className="text-xs text-gray-500 mb-4">Total ad spend (PHP, left axis) and resulting inquiries (right axis) — separate scales, not directly comparable by bar height</p>
+        <SpendInquiriesChart data={adTrends} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

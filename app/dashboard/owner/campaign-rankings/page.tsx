@@ -85,7 +85,7 @@ export default async function OwnerCampaignRankingsPage({
   }
   const adWhere = (from || to) ? { reporting_starts: dateFilter } : {}
 
-  const [topSpend, topPurchases, topReach, totalAds, totalSpend, adsWithPurchases] = await Promise.all([
+  const [topSpend, topInquiries, topReach, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
     prisma.ad.findMany({
       where: adWhere,
       orderBy: { amount_spent: 'desc' },
@@ -93,10 +93,10 @@ export default async function OwnerCampaignRankingsPage({
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
-      where: { ...adWhere, purchases: { gt: 0 } },
-      orderBy: { purchases: 'desc' },
+      where: { ...adWhere, inquiries: { gt: 0 } },
+      orderBy: { inquiries: 'desc' },
       take: 10,
-      select: { ad_name: true, ad_set_name: true, purchases: true, reporting_starts: true, reporting_ends: true },
+      select: { ad_name: true, ad_set_name: true, inquiries: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { ...adWhere, reach: { not: null } },
@@ -106,15 +106,15 @@ export default async function OwnerCampaignRankingsPage({
     }),
     prisma.ad.count({ where: adWhere }),
     prisma.ad.aggregate({ where: adWhere, _sum: { amount_spent: true } }),
-    prisma.ad.count({ where: { ...adWhere, purchases: { gt: 0 } } }),
+    prisma.ad.count({ where: { ...adWhere, inquiries: { gt: 0 } } }),
   ])
 
   const bySpend: RankRow[] = topSpend.map(a => ({
     name: a.ad_name, adSetName: a.ad_set_name, value: a.amount_spent,
     reportingStarts: a.reporting_starts, reportingEnds: a.reporting_ends,
   }))
-  const byPurchases: RankRow[] = topPurchases.map(a => ({
-    name: a.ad_name, adSetName: a.ad_set_name, value: a.purchases ?? 0,
+  const byInquiries: RankRow[] = topInquiries.map(a => ({
+    name: a.ad_name, adSetName: a.ad_set_name, value: a.inquiries ?? 0,
     reportingStarts: a.reporting_starts, reportingEnds: a.reporting_ends,
   }))
   const byReach: RankRow[] = topReach.map(a => ({
@@ -126,7 +126,7 @@ export default async function OwnerCampaignRankingsPage({
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <PageHeader title="Campaign Rankings" description="Top 10 ads ranked by spend, purchases, and reach" />
+      <PageHeader title="Campaign Rankings" description="Top 10 ads ranked by spend, inquiries, and reach" />
       <DateRangeFilter from={from} to={to} className="mb-6" />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
@@ -139,8 +139,8 @@ export default async function OwnerCampaignRankingsPage({
           <p className="text-2xl font-bold text-red-400 mt-1">{formatPHP(totalSpendValue)}</p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5 col-span-2 md:col-span-1">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Purchases</p>
-          <p className="text-2xl font-bold text-green-400 mt-1">{adsWithPurchases}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Inquiries</p>
+          <p className="text-2xl font-bold text-green-400 mt-1">{adsWithInquiries}</p>
         </div>
       </div>
 
@@ -160,10 +160,10 @@ export default async function OwnerCampaignRankingsPage({
             <span className="w-7 h-7 rounded-lg bg-green-500/10 text-green-400 flex items-center justify-center flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
             </span>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top by Purchases</p>
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top by Inquiries</p>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
-          <RankingTable rows={byPurchases} valueLabel="Purchases" formatValue={v => v.toLocaleString()} />
+          <RankingTable rows={byInquiries} valueLabel="Inquiries" formatValue={v => v.toLocaleString()} />
         </div>
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">

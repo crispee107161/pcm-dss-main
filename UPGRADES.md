@@ -14,7 +14,7 @@ To strengthen the statistical models, a synthetic data generator (`generate_synt
 
 | File | Description | Records |
 |---|---|---|
-| `Ads-Synthetic.csv` | Facebook Ads with spend, reach, purchases, impressions | ~180 ad records across 12 months |
+| `Ads-Synthetic.csv` | Facebook Ads with spend, reach, inquiries, impressions | ~180 ad records across 12 months |
 | `Posts-Synthetic.csv` | Organic post metrics (reach, reactions, engagement rate) | ~120 posts (Oct 2025 – Jan 2026) |
 | `Follows-Synthetic.csv` | Daily page follows | ~365 daily rows |
 | `Interactions-Synthetic.csv` | Daily content interactions | ~365 daily rows |
@@ -22,7 +22,7 @@ To strengthen the statistical models, a synthetic data generator (`generate_synt
 | `Views-Synthetic.csv` | Daily page views | ~365 daily rows |
 | `Visits-Synthetic.csv` | Daily page visits | ~365 daily rows |
 
-**Key design rule:** Higher ad spend → higher reach → more messaging contacts → more purchases. Correlations were intentionally preserved so the regression model trains correctly and produces meaningful results.
+**Key design rule:** Higher ad spend → higher reach → more messaging contacts → more inquiries. Correlations were intentionally preserved so the regression model trains correctly and produces meaningful results.
 
 ---
 
@@ -58,14 +58,14 @@ Holt-Winters is now applied across all three role dashboards:
 
 ## 3. Report Accuracy Fixes
 
-### ROAS Column → CPA (Cost Per Acquisition)
+### ROAS Column → CPI (Cost Per Acquisition)
 
 | | Before | After |
 |---|---|---|
-| Column label | ROAS | CPA |
-| Formula | `purchases ÷ spend × 1,000` | `spend ÷ purchases` |
-| Issue | ROAS requires revenue data we do not have; the old formula was dimensionally incorrect | CPA is the correct metric when only purchase counts are available |
-| Example | `10 ÷ ₱5,000 × 1,000 = 2.0000` (meaningless) | `₱5,000 ÷ 10 = ₱500.00 per purchase` (actionable) |
+| Column label | ROAS | CPI |
+| Formula | `inquiries ÷ spend × 1,000` | `spend ÷ inquiries` |
+| Issue | ROAS requires revenue data we do not have; the old formula was dimensionally incorrect | CPI is the correct metric when only inquiry counts are available |
+| Example | `10 ÷ ₱5,000 × 1,000 = 2.0000` (meaningless) | `₱5,000 ÷ 10 = ₱500.00 per inquiry` (actionable) |
 
 ### Monthly Total Row Mismatch
 
@@ -92,7 +92,7 @@ Holt-Winters is now applied across all three role dashboards:
 | Area | Change |
 |---|---|
 | Forecasting | Simple Moving Average → Holt-Winters Triple Exponential Smoothing |
-| Report metrics | ROAS (wrong formula) → CPA (correct, actionable) |
+| Report metrics | ROAS (wrong formula) → CPI (correct, actionable) |
 | Report totals | All-time totals → period-accurate totals matching displayed rows |
 | CSV upload | Accept both short and full Facebook metric names |
 | Synthetic data | 7 CSV files generated covering 12 months of realistic data |

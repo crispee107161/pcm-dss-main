@@ -54,9 +54,9 @@ export default function MonthlyKpiCards({ data }: { data: MonthlyKpi[] }) {
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                  <p className="text-[11px] text-gray-400">Purchases</p>
+                  <p className="text-[11px] text-gray-400">Inquiries</p>
                 </div>
-                <p className="sensitive text-lg font-bold text-green-500 tabular">{formatNumber(kpi.total_purchases)}</p>
+                <p className="sensitive text-lg font-bold text-green-500 tabular">{formatNumber(kpi.total_inquiries)}</p>
               </div>
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">

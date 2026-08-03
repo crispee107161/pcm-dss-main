@@ -17,7 +17,7 @@ function formatPHP(v: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(v)
 }
 
-function formatConvRate(rate: number): string {
+function formatInquiryRate(rate: number): string {
   if (rate <= 0) return '—'
   return `1 per ${Math.round(1 / rate).toLocaleString()}`
 }
@@ -42,7 +42,7 @@ function ScoreBar({ score, grade }: { score: number; grade: ScoredAd['grade'] })
 
 const PAGE_SIZE = 10
 
-type Sort = 'score' | 'cpa' | 'rate' | 'spend'
+type Sort = 'score' | 'cpi' | 'rate' | 'spend'
 
 export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
   const [sort, setSort] = useState<Sort>('score')
@@ -77,8 +77,8 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
   const sorted = [...filtered].sort((a, b) => {
     let va = 0, vb = 0
     if (sort === 'score') { va = a.score; vb = b.score }
-    else if (sort === 'cpa') { va = a.cpa ?? 999999; vb = b.cpa ?? 999999 }
-    else if (sort === 'rate') { va = a.purchase_rate ?? 0; vb = b.purchase_rate ?? 0 }
+    else if (sort === 'cpi') { va = a.cpi ?? 999999; vb = b.cpi ?? 999999 }
+    else if (sort === 'rate') { va = a.inquiry_rate ?? 0; vb = b.inquiry_rate ?? 0 }
     else { va = a.amount_spent; vb = b.amount_spent }
     return asc ? va - vb : vb - va
   })
@@ -158,10 +158,10 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
                   <SortBtn col="spend" label="Spend" />
                 </TableHead>
                 <TableHead className="text-right px-4 py-3 hidden sm:table-cell">
-                  <SortBtn col="cpa" label="CPA" />
+                  <SortBtn col="cpi" label="CPI" />
                 </TableHead>
                 <TableHead className="text-right px-4 py-3 hidden sm:table-cell">
-                  <SortBtn col="rate" label="Conv. Rate" />
+                  <SortBtn col="rate" label="Inquiry Rate" />
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -202,13 +202,13 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
                         {formatPHP(ad.amount_spent)}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">
-                        {ad.cpa !== null
-                          ? <span className="sensitive font-semibold text-gray-700">{formatPHP(ad.cpa)}</span>
+                        {ad.cpi !== null
+                          ? <span className="sensitive font-semibold text-gray-700">{formatPHP(ad.cpi)}</span>
                           : <span className="text-gray-300">—</span>}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right tabular-nums hidden sm:table-cell">
-                        {ad.purchase_rate !== null
-                          ? <span className="font-semibold text-gray-700">{formatConvRate(ad.purchase_rate)}</span>
+                        {ad.inquiry_rate !== null
+                          ? <span className="font-semibold text-gray-700">{formatInquiryRate(ad.inquiry_rate)}</span>
                           : <span className="text-gray-300">—</span>}
                       </TableCell>
                     </TableRow>
@@ -219,12 +219,12 @@ export default function CampaignHealthTable({ ads }: { ads: ScoredAd[] }) {
                         <TableCell colSpan={5} className="px-4 py-4">
                           <div className="animate-fade-slide-up grid grid-cols-1 sm:grid-cols-3 gap-4 sm:max-w-lg">
                             <div>
-                              <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">CPA Score</p>
-                              <ScoreBar score={ad.breakdown.cpa_score} grade={ad.grade} />
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">CPI Score</p>
+                              <ScoreBar score={ad.breakdown.cpi_score} grade={ad.grade} />
                               <p className="text-[10px] text-gray-400 mt-1">50% weight</p>
                             </div>
                             <div>
-                              <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Conv. Rate Score</p>
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Inquiry Rate Score</p>
                               <ScoreBar score={ad.breakdown.rate_score} grade={ad.grade} />
                               <p className="text-[10px] text-gray-400 mt-1">35% weight</p>
                             </div>

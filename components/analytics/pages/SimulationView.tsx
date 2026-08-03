@@ -28,7 +28,7 @@ export default async function SimulationView() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="What-If Simulation"
-        description="Predict purchases from hypothetical engagement inputs, with a realistic range instead of a single number"
+        description="Predict inquiries from hypothetical engagement inputs, with a realistic range instead of a single number"
       />
 
       <div className="bg-card rounded-2xl card-shadow p-6 mb-8">
@@ -64,7 +64,7 @@ export default async function SimulationView() {
                     <td className="px-3 py-3 text-gray-600 border-t border-gray-100">{sim.messaging_input != null ? sim.messaging_input.toLocaleString() : '—'}</td>
                     <td className="px-3 py-3 text-gray-700 border-t border-gray-100">{formatPhp(sim.amount_spent_input)}</td>
                     <td className="px-3 py-3 border-t border-gray-100">
-                      <span className="font-semibold text-red-400">{Math.max(0, Math.round(sim.projected_purchases))}</span>
+                      <span className="font-semibold text-red-400">{Math.max(0, Math.round(sim.projected_inquiries))}</span>
                     </td>
                     <td className="px-3 py-3 border-t border-gray-100 text-xs text-yellow-400">
                       {sim.interval_lower != null && sim.interval_upper != null

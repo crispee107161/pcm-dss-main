@@ -10,13 +10,13 @@ This document catalogs every non-trivial algorithm implemented in the PC Merchan
 **File:** `lib/stats/spearman.ts` (`computeSpearmanMatrix`, `rankArray`, `spearmanFiltered`)
 **Feature:** Correlation Analysis (`app/dashboard/*/correlation/`)
 
-**What it does:** Measures how strongly two variables move together *without assuming a linear relationship* — e.g., "does more Reach tend to come with more Purchases?" — using rank order rather than raw values, which makes it robust to outliers (a single viral ad with 10x normal reach won't distort the whole matrix).
+**What it does:** Measures how strongly two variables move together *without assuming a linear relationship* — e.g., "does more Reach tend to come with more Inquiries?" — using rank order rather than raw values, which makes it robust to outliers (a single viral ad with 10x normal reach won't distort the whole matrix).
 
 **How it's implemented:**
-1. `rankArray()` converts each column of raw numbers (Amount Spent, Reach, Impressions, Link Clicks, Purchases, Messaging Contacts) into rank positions. Ties are handled with the standard **average rank** method: if two values tie for 3rd/4th place, both get rank 3.5.
+1. `rankArray()` converts each column of raw numbers (Amount Spent, Reach, Impressions, Link Clicks, Inquiries, Messaging Contacts) into rank positions. Ties are handled with the standard **average rank** method: if two values tie for 3rd/4th place, both get rank 3.5.
 2. Spearman's ρ is then computed as the **Pearson correlation of the two rank arrays** (this is mathematically equivalent to the classic Spearman formula and avoids a separate implementation).
 3. `spearmanFiltered()` drops any row where either variable is `null` (missing data) before ranking, and requires at least 3 complete pairs or it returns `null` rather than a misleading number from too little data.
-4. `computeSpearmanMatrix()` runs this for every predictor (Spend, Reach, Impressions, Link Clicks) against two outcomes (Purchases, Messaging Contacts), producing the correlation matrix rendered as a heatmap-style table in `components/analytics/CorrelationTable.tsx`.
+4. `computeSpearmanMatrix()` runs this for every predictor (Spend, Reach, Impressions, Link Clicks) against two outcomes (Inquiries, Messaging Contacts), producing the correlation matrix rendered as a heatmap-style table in `components/analytics/CorrelationTable.tsx`.
 
 ---
 
@@ -38,11 +38,11 @@ Computed in a single pass: means are calculated first, then one loop accumulates
 **File:** `lib/stats/laggedCorrelation.ts` (`computeLaggedCorrelations`)
 **Feature:** Lagged Correlation Panel (`components/analytics/LaggedCorrelationPanel.tsx`)
 
-**What it does:** Answers "if we spend more today, how many days later do we actually see more purchases?" by testing correlation at multiple time offsets (1, 2, 3, 5, 7, and 14 days) and reporting which lag has the strongest, statistically meaningful relationship.
+**What it does:** Answers "if we spend more today, how many days later do we actually see more inquiries?" by testing correlation at multiple time offsets (1, 2, 3, 5, 7, and 14 days) and reporting which lag has the strongest, statistically meaningful relationship.
 
 **How it's implemented:**
 1. **Daily aggregation** — each ad row spans a date range (`reporting_starts` → `reporting_ends`) with totals for the whole range. `expandAndAggregate()` spreads each ad's totals evenly across every day in its range (e.g., ₱700 spent over 7 days → ₱100/day) and sums overlapping ads into one map keyed by date.
-2. **Lag construction** — for each candidate lag *L*, `computeLaggedPearson()` pairs "today's" reach/messaging/spend against "*L* days later's" purchases, keeping only dates where both the source and target day exist in the data.
+2. **Lag construction** — for each candidate lag *L*, `computeLaggedPearson()` pairs "today's" reach/messaging/spend against "*L* days later's" inquiries, keeping only dates where both the source and target day exist in the data.
 3. **Pearson correlation** is computed per lag per metric (reach, messaging, spend) using the shared `pearsonCorrelation` function above.
 4. **Statistical significance (p-value)** — `pearsonPValue()` converts *r* into a z-score via the **Fisher z-transformation** (`z = 0.5 · ln((1+r)/(1-r))`), then computes a two-tailed p-value using the **Abramowitz & Stegun polynomial approximation** of the normal cumulative distribution function (a classic closed-form approximation accurate to ~7.5×10⁻⁸, avoiding the need for a full statistics library just for one function).
 5. **Best-lag selection** — the code first looks for the strongest correlation among lags where *p* < 0.05 (statistically significant at 95% confidence); if none qualify, it falls back to the single strongest |r| regardless of significance, so the UI always has something to display rather than an empty state.
@@ -53,13 +53,13 @@ Computed in a single pass: means are calculated first, then one loop accumulates
 **File:** `lib/stats/regression.ts` (`fitMLR`, `fitPlainMLR`, `gaussianElimination`, `maybeRetrainRegression`)
 **Feature:** Regression Model (`app/dashboard/*/regression/`), and the numeric engine behind Budget Allocation and What-If Simulation (Sections 1.5 and 1.6 depend on this model)
 
-**What it does:** Fits the equation `Purchases = β₀ + β₁·Reach + β₂·MessagingContacts + β₃·AmountSpent` to historical ad data, so the system can predict purchases from hypothetical future inputs.
+**What it does:** Fits the equation `Inquiries = β₀ + β₁·Reach + β₂·MessagingContacts + β₃·AmountSpent` to historical ad data, so the system can predict inquiries from hypothetical future inputs.
 
 **How it's implemented:**
 1. **Normal equations** — rather than a generic matrix library, OLS is solved via the closed-form normal equation `XᵀXβ = Xᵀy`. `X` is the design matrix (a column of 1s for the intercept, plus reach/messaging/spend columns); `XᵀX` (a small 4×4 matrix here) and `Xᵀy` are built with explicit triple-nested loops.
 2. **Gaussian elimination with partial pivoting** (`gaussianElimination`) solves the resulting 4×4 linear system for the coefficient vector β. Partial pivoting (swapping in the row with the largest absolute value in the current column before eliminating) keeps the elimination numerically stable even when coefficients differ by orders of magnitude — e.g., ad spend in the thousands vs. small reach ratios.
 3. **Goodness of fit** — R² (`1 - SSres/SStot`), adjusted R² (penalizing for the 3 predictors relative to sample size), and residual standard error are computed directly from the fitted residuals.
-4. **Automatic retraining** — `maybeRetrainRegression()` re-fits the model against *all* ads with known purchase counts every time enough new data exists (minimum 10 records), storing the new coefficients as a fresh `RegressionModel` row rather than mutating the old one, so historical simulations/allocations remain reproducible against the model that was live when they ran.
+4. **Automatic retraining** — `maybeRetrainRegression()` re-fits the model against *all* ads with known inquiry counts every time enough new data exists (minimum 10 records), storing the new coefficients as a fresh `RegressionModel` row rather than mutating the old one, so historical simulations/allocations remain reproducible against the model that was live when they ran.
 
 ---
 
@@ -67,7 +67,7 @@ Computed in a single pass: means are calculated first, then one loop accumulates
 **File:** `lib/stats/simulation.ts` (`runSimulation`, `randNormal`)
 **Feature:** What-If Simulator (`components/analytics/WhatIfSimulator.tsx`)
 
-**What it does:** Given a hypothetical Reach/Messaging/Spend combination, produces not just a single predicted purchase count but a realistic **range** (a 90% prediction interval) that accounts for the natural noise in the historical data the model was trained on.
+**What it does:** Given a hypothetical Reach/Messaging/Spend combination, produces not just a single predicted inquiry count but a realistic **range** (a 90% prediction interval) that accounts for the natural noise in the historical data the model was trained on.
 
 **How it's implemented:**
 1. The regression model (Section 1.4) produces a single point prediction (`basePredict`).
@@ -84,15 +84,15 @@ Computed in a single pass: means are calculated first, then one loop accumulates
 **File:** `lib/stats/budget-allocator.ts` (`computeBudgetAllocation`)
 **Feature:** Budget Allocator (`components/analytics/BudgetAllocator.tsx`)
 
-**What it does:** Given a total budget, splits it across ad sets in proportion to how efficiently each one historically converted spend into purchases — while correcting for the statistical trap where an ad set with only 1–2 purchases can look artificially "perfect."
+**What it does:** Given a total budget, splits it across ad sets in proportion to how efficiently each one historically converted spend into inquiries — while correcting for the statistical trap where an ad set with only 1–2 inquiries can look artificially "perfect."
 
 **How it's implemented:**
-1. Ad records are grouped by `ad_set_name`, summing spend, purchases, reach, and messaging contacts per group.
-2. **Laplace smoothing** — raw efficiency (`purchases / spend`) is unstable for ad sets with very few purchases (an ad set with 1 purchase on ₱50 spend looks better than one with 40 purchases on ₱3,000, even though the second is far more statistically trustworthy). The code adds a pseudo-purchase at the group's own CPA rate to both numerator and denominator before computing efficiency, pulling small-sample groups' scores toward a more conservative estimate without needing external prior data.
-3. Groups are filtered to those with real spend and at least one purchase, sorted by smoothed efficiency, and capped to the **top 8** to keep the UI readable.
+1. Ad records are grouped by `ad_set_name`, summing spend, inquiries, reach, and messaging contacts per group.
+2. **Laplace smoothing** — raw efficiency (`inquiries / spend`) is unstable for ad sets with very few inquiries (an ad set with 1 inquiry on ₱50 spend looks better than one with 40 inquiries on ₱3,000, even though the second is far more statistically trustworthy). The code adds a pseudo-inquiry at the group's own CPI rate to both numerator and denominator before computing efficiency, pulling small-sample groups' scores toward a more conservative estimate without needing external prior data.
+3. Groups are filtered to those with real spend and at least one inquiry, sorted by smoothed efficiency, and capped to the **top 8** to keep the UI readable.
 4. The budget is split proportionally: each ad set's share of the total budget equals its share of total efficiency among the top 8 (`pct = efficiency / Σefficiency`).
-5. Projected reach/messaging for each allocation are extrapolated from that ad set's own historical reach-per-peso / messaging-per-peso ratio (falling back to the cross-ad-set average when a group has no history for a metric), then fed into the shared regression model (Section 1.4) to predict purchases for that slice of budget.
-6. **Prediction interval** — rather than the resampling approach used in the simulator, this uses a closed-form approximation for the standard error of a *new* prediction (`SE_pred = RSE · √(1 + 1/n)`), and a fixed **z-score of 1.2816** (the 90th-percentile point of the standard normal distribution) to build an 80% interval band around each allocation's projected purchases.
+5. Projected reach/messaging for each allocation are extrapolated from that ad set's own historical reach-per-peso / messaging-per-peso ratio (falling back to the cross-ad-set average when a group has no history for a metric), then fed into the shared regression model (Section 1.4) to predict inquiries for that slice of budget.
+6. **Prediction interval** — rather than the resampling approach used in the simulator, this uses a closed-form approximation for the standard error of a *new* prediction (`SE_pred = RSE · √(1 + 1/n)`), and a fixed **z-score of 1.2816** (the 90th-percentile point of the standard normal distribution) to build an 80% interval band around each allocation's projected inquiries.
 
 ---
 
@@ -121,13 +121,13 @@ Computed in a single pass: means are calculated first, then one loop accumulates
 **File:** `lib/stats/health-score.ts` (`computeHealthScores`)
 **Feature:** Campaign Health Table (`components/analytics/CampaignHealthTable.tsx`)
 
-**What it does:** Converts three raw, differently-scaled ad metrics (Cost Per Acquisition, Purchase Rate, Reach) into a single 0–100 score and a letter-style grade (Excellent/Good/Fair/Poor/Critical), so ads can be ranked and compared at a glance.
+**What it does:** Converts three raw, differently-scaled ad metrics (Cost Per Inquiry, Inquiry Rate, Reach) into a single 0–100 score and a letter-style grade (Excellent/Good/Fair/Poor/Critical), so ads can be ranked and compared at a glance.
 
 **How it's implemented:**
-1. Three raw metrics are computed per ad: **CPA** (spend ÷ purchases — lower is better), **purchase rate** (purchases ÷ reach — higher is better), and raw **reach**.
+1. Three raw metrics are computed per ad: **CPI** (spend ÷ inquiries — lower is better), **inquiry rate** (inquiries ÷ reach — higher is better), and raw **reach**.
 2. **95th-percentile capping instead of min/max normalization:** using the absolute maximum as the normalization ceiling means a single outlier ad (e.g., one viral post with 50x normal reach) would compress every other ad's score toward the bottom of the scale. Capping at the 95th percentile of the whole dataset means normal-range ads still spread meaningfully across the 0–100 scale, and the rare outlier is simply clipped rather than dominating.
-3. **Normalization** maps each ad's raw value into 0–100 within `[min, 95th-percentile]`, inverted for CPA since a *lower* cost is better (`invert=true` flips the direction of the scale).
-4. **Weighted composite score:** `score = 0.50·cpa_score + 0.35·rate_score + 0.15·reach_score` — cost efficiency is weighted heaviest (it directly reflects ROI), purchase rate second, and raw reach least (reach alone doesn't mean the ad performed, just that it was seen).
+3. **Normalization** maps each ad's raw value into 0–100 within `[min, 95th-percentile]`, inverted for CPI since a *lower* cost is better (`invert=true` flips the direction of the scale).
+4. **Weighted composite score:** `score = 0.50·cpi_score + 0.35·rate_score + 0.15·reach_score` — cost efficiency is weighted heaviest (it directly reflects ROI), inquiry rate second, and raw reach least (reach alone doesn't mean the ad performed, just that it was seen).
 5. The composite score is bucketed into a grade: ≥80 Excellent, ≥60 Good, ≥40 Fair, ≥20 Poor, otherwise Critical.
 
 ---

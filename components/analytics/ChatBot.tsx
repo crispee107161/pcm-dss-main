@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { MessageCircleMoreIcon, type MessageCircleMoreIconHandle } from '@/components/icons/message-circle-more-icon'
 
 const SUGGESTIONS = [
-  'Which ad had the best CPA?',
+  'Which ad had the best CPI?',
   'What does the R² value mean?',
   'How much did we spend in total?',
   'What should we focus on next?',

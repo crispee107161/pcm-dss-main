@@ -34,7 +34,7 @@ export default async function RegressionView() {
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
     prisma.regressionModel.findMany({ orderBy: { trained_at: 'desc' } }),
     prisma.ad.findMany({
-      where: { purchases: { not: null } },
+      where: { inquiries: { not: null } },
       select: { reach: true, total_messaging_contacts: true, amount_spent: true },
     }),
   ])
@@ -52,8 +52,8 @@ export default async function RegressionView() {
       <PageHeader
         title={isMLR ? 'Multiple Linear Regression' : 'Simple Linear Regression'}
         description={isMLR
-          ? 'Log-transformed MLR predicting purchases from Reach, Messaging Contacts, and Amount Spent'
-          : 'Predicts purchases based on ad spend'}
+          ? 'Log-transformed MLR predicting inquiries from Reach, Messaging Contacts, and Amount Spent'
+          : 'Predicts inquiries based on ad spend'}
       />
 
       {latestModel ? (

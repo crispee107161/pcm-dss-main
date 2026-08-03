@@ -38,7 +38,7 @@ PC Merchandise DSS is a role-based analytics dashboard for Facebook ad campaign 
 |---|---|---|
 | `User` | Auth + role | `email`, `password_hash`, `role` (MARKETING_MANAGER \| SALES_DIRECTOR \| BUSINESS_OWNER) |
 | `UploadLog` | Audit trail for every CSV upload | `upload_type`, `status`, `records_inserted`, `records_updated`, `records_unchanged`, `error_message` |
-| `Ad` | Core Facebook Ads data | `ad_name`, `ad_set_name`, `reporting_starts/ends`, `reach`, `impressions`, `link_clicks`, `amount_spent`, `purchases`, `total_messaging_contacts`, `cost_per_result`, `category_id` |
+| `Ad` | Core Facebook Ads data | `ad_name`, `ad_set_name`, `reporting_starts/ends`, `reach`, `impressions`, `link_clicks`, `amount_spent`, `inquiries`, `total_messaging_contacts`, `cost_per_result`, `category_id` |
 | `FacebookPost` | Organic post metrics | `post_id`, `publish_time`, `post_type`, `reach`, `reactions`, `comments`, `shares`, `views`, `engagement_rate`, `category_id` |
 | `Category` | Ad/post categorization | `name` |
 | `Keyword` | Keywords per category | `word`, `category_id` |
@@ -48,7 +48,7 @@ PC Merchandise DSS is a role-based analytics dashboard for Facebook ad campaign 
 | `FollowerGender` | Gender distribution snapshot | `gender`, `distribution` |
 | `FollowerTerritory` | Territory distribution snapshot | `territory`, `distribution` |
 | `RegressionModel` | Stored model record | `intercept`, `coefficient`, `coef_reach`, `coef_messaging`, `coef_amount_spent`, `coef_spend_sq`, `coef_link_clicks`, `model_type`, `residual_std_error`, `best_lag`, `r_squared`, `adj_r_squared`, `n`, `trained_at` |
-| `SimulationResult` | What-If run history | `reach_input`, `messaging_input`, `amount_spent_input`, `projected_purchases`, `interval_lower`, `interval_upper`, `model_id` |
+| `SimulationResult` | What-If run history | `reach_input`, `messaging_input`, `amount_spent_input`, `projected_inquiries`, `interval_lower`, `interval_upper`, `model_id` |
 
 **Unique constraints:**
 - `Ad`: `(ad_name, reporting_starts)`
@@ -67,7 +67,7 @@ The system fits **10 model variants** on every retrain. Model selection uses **5
 
 | # | Model Type | Formula / Approach | Best For |
 |---|---|---|---|
-| 1 | `log_mlr` | `Purchases = β₀ + β₁·log(1+Reach) + β₂·log(1+Msgs) + β₃·log(1+Spend)` | Baseline |
+| 1 | `log_mlr` | `Inquiries = β₀ + β₁·log(1+Reach) + β₂·log(1+Msgs) + β₃·log(1+Spend)` | Baseline |
 | 2 | `plain_mlr` | Raw (untransformed) predictors | Linear relationships |
 | 3 | `poly_mlr` | Adds `log(1+Spend)²` | Diminishing spend returns |
 | 4 | `ridge_mlr` | Log MLR + L2 penalty λ=0.1 | Correlated predictors |
@@ -75,12 +75,12 @@ The system fits **10 model variants** on every retrain. Model selection uses **5
 | 6 | `elastic_net_mlr` | L1+L2 mix α=0.5 λ=0.1 | Correlated predictors + selection |
 | 7 | `wls_mlr` | Time-decay weights, 90-day half-life | Recent campaigns matter more |
 | 8 | `robust_mlr` | IRLS Huber loss δ=1.345σ̂ | Outlier campaign resistance |
-| 9 | `log_log_mlr` | `log(1+Purchases) ~ log(1+X)`, back-transformed R² | Elasticity model |
-| 10 | `expanded_mlr` | Adds `log(1+link_clicks)` as 4th predictor | Purchase-intent signal |
+| 9 | `log_log_mlr` | `log(1+Inquiries) ~ log(1+X)`, back-transformed R² | Elasticity model |
+| 10 | `expanded_mlr` | Adds `log(1+link_clicks)` as 4th predictor | Inquiry-intent signal |
 
 **DB fields saved per retrain:** `model_type`, `intercept`, `coef_reach`, `coef_messaging`, `coef_amount_spent`, `coef_spend_sq`, `coef_link_clicks`, `r_squared`, `adj_r_squared`, `residual_std_error`, `n`
 
-**Auto-retrains** after each Ads CSV upload when n ≥ 10 purchase records.
+**Auto-retrains** after each Ads CSV upload when n ≥ 10 inquiry records.
 
 ---
 
@@ -101,7 +101,7 @@ The system fits **10 model variants** on every retrain. Model selection uses **5
 **File:** `lib/stats/budget-allocator.ts`
 
 - Groups ads by `ad_set_name`
-- **Laplace-smoothed efficiency** = `(purchases + 1) / (spend + CPA_estimate)` — resists single-purchase flukes
+- **Laplace-smoothed efficiency** = `(inquiries + 1) / (spend + CPI_estimate)` — resists single-inquiry flukes
 - Proportional allocation across top 8 ad sets by smoothed efficiency
 - Prediction intervals use corrected SE = RSE × √(1 + 1/n)
 
@@ -111,7 +111,7 @@ The system fits **10 model variants** on every retrain. Model selection uses **5
 **File:** `lib/stats/laggedCorrelation.ts`
 
 - Expands monthly ad records to daily metrics
-- Tests **lags [1, 2, 3, 5, 7, 14] days**: Reach/Messaging/Spend (t) vs. Purchases (t+lag)
+- Tests **lags [1, 2, 3, 5, 7, 14] days**: Reach/Messaging/Spend (t) vs. Inquiries (t+lag)
 - p-values via Fisher z-transform → Abramowitz & Stegun normal CDF approximation
 - Best = highest significant |r| (p < 0.05); fallback to highest |r| if none significant
 
@@ -121,7 +121,7 @@ The system fits **10 model variants** on every retrain. Model selection uses **5
 **File:** `lib/stats/spearman.ts`
 
 - Ranks with tie-handling (average rank)
-- Correlation matrix: Amount Spent, Reach, Impressions, Link Clicks vs. Purchases & Messaging
+- Correlation matrix: Amount Spent, Reach, Impressions, Link Clicks vs. Inquiries & Messaging
 
 ---
 
@@ -130,8 +130,8 @@ The system fits **10 model variants** on every retrain. Model selection uses **5
 
 | Metric | Weight | Direction | Normalization |
 |---|---|---|---|
-| CPA | 50% | Lower = better | 95th-percentile cap |
-| Purchase Rate | 35% | Higher = better | 95th-percentile cap |
+| CPI | 50% | Lower = better | 95th-percentile cap |
+| Inquiry Rate | 35% | Higher = better | 95th-percentile cap |
 | Reach | 15% | Higher = better | 95th-percentile cap |
 
 **Grades:** Excellent (80+), Good (60+), Fair (40+), Poor (20+), Critical (<20)
@@ -160,7 +160,7 @@ Triple exponential smoothing (additive seasonality): α=0.3, β=0.1, γ=0.3, per
 
 | Type | Encoding | Key Columns | Upsert Key |
 |---|---|---|---|
-| ADS_CSV | UTF-8 BOM | Ad name, Amount spent (PHP), Purchases, Reach | (ad_name, reporting_starts) |
+| ADS_CSV | UTF-8 BOM | Ad name, Amount spent (PHP), Purchases (→ inquiries), Reach | (ad_name, reporting_starts) |
 | POSTS_CSV | UTF-8 BOM | Post ID, Publish time, Post type, Reach | post_id |
 | PAGE_METRIC_CSV | UTF-16 LE | Date, metric value (filename determines column) | date |
 | FOLLOWER_HISTORY_CSV | UTF-8 | Date, Followers, Difference | date |
@@ -180,10 +180,10 @@ CSV Upload
 **Status: Generated and ready to seed.**
 
 `generate_synthetic_data.py` has been run. Output:
-- `data/Ads/synthetic/` — 14 monthly Ads CSVs, 306 rows, **163 purchase records**
+- `data/Ads/synthetic/` — 14 monthly Ads CSVs, 306 rows, **163 inquiry records**
 - `data/Page-Level Metrics/synthetic/` — 70 metric files (5 metrics × 14 months)
 
-Combined with ~42 real purchase records → **~205 total purchase records** after seeding.
+Combined with ~42 real inquiry records → **~205 total inquiry records** after seeding.
 
 **To seed the database:**
 ```bash
@@ -254,7 +254,7 @@ URL search params (`?from=YYYY-MM-DD&to=YYYY-MM-DD`) filter all Prisma `ad` quer
 
 | Source | Real Data | Synthetic Data | After Seeding |
 |---|---|---|---|
-| Ads with purchases | ~42 records | 163 records | ~205 |
+| Ads with inquiries | ~42 records | 163 records | ~205 |
 | All ads | ~230 records | 306 records | ~536 |
 | Daily page metrics | ~120 rows | ~420 rows (14 months) | ~540 |
 | Organic posts | 81 (Sep 2025 only) | — | 81 |

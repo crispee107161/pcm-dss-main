@@ -145,8 +145,8 @@ export default function LoginPage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
                 </div>
                 <div>
-                  <p className="text-gray-500 text-[11px]">Purchases Tracked</p>
-                  <p className="text-white font-bold text-sm">1,284 conversions</p>
+                  <p className="text-gray-500 text-[11px]">Inquiries Tracked</p>
+                  <p className="text-white font-bold text-sm">1,284 inquiries</p>
                 </div>
               </div>
 

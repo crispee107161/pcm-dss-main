@@ -38,7 +38,7 @@ export async function runSimulation(
   const [latestModel, trainingAds] = await Promise.all([
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
     prisma.ad.findMany({
-      where: { purchases: { not: null } },
+      where: { inquiries: { not: null } },
       select: { reach: true, total_messaging_contacts: true, amount_spent: true },
     }),
   ])
@@ -56,7 +56,7 @@ export async function runSimulation(
   )
   samples.sort((a, b) => a - b)
 
-  const projected_purchases = samples[Math.floor(N_ITER / 2)]     // median
+  const projected_inquiries = samples[Math.floor(N_ITER / 2)]     // median
   const interval_lower      = samples[Math.floor(0.05 * N_ITER)]  // 5th percentile → 90% interval
   const interval_upper      = samples[Math.floor(0.95 * N_ITER)]  // 95th percentile
 
@@ -106,7 +106,7 @@ export async function runSimulation(
       reach_input: reach,
       messaging_input: messaging,
       amount_spent_input: amountSpent,
-      projected_purchases,
+      projected_inquiries,
       interval_lower,
       interval_upper,
       model_id: latestModel.id,
@@ -117,7 +117,7 @@ export async function runSimulation(
     reach_input: reach,
     messaging_input: messaging,
     amount_spent_input: amountSpent,
-    projected_purchases,
+    projected_inquiries,
     interval_lower,
     interval_upper,
     model: {

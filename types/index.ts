@@ -20,7 +20,7 @@ export interface UploadResult {
 
 export interface SpearmanRow {
   variable: string
-  vs_purchases: number | null
+  vs_inquiries: number | null
   vs_messaging: number | null
 }
 
@@ -41,7 +41,7 @@ export interface SimulationOutput {
   reach_input: number
   messaging_input: number
   amount_spent_input: number
-  projected_purchases: number
+  projected_inquiries: number
   interval_lower: number
   interval_upper: number
   model: MLRModelInfo
@@ -56,7 +56,7 @@ export interface SimulationOutput {
 export interface MonthlyKpi {
   period: string
   total_spend: number
-  total_purchases: number
+  total_inquiries: number
   total_reach: number
   ad_count: number
 }

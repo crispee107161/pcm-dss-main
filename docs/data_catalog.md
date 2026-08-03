@@ -39,18 +39,18 @@ data/
 ## 1. Ads CSVs → T4 (`ads`)
 
 **Source:** Facebook Ads Manager, exported by John Bernard Olermo (Marketing Manager).  
-**DSS role:** Core predictor dataset. `amount_spent` is the regression predictor; `purchases` is the outcome variable. These records drive Stages 1, 2, and 3 of the analytics pipeline.
+**DSS role:** Core predictor dataset. `amount_spent` is the regression predictor; `inquiries` is the outcome variable. These records drive Stages 1, 2, and 3 of the analytics pipeline.
 
 ### Files
 
-| File | Period | Ad Records | PHP Spent | Records with Purchases | Total Purchases |
+| File | Period | Ad Records | PHP Spent | Records with Inquiries | Total Inquiries |
 |---|---|---|---|---|---|
 | `John-Bernard-Olermo-Ads-Sep-1-2025-Sep-30-2025.csv` | Sep 1–30, 2025 | 65 | ₱66,067.60 | 19 | 40 |
 | `John-Bernard-Olermo-Ads-Dec-1-2025-Dec-31-2025.csv` | Dec 1–31, 2025 | 93 | ₱77,678.81 | 14 | 93 |
 | `John-Bernard-Olermo-Ads-Jan-1-2026-Jan-27-2026.csv` | Jan 1–27, 2026 | 72 | ₱71,583.85 | 9 | 47 |
-| **Total** | | **230 records** | **₱215,330.26** | **42 records** | **180 purchases** |
+| **Total** | | **230 records** | **₱215,330.26** | **42 records** | **180 inquiries** |
 
-> The 42 purchase-bearing records across 3 files correspond exactly to the `n = 42` in the Chapter 3 regression equation (`Purchases = 1.8168 + 0.000705 × Amount Spent`, R² = 0.2658).
+> The 42 inquiry-bearing records across 3 files correspond exactly to the `n = 42` in the Chapter 3 regression equation (`Inquiries = 1.8168 + 0.000705 × Amount Spent`, R² = 0.2658).
 
 ### Schema (T4 field mapping)
 
@@ -66,7 +66,7 @@ data/
 | Link clicks | `link_clicks` | 27% missing — retained, excluded from computations |
 | Amount spent (PHP) | `amount_spent` | **Primary regression predictor** |
 | Total messaging contacts | `total_messaging_contacts` | 43.5% missing — retained, excluded from computations |
-| Purchases | `purchases` | **Regression outcome variable** — 81.7% missing |
+| Purchases | `inquiries` | Facebook's literal CSV header; interpreted as customer inquiries, not sales. **Regression outcome variable** — 81.7% missing |
 | Results | `results` | 28.7% missing |
 | Cost per results | `cost_per_result` | Stored as-is |
 | Attribution setting | `attribution_setting` | Always "7-day click or 1-day view" |
@@ -81,7 +81,7 @@ All 3 files use a single ad set: `"ALL REELS SHOP"` (Dec/Jan) and `"VIDEO REELS"
 | `link_clicks` | ~27% | Retained; excluded from regression/correlation |
 | `results` | ~28.7% | Retained |
 | `total_messaging_contacts` | ~43.5% | Retained; excluded from computations |
-| `purchases` | **81.7%** | Structural — only ads with conversion tracking have values; not a data error |
+| `inquiries` | **81.7%** | Structural — only ads with conversion tracking have values; not a data error |
 
 ---
 
@@ -216,7 +216,7 @@ All 7 files merge into a single `page_metrics` table keyed on `date` via UPSERT.
 | Gap | Impact | Notes |
 |---|---|---|
 | Only 3 months of ads data (Sep 2025, Dec 2025, Jan 2026) | Non-consecutive months block ARIMA/time-series | Planned: full 8-month dataset (Jan–Aug 2025) post-proposal approval |
-| 42 purchase records out of 230 total | Regression constrained to 1 predictor | 10-observations-per-predictor convention; VIF of all candidates was 26–158 |
+| 42 inquiry records out of 230 total | Regression constrained to 1 predictor | 10-observations-per-predictor convention; VIF of all candidates was 26–158 |
 | Organic posts only cover September 2025 | Correlation limited to 1 month | Expected to expand with the full dataset |
 | Page metrics cover only Sep 20 – Oct 17, 2025 | T9 is sparse | Dashboard display only — no analytical impact |
 | Demographics are a single snapshot | No longitudinal audience data | Treated as static reference; no date-based trend possible |

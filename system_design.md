@@ -88,7 +88,7 @@ pc-merchandise-dss/
 │   ├── kpi/
 │   │   └── MonthlyKpiCards.tsx       # Monthly totals per reporting period
 │   └── charts/
-│       └── SpendPurchaseLine.tsx     # Spend vs Purchases line chart (Client Component)
+│       └── SpendInquiryLine.tsx     # Spend vs Inquiries line chart (Client Component)
 │
 ├── prisma/
 │   ├── schema.prisma                 # Full schema (T1–T8, T5/T6 seeded, T9/T10 skipped)
@@ -198,7 +198,7 @@ model Ad {
   total_messaging_contacts    Int?                  // 43.5% missing — nullable; absent for awareness ads
   results                     Int?                  // 28.7% missing — nullable
   cost_per_result             Float?
-  purchases                   Int?                  // 81.7% missing — nullable; regression outcome
+  inquiries                   Int?                  // 81.7% missing — nullable; regression outcome
   category_id                 Int?
   category                    Category? @relation(fields: [category_id], references: [id])
   created_at                  DateTime  @default(now())
@@ -240,7 +240,7 @@ model SimulationResult {
   user_id             Int
   user                User     @relation(fields: [user_id], references: [id])
   amount_spent_input  Float                       // hypothetical spend in PHP
-  projected_purchases Float                       // regression output
+  projected_inquiries Float                       // regression output
   model_id            Int                         // which RegressionModel was used
   simulated_at        DateTime @default(now())
 }
@@ -275,7 +275,7 @@ export interface AdRecord {
   total_messaging_contacts: number | null
   results: number | null
   cost_per_result: number | null
-  purchases: number | null
+  inquiries: number | null
 }
 
 export interface PostRecord {
@@ -296,7 +296,7 @@ export interface PostRecord {
 // Analytics
 export interface SpearmanResult {
   variable: string
-  correlation_with_purchases: number
+  correlation_with_inquiries: number
   correlation_with_messaging: number
 }
 
@@ -305,12 +305,12 @@ export interface RegressionResult {
   coefficient: number
   r_squared: number
   n: number
-  equation: string  // formatted: "Purchases = 1.8168 + 0.000705 × Amount Spent"
+  equation: string  // formatted: "Inquiries = 1.8168 + 0.000705 × Amount Spent"
 }
 
 export interface SimulationOutput {
   amount_spent_input: number
-  projected_purchases: number
+  projected_inquiries: number
   model: RegressionResult
 }
 
@@ -332,7 +332,7 @@ export interface UploadResult {
 export interface MonthlyKpi {
   period: string       // "Sep 2025", "Dec 2025", "Jan 2026"
   total_spend: number
-  total_purchases: number
+  total_inquiries: number
   total_reach: number
   ad_count: number
 }
@@ -429,7 +429,7 @@ export const config = {
 Auto-detect by column header presence:
 
 ```typescript
-const ADS_REQUIRED_HEADERS = ['Ad name', 'Reporting starts', 'Amount spent (PHP)', 'Purchases']
+const ADS_REQUIRED_HEADERS = ['Ad name', 'Reporting starts', 'Amount spent (PHP)', 'Purchases'] // literal Facebook header; maps to internal 'inquiries'
 const POSTS_REQUIRED_HEADERS = ['Post ID', 'Publish time', 'Post type', 'Reach']
 
 export function detectUploadType(headers: string[]): UploadType {
@@ -495,7 +495,7 @@ export function parseCSV(text: string): { headers: string[]; rows: Record<string
 | `Total messaging contacts` | `total_messaging_contacts` | `parseInt` or `null` — absent for awareness ads |
 | `Results` | `results` | `parseInt` or `null` |
 | `Cost per results` | `cost_per_result` | `parseFloat` or `null` |
-| `Purchases` | `purchases` | `parseInt` or `null` |
+| `Purchases` (Facebook's literal header, interpreted as inquiries) | `inquiries` | `parseInt` or `null` |
 | *(omit all others)* | — | — |
 
 **UPSERT key:** `(ad_name, reporting_starts)`
@@ -621,17 +621,17 @@ export function spearmanCorrelation(x: (number | null)[], y: (number | null)[]):
 
 // Variables to correlate: reach, impressions, reactions, comments, shares,
 // engagement_rate (posts), amount_spent, link_clicks (ads)
-// Outcomes: purchases, total_messaging_contacts
+// Outcomes: inquiries, total_messaging_contacts
 
 export async function computeSpearmanMatrix(): Promise<SpearmanResult[]> {
   const ads = await prisma.ad.findMany()
   const posts = await prisma.facebookPost.findMany()
-  // Build paired arrays from ads (all have amount_spent; purchases mostly null)
+  // Build paired arrays from ads (all have amount_spent; inquiries mostly null)
   // Return correlation of each predictor vs each outcome
 }
 ```
 
-**Validation target:** `amount_spent` vs `purchases` correlation should be consistent with the SLR R² = 0.2658 (Spearman ρ ≈ 0.52).
+**Validation target:** `amount_spent` vs `inquiries` correlation should be consistent with the SLR R² = 0.2658 (Spearman ρ ≈ 0.52).
 
 ### Stage 2 — Simple Linear Regression (`lib/stats/regression.ts`)
 
@@ -663,27 +663,27 @@ export function fitLinearRegression(pairs: SLRInput[]): RegressionResult {
     coefficient,
     r_squared,
     n,
-    equation: `Purchases = ${intercept.toFixed(4)} + ${coefficient.toFixed(6)} × Amount Spent`,
+    equation: `Inquiries = ${intercept.toFixed(4)} + ${coefficient.toFixed(6)} × Amount Spent`,
   }
 }
 
 export async function maybeRetrainRegression(): Promise<boolean> {
-  // Pull all ads where purchases IS NOT NULL
+  // Pull all ads where inquiries IS NOT NULL
   const pairs = await prisma.ad.findMany({
-    where: { purchases: { not: null } },
-    select: { amount_spent: true, purchases: true },
+    where: { inquiries: { not: null } },
+    select: { amount_spent: true, inquiries: true },
   })
   if (pairs.length < 10) return false  // minimum sample guard
 
   const result = fitLinearRegression(
-    pairs.map(p => ({ x: p.amount_spent, y: p.purchases! }))
+    pairs.map(p => ({ x: p.amount_spent, y: p.inquiries! }))
   )
   await prisma.regressionModel.create({ data: result })
   return true
 }
 ```
 
-**Validation target:** With all 3 CSV files loaded (n = 42 purchase records):
+**Validation target:** With all 3 CSV files loaded (n = 42 inquiry records):
 - Intercept ≈ 1.8168
 - Coefficient ≈ 0.000705
 - R² ≈ 0.2658
@@ -706,20 +706,20 @@ export async function runSimulation(
     data: {
       user_id: userId,
       amount_spent_input: amountSpent,
-      projected_purchases: projected,
+      projected_inquiries: projected,
       model_id: model.id,
     },
   })
 
   return {
     amount_spent_input: amountSpent,
-    projected_purchases: projected,
+    projected_inquiries: projected,
     model: {
       intercept: model.intercept,
       coefficient: model.coefficient,
       r_squared: model.r_squared,
       n: model.n,
-      equation: `Purchases = ${model.intercept.toFixed(4)} + ${model.coefficient.toFixed(6)} × Amount Spent`,
+      equation: `Inquiries = ${model.intercept.toFixed(4)} + ${model.coefficient.toFixed(6)} × Amount Spent`,
     },
   }
 }
@@ -749,7 +749,7 @@ export async function runSimulation(
 │  2025-09-30  Sep-01-...-posts.csv  Posts   81 ins   ✓   │
 ├─────────────────────────────────────────────────────────┤
 │  ANALYTICS SUMMARY                                       │
-│  Spearman: amount_spent ↔ purchases  ρ ≈ 0.52           │
+│  Spearman: amount_spent ↔ inquiries  ρ ≈ 0.52           │
 │  Regression: n=42  R²=0.2658  [View full analytics →]  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -768,25 +768,25 @@ export async function runSimulation(
 │  ┌──────────┬──────────┬──────────┐                     │
 │  │ Sep 2025 │ Dec 2025 │ Jan 2026 │                     │
 │  │ ₱66,068  │ ₱77,679  │ ₱71,584  │  ← total spend     │
-│  │ 40 purch │ 93 purch │ 47 purch │  ← total purchases │
+│  │ 40 purch │ 93 purch │ 47 purch │  ← total inquiries │
 │  └──────────┴──────────┴──────────┘                     │
 ├─────────────────────────────────────────────────────────┤
 │  SPEARMAN CORRELATION                                    │
 │  [Heatmap: 8 predictors × 2 outcomes]                   │
-│  Variable                  vs Purchases  vs Messaging   │
+│  Variable                  vs Inquiries  vs Messaging   │
 │  amount_spent              0.52          0.68           │
 │  reach                     0.41          0.59           │
 │  impressions               0.38          0.56           │
 │  ...                                                    │
 ├─────────────────────────────────────────────────────────┤
 │  REGRESSION MODEL                                        │
-│  Purchases = 1.8168 + 0.000705 × Amount Spent           │
+│  Inquiries = 1.8168 + 0.000705 × Amount Spent           │
 │  R² = 0.2658   n = 42   Trained: 2026-01-28            │
 │  [Regression line chart]  [Residual plot]               │
 ├─────────────────────────────────────────────────────────┤
 │  WHAT-IF SIMULATION                                      │
 │  If I spend: [₱ ___________]  [Simulate]               │
-│  Projected purchases: 57                                 │
+│  Projected inquiries: 57                                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -803,20 +803,20 @@ export async function runSimulation(
 ├─────────────────────────────────────────────────────────┤
 │  AD SPEND OVERVIEW                                       │
 │  Total spend across 3 months: ₱215,330.26               │
-│  Total purchases recorded:    180                        │
+│  Total inquiries recorded:    180                        │
 │  Total ads tracked:           230                        │
 ├─────────────────────────────────────────────────────────┤
 │  PREDICTIVE MODEL                                        │
-│  Purchases = 1.8168 + 0.000705 × Amount Spent           │
+│  Inquiries = 1.8168 + 0.000705 × Amount Spent           │
 │  Explained variance (R²): 26.58%                        │
-│  Based on 42 purchase-bearing ad records                │
+│  Based on 42 inquiry-bearing ad records                │
 ├─────────────────────────────────────────────────────────┤
 │  WHAT-IF SIMULATION                                      │
 │  If I spend: [₱ ___________]  [Simulate]               │
-│  Projected purchases: —                                  │
+│  Projected inquiries: —                                  │
 │                                                          │
 │  SIMULATION HISTORY                                      │
-│  Date        Spend Input   Projected Purchases           │
+│  Date        Spend Input   Projected Inquiries           │
 │  2026-04-07  ₱80,000       58.3                         │
 │  2026-04-06  ₱100,000      72.2                         │
 └─────────────────────────────────────────────────────────┘
@@ -857,7 +857,7 @@ async function getMonthlyKpis(): Promise<MonthlyKpi[]> {
     select: {
       reporting_starts: true,
       amount_spent: true,
-      purchases: true,
+      inquiries: true,
       reach: true,
     },
   })
@@ -865,11 +865,11 @@ async function getMonthlyKpis(): Promise<MonthlyKpi[]> {
   const grouped = new Map<string, MonthlyKpi>()
   for (const ad of ads) {
     const period = ad.reporting_starts.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
-    const existing = grouped.get(period) ?? { period, total_spend: 0, total_purchases: 0, total_reach: 0, ad_count: 0 }
+    const existing = grouped.get(period) ?? { period, total_spend: 0, total_inquiries: 0, total_reach: 0, ad_count: 0 }
     grouped.set(period, {
       period,
       total_spend: existing.total_spend + ad.amount_spent,
-      total_purchases: existing.total_purchases + (ad.purchases ?? 0),
+      total_inquiries: existing.total_inquiries + (ad.inquiries ?? 0),
       total_reach: existing.total_reach + ad.reach,
       ad_count: existing.ad_count + 1,
     })
@@ -1061,7 +1061,7 @@ Execute strictly in order — each step depends on the previous being stable and
 | 2 | Write `prisma/schema.prisma` → `prisma migrate dev` → `prisma db seed` | `prisma studio` shows 3 users, categories, keywords |
 | 3 | NextAuth.js v5 setup → login page → middleware role guards | All 3 users can log in and are redirected correctly; cross-role access blocked |
 | 4 | Upload Server Action → CSV parse → validate → UPSERT → upload log | Upload all 4 CSVs (3 Ads + 1 Posts); DB shows correct record counts |
-| 5 | `computeSpearmanMatrix()` → validate output against known data | `amount_spent` vs `purchases` ρ consistent with R²=0.2658 |
+| 5 | `computeSpearmanMatrix()` → validate output against known data | `amount_spent` vs `inquiries` ρ consistent with R²=0.2658 |
 | 6 | `fitLinearRegression()` + `maybeRetrainRegression()` + auto-retrain trigger | Intercept ≈ 1.8168, coefficient ≈ 0.000705, R² ≈ 0.2658 |
 | 7 | `runSimulation()` + SimulationResult persistence | Simulation returns sensible values; logged to DB |
 | 8 | Marketing Manager dashboard (upload form + history + summary) | Upload works end-to-end from UI |
@@ -1078,9 +1078,9 @@ Verified by reading every file. Upload pipeline must handle exactly these files.
 
 | File | Encoding | Rows | MVP? | Key parsing notes |
 |---|---|---|---|---|
-| `Ads/...-Sep-2025.csv` | UTF-8 BOM | 65 | **Yes** | Conversion-type ads only; `reach` present; `purchases` on 19/65 |
-| `Ads/...-Dec-2025.csv` | UTF-8 BOM | 93 | **Yes** | Mostly conversion; some awareness ads appear; `purchases` on 14/93 |
-| `Ads/...-Jan-2026.csv` | UTF-8 BOM | 72 | **Yes** | Mix of conversion + awareness; awareness ads have no `reach`; Unicode ad names (𝐑𝐘𝐙𝐄𝐍); `purchases` on 9/72 |
+| `Ads/...-Sep-2025.csv` | UTF-8 BOM | 65 | **Yes** | Conversion-type ads only; `reach` present; `inquiries` on 19/65 |
+| `Ads/...-Dec-2025.csv` | UTF-8 BOM | 93 | **Yes** | Mostly conversion; some awareness ads appear; `inquiries` on 14/93 |
+| `Ads/...-Jan-2026.csv` | UTF-8 BOM | 72 | **Yes** | Mix of conversion + awareness; awareness ads have no `reach`; Unicode ad names (𝐑𝐘𝐙𝐄𝐍); `inquiries` on 9/72 |
 | `Organic Posts/Sep-2025.csv` | UTF-8 BOM | 81 | **Yes** | 35+ columns; keep 11; compute `engagement_rate`; 44.4% missing `description` |
 | `Demographics/FollowerGender.csv` | UTF-8 | 3 | No | `Gender`, `Distribution` |
 | `Demographics/FollowerTopTerritories.csv` | UTF-8 | 11 | No | `Top territories`, `Distribution` |
@@ -1102,9 +1102,9 @@ Mirrors `docs/mvp.md` exactly — system is complete when:
 
 - [ ] Marketing Manager can log in, upload a Facebook Insights CSV and an Ads Manager CSV, and see records stored
 - [ ] Spearman correlation runs and shows a coefficient table with heatmap
-- [ ] Regression trains on records with non-null purchases and shows the equation + R²
-- [ ] Regression auto-retrains after a new upload adds purchase records
-- [ ] Any user can run a What-If simulation and get a projected purchase estimate
+- [ ] Regression trains on records with non-null inquiries and shows the equation + R²
+- [ ] Regression auto-retrains after a new upload adds inquiry records
+- [ ] Any user can run a What-If simulation and get a projected inquiry estimate
 - [ ] All three role dashboards load with relevant outputs
 - [ ] Every upload is logged to `upload_logs` regardless of success or failure
 - [ ] Invalid or malformed CSV files show specific error messages, not crashes

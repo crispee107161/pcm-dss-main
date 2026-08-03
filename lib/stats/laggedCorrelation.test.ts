@@ -35,15 +35,15 @@ describe('expandAndAggregate', () => {
         reach: 200,
         total_messaging_contacts: 20,
         amount_spent: 100,
-        purchases: 10,
+        inquiries: 10,
       },
     ]
 
     const result = expandAndAggregate(ads)
 
     expect(result.size).toBe(2)
-    expect(result.get('2026-01-01')).toEqual({ reach: 100, messaging: 10, amount_spent: 50, purchases: 5 })
-    expect(result.get('2026-01-02')).toEqual({ reach: 100, messaging: 10, amount_spent: 50, purchases: 5 })
+    expect(result.get('2026-01-01')).toEqual({ reach: 100, messaging: 10, amount_spent: 50, inquiries: 5 })
+    expect(result.get('2026-01-02')).toEqual({ reach: 100, messaging: 10, amount_spent: 50, inquiries: 5 })
   })
 
   it('sums contributions from overlapping ads onto the same day', () => {
@@ -53,14 +53,14 @@ describe('expandAndAggregate', () => {
       reach: 50,
       total_messaging_contacts: 5,
       amount_spent: 25,
-      purchases: 2,
+      inquiries: 2,
     }
     const result = expandAndAggregate([sameDayAd, sameDayAd])
 
-    expect(result.get('2026-01-01')).toEqual({ reach: 100, messaging: 10, amount_spent: 50, purchases: 4 })
+    expect(result.get('2026-01-01')).toEqual({ reach: 100, messaging: 10, amount_spent: 50, inquiries: 4 })
   })
 
-  it('treats null purchases/reach/messaging as zero rather than throwing', () => {
+  it('treats null inquiries/reach/messaging as zero rather than throwing', () => {
     const ads = [
       {
         reporting_starts: new Date('2026-01-01'),
@@ -68,10 +68,10 @@ describe('expandAndAggregate', () => {
         reach: null,
         total_messaging_contacts: null,
         amount_spent: 10,
-        purchases: null,
+        inquiries: null,
       },
     ]
-    expect(expandAndAggregate(ads).get('2026-01-01')).toEqual({ reach: 0, messaging: 0, amount_spent: 10, purchases: 0 })
+    expect(expandAndAggregate(ads).get('2026-01-01')).toEqual({ reach: 0, messaging: 0, amount_spent: 10, inquiries: 0 })
   })
 })
 
@@ -87,7 +87,7 @@ describe('computeLaggedCorrelations', () => {
     expect(result.results).toEqual([])
   })
 
-  it('identifies the correct lag when purchases are an exact function of reach N days earlier', async () => {
+  it('identifies the correct lag when inquiries are an exact function of reach N days earlier', async () => {
     // An irregular (non-monotonic) reach sequence so that only the true lag
     // reconstructs it — a monotonic sequence would correlate at every lag.
     const reach = [120, 340, 90, 500, 210, 60, 430, 150, 280, 20, 390, 460, 100, 310, 70, 480, 200, 40, 350, 260]
@@ -96,14 +96,14 @@ describe('computeLaggedCorrelations', () => {
     const ads = reach.map((r, d) => {
       const date = new Date('2026-01-01')
       date.setDate(date.getDate() + d)
-      const purchases = d < TRUE_LAG ? 0 : reach[d - TRUE_LAG]
+      const inquiries = d < TRUE_LAG ? 0 : reach[d - TRUE_LAG]
       return {
         reporting_starts: date,
         reporting_ends: date,
         reach: r,
         total_messaging_contacts: 0,
         amount_spent: 1,
-        purchases,
+        inquiries,
       }
     })
 

@@ -11,7 +11,7 @@ function formatNum(v: number) {
   return new Intl.NumberFormat('en-PH').format(v)
 }
 
-function formatConvRate(rate: number): string {
+function formatInquiryRate(rate: number): string {
   if (rate <= 0) return '—'
   return `1 per ${Math.round(1 / rate).toLocaleString()}`
 }
@@ -32,7 +32,7 @@ export default async function CategoryPerformancePage() {
   const [categories, allAds, allPosts] = await Promise.all([
     prisma.category.findMany({ orderBy: { name: 'asc' } }),
     prisma.ad.findMany({
-      select: { category_id: true, amount_spent: true, purchases: true, reach: true },
+      select: { category_id: true, amount_spent: true, inquiries: true, reach: true },
     }),
     prisma.facebookPost.findMany({
       select: { category_id: true, engagement_rate: true, reach: true },
@@ -46,10 +46,10 @@ export default async function CategoryPerformancePage() {
 
     const ad_count       = ads.length
     const total_spend    = ads.reduce((s, a) => s + a.amount_spent, 0)
-    const total_purchases = ads.reduce((s, a) => s + (a.purchases ?? 0), 0)
+    const total_inquiries = ads.reduce((s, a) => s + (a.inquiries ?? 0), 0)
     const total_reach    = ads.reduce((s, a) => s + (a.reach ?? 0), 0)
-    const cpa            = total_purchases > 0 ? total_spend / total_purchases : null
-    const purchase_rate  = total_reach > 0 && total_purchases > 0 ? total_purchases / total_reach : null
+    const cpi            = total_inquiries > 0 ? total_spend / total_inquiries : null
+    const inquiry_rate   = total_reach > 0 && total_inquiries > 0 ? total_inquiries / total_reach : null
 
     const post_count      = posts.length
     const total_post_reach = posts.reduce((s, p) => s + p.reach, 0)
@@ -57,7 +57,7 @@ export default async function CategoryPerformancePage() {
       ? posts.reduce((s, p) => s + p.engagement_rate, 0) / posts.length
       : null
 
-    return { cat, ad_count, total_spend, total_purchases, total_reach, cpa, purchase_rate, post_count, total_post_reach, avg_engagement }
+    return { cat, ad_count, total_spend, total_inquiries, total_reach, cpi, inquiry_rate, post_count, total_post_reach, avg_engagement }
   })
 
   // Only show categories that have at least one ad or post assigned
@@ -65,19 +65,19 @@ export default async function CategoryPerformancePage() {
   const uncategorized_ads   = allAds.filter(a => a.category_id === null).length
   const uncategorized_posts = allPosts.filter(p => p.category_id === null).length
 
-  // Sort by total purchases desc, then spend
+  // Sort by total inquiries desc, then spend
   const sorted = [...active].sort((a, b) =>
-    b.total_purchases !== a.total_purchases
-      ? b.total_purchases - a.total_purchases
+    b.total_inquiries !== a.total_inquiries
+      ? b.total_inquiries - a.total_inquiries
       : b.total_spend - a.total_spend
   )
 
   const maxSpend     = Math.max(...sorted.map(r => r.total_spend), 1)
-  const maxPurchases = Math.max(...sorted.map(r => r.total_purchases), 1)
+  const maxInquiries = Math.max(...sorted.map(r => r.total_inquiries), 1)
   const maxEngagement = Math.max(...sorted.map(r => r.avg_engagement ?? 0), 1)
 
   const totalSpend     = allAds.reduce((s, a) => s + a.amount_spent, 0)
-  const totalPurchases = allAds.reduce((s, a) => s + (a.purchases ?? 0), 0)
+  const totalInquiries = allAds.reduce((s, a) => s + (a.inquiries ?? 0), 0)
 
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-6">
@@ -91,17 +91,17 @@ export default async function CategoryPerformancePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: 'Categories tracked', value: active.length, sub: `of ${categories.length} total` },
-            { label: 'Top by purchases', value: sorted[0]?.cat.name ?? '—', sub: `${formatNum(sorted[0]?.total_purchases ?? 0)} purchases` },
-            { label: 'Lowest CPA', value: (() => {
-                const withCpa = sorted.filter(r => r.cpa !== null)
-                if (!withCpa.length) return '—'
-                const best = withCpa.reduce((a, b) => (a.cpa! < b.cpa! ? a : b))
+            { label: 'Top by inquiries', value: sorted[0]?.cat.name ?? '—', sub: `${formatNum(sorted[0]?.total_inquiries ?? 0)} inquiries` },
+            { label: 'Lowest CPI', value: (() => {
+                const withCpi = sorted.filter(r => r.cpi !== null)
+                if (!withCpi.length) return '—'
+                const best = withCpi.reduce((a, b) => (a.cpi! < b.cpi! ? a : b))
                 return best.cat.name
               })(), sub: (() => {
-                const withCpa = sorted.filter(r => r.cpa !== null)
-                if (!withCpa.length) return ''
-                const best = withCpa.reduce((a, b) => (a.cpa! < b.cpa! ? a : b))
-                return formatPHP(best.cpa!)
+                const withCpi = sorted.filter(r => r.cpi !== null)
+                if (!withCpi.length) return ''
+                const best = withCpi.reduce((a, b) => (a.cpi! < b.cpi! ? a : b))
+                return formatPHP(best.cpi!)
               })() },
             { label: 'Best engagement', value: (() => {
                 const withEng = sorted.filter(r => r.avg_engagement !== null)
@@ -147,9 +147,9 @@ export default async function CategoryPerformancePage() {
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-left">Category</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Ads</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Total Spend</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Purchases</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">CPA</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Conv. Rate</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Inquiries</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">CPI</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Inquiry Rate</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden md:table-cell">Reach</th>
                 </tr>
               </thead>
@@ -171,20 +171,20 @@ export default async function CategoryPerformancePage() {
                       )}
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <div className="font-bold text-red-600">{formatNum(r.total_purchases)}</div>
-                      <GradeBar value={r.total_purchases} max={maxPurchases} color="bg-red-400" />
-                      {totalPurchases > 0 && (
-                        <div className="text-[10px] text-gray-400 mt-0.5 hidden sm:block">{((r.total_purchases / totalPurchases) * 100).toFixed(1)}% of total</div>
+                      <div className="font-bold text-red-600">{formatNum(r.total_inquiries)}</div>
+                      <GradeBar value={r.total_inquiries} max={maxInquiries} color="bg-red-400" />
+                      {totalInquiries > 0 && (
+                        <div className="text-[10px] text-gray-400 mt-0.5 hidden sm:block">{((r.total_inquiries / totalInquiries) * 100).toFixed(1)}% of total</div>
                       )}
                     </td>
                     <td className="px-4 py-4 text-right hidden sm:table-cell">
-                      {r.cpa !== null
-                        ? <span className="font-semibold text-gray-700">{formatPHP(r.cpa)}</span>
+                      {r.cpi !== null
+                        ? <span className="font-semibold text-gray-700">{formatPHP(r.cpi)}</span>
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-4 text-right hidden sm:table-cell">
-                      {r.purchase_rate !== null
-                        ? <span className="font-semibold text-gray-700">{formatConvRate(r.purchase_rate)}</span>
+                      {r.inquiry_rate !== null
+                        ? <span className="font-semibold text-gray-700">{formatInquiryRate(r.inquiry_rate)}</span>
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-4 text-right text-gray-600 hidden md:table-cell">{formatNum(r.total_reach)}</td>

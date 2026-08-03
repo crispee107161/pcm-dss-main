@@ -6,6 +6,8 @@ export type CsvType =
   | 'PAGE_VIEWERS_CSV'
   | 'DEMOGRAPHICS_CSV'
 
+// 'Purchases' is Facebook's literal export header — external data we don't control.
+// Do not rename this string; it maps to our internal 'inquiries' field in validate-ads.ts.
 const ADS_REQUIRED_HEADERS    = ['Ad name', 'Reporting starts', 'Amount spent (PHP)', 'Purchases']
 // Older Facebook exports (pre-2025) omit Reach/Views — Post ID + Publish time + Post type is unique enough
 const POSTS_REQUIRED_HEADERS  = ['Post ID', 'Publish time', 'Post type']

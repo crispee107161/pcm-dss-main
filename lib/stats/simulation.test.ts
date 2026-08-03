@@ -62,7 +62,7 @@ describe('runSimulation', () => {
     const noise = Math.sqrt(-2 * Math.log(0.5)) * Math.cos(2 * Math.PI * 0.5) * model.residual_std_error
     const expected = Math.max(0, basePredict + noise)
 
-    expect(result.projected_purchases).toBeCloseTo(expected, 6)
+    expect(result.projected_inquiries).toBeCloseTo(expected, 6)
     expect(result.interval_lower).toBeCloseTo(expected, 6)
     expect(result.interval_upper).toBeCloseTo(expected, 6)
   })

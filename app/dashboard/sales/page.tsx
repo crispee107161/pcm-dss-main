@@ -47,7 +47,7 @@ async function getMonthlyKpis(
     kpis.push({
       period: target.label,
       total_spend: ads.reduce((s, a) => s + a.amount_spent, 0),
-      total_purchases: ads.reduce((s, a) => s + (a.purchases ?? 0), 0),
+      total_inquiries: ads.reduce((s, a) => s + (a.inquiries ?? 0), 0),
       total_reach: ads.reduce((s, a) => s + (a.reach ?? 0), 0),
       ad_count: ads.length,
     })
@@ -63,13 +63,13 @@ export default async function SalesDashboard() {
 
   const targetMonths = await getRecentTargetMonths()
 
-  const [monthlyKpis, spearmanRows, latestModel, allAds, topSpend, topPurchases, genderData, territoryData, allAdsForHealth] =
+  const [monthlyKpis, spearmanRows, latestModel, allAds, topSpend, topInquiries, genderData, territoryData, allAdsForHealth] =
     await Promise.all([
       getMonthlyKpis(targetMonths),
       computeSpearmanMatrix(),
       prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
       prisma.ad.findMany({
-        select: { reporting_starts: true, amount_spent: true, purchases: true, reach: true, total_messaging_contacts: true },
+        select: { reporting_starts: true, amount_spent: true, inquiries: true, reach: true, total_messaging_contacts: true },
       }),
       prisma.ad.findMany({
         orderBy: { amount_spent: 'desc' },
@@ -77,15 +77,15 @@ export default async function SalesDashboard() {
         select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
       }),
       prisma.ad.findMany({
-        where: { purchases: { gt: 0 } },
-        orderBy: { purchases: 'desc' },
+        where: { inquiries: { gt: 0 } },
+        orderBy: { inquiries: 'desc' },
         take: 5,
-        select: { ad_name: true, ad_set_name: true, purchases: true, reporting_starts: true, reporting_ends: true },
+        select: { ad_name: true, ad_set_name: true, inquiries: true, reporting_starts: true, reporting_ends: true },
       }),
       prisma.followerGender.findMany(),
       prisma.followerTerritory.findMany(),
       prisma.ad.findMany({
-        select: { id: true, ad_name: true, ad_set_name: true, amount_spent: true, purchases: true, reach: true, reporting_starts: true, reporting_ends: true },
+        select: { id: true, ad_name: true, ad_set_name: true, amount_spent: true, inquiries: true, reach: true, reporting_starts: true, reporting_ends: true },
       }),
     ])
 
@@ -99,10 +99,10 @@ export default async function SalesDashboard() {
       return d >= start && d <= end
     })
     const total_spend     = ads.reduce((s, a) => s + a.amount_spent, 0)
-    const total_purchases = ads.reduce((s, a) => s + (a.purchases ?? 0), 0)
+    const total_inquiries = ads.reduce((s, a) => s + (a.inquiries ?? 0), 0)
     const total_reach     = ads.reduce((s, a) => s + (a.reach ?? 0), 0)
     const ad_count        = ads.length
-    return { period: label, total_spend, total_purchases, total_reach, ad_count, avg_spend_per_ad: ad_count > 0 ? total_spend / ad_count : 0 }
+    return { period: label, total_spend, total_inquiries, total_reach, ad_count, avg_spend_per_ad: ad_count > 0 ? total_spend / ad_count : 0 }
   })
 
   const lastTwo = adTrends.slice(-2)
@@ -110,9 +110,9 @@ export default async function SalesDashboard() {
     lastTwo.length === 2 && lastTwo[0].total_spend > 0
       ? ((lastTwo[1].total_spend - lastTwo[0].total_spend) / lastTwo[0].total_spend) * 100
       : null
-  const purchaseDelta =
-    lastTwo.length === 2 && lastTwo[0].total_purchases > 0
-      ? ((lastTwo[1].total_purchases - lastTwo[0].total_purchases) / lastTwo[0].total_purchases) * 100
+  const inquiryDelta =
+    lastTwo.length === 2 && lastTwo[0].total_inquiries > 0
+      ? ((lastTwo[1].total_inquiries - lastTwo[0].total_inquiries) / lastTwo[0].total_inquiries) * 100
       : null
 
   const serialisedTopSpend = topSpend.map(a => ({
@@ -121,7 +121,7 @@ export default async function SalesDashboard() {
     reporting_ends:   a.reporting_ends?.toISOString()   ?? null,
   }))
 
-  const serialisedTopPurchases = topPurchases.map(a => ({
+  const serialisedTopInquiries = topInquiries.map(a => ({
     ...a,
     reporting_starts: a.reporting_starts?.toISOString() ?? null,
     reporting_ends:   a.reporting_ends?.toISOString()   ?? null,
@@ -151,9 +151,9 @@ export default async function SalesDashboard() {
       monthlyKpis={monthlyKpis}
       adTrends={adTrends}
       spendDelta={spendDelta}
-      purchaseDelta={purchaseDelta}
+      inquiryDelta={inquiryDelta}
       topSpend={serialisedTopSpend}
-      topPurchases={serialisedTopPurchases}
+      topInquiries={serialisedTopInquiries}
       genderData={genderData}
       territoryData={territoryData}
       scoredAds={serialisedScoredAds as any}

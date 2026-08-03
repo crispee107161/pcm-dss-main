@@ -13,7 +13,7 @@ export interface AdRecord {
   total_messaging_contacts: number | null
   results: number | null
   cost_per_result: number | null
-  purchases: number | null
+  inquiries: number | null
 }
 
 function parseIntOrNull(value: string | undefined): number | null {
@@ -83,7 +83,9 @@ export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
       )
       const results = parseIntOrNull(row['Results'])
       const cost_per_result = parseFloatOrNull(row['Cost per result'])
-      const purchases = parseIntOrNull(row['Purchases'] ?? row['Purchase'])
+      // 'Purchases' is Facebook's literal export header — external data we don't control.
+      // We interpret this count as customer inquiries; map it to our internal field name here.
+      const inquiries = parseIntOrNull(row['Purchases'] ?? row['Purchase'])
 
       return {
         reporting_starts,
@@ -98,7 +100,7 @@ export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
         total_messaging_contacts,
         results,
         cost_per_result,
-        purchases,
+        inquiries,
       }
     } catch (err) {
       throw new Error(`Row ${index + 1}: ${(err as Error).message}`)

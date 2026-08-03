@@ -7,16 +7,16 @@ export interface AdSetAllocation {
   pct: number
   projected_reach: number
   projected_messaging: number
-  projected_purchases: number
+  projected_inquiries: number
   interval_lower: number
   interval_upper: number
-  historical_cpa: number | null
-  historical_purchases: number
+  historical_cpi: number | null
+  historical_inquiries: number
 }
 
 export interface AllocationResult {
   total_budget: number
-  total_projected_purchases: number
+  total_projected_inquiries: number
   allocations: AdSetAllocation[]
   model_r_squared: number
   model_type: string
@@ -31,7 +31,7 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
       select: {
         ad_set_name: true,
         amount_spent: true,
-        purchases: true,
+        inquiries: true,
         reach: true,
         total_messaging_contacts: true,
       },
@@ -44,7 +44,7 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
   // Group by ad set
   const grouped = new Map<string, {
     total_spend: number
-    total_purchases: number
+    total_inquiries: number
     total_reach: number
     total_messaging: number
     count: number
@@ -53,38 +53,38 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
   for (const ad of ads) {
     const key = ad.ad_set_name
     const existing = grouped.get(key) ?? {
-      total_spend: 0, total_purchases: 0, total_reach: 0,
+      total_spend: 0, total_inquiries: 0, total_reach: 0,
       total_messaging: 0, count: 0,
     }
     grouped.set(key, {
       total_spend:     existing.total_spend + ad.amount_spent,
-      total_purchases: existing.total_purchases + (ad.purchases ?? 0),
+      total_inquiries: existing.total_inquiries + (ad.inquiries ?? 0),
       total_reach:     existing.total_reach + (ad.reach ?? 0),
       total_messaging: existing.total_messaging + (ad.total_messaging_contacts ?? 0),
       count:           existing.count + 1,
     })
   }
 
-  // Only include ad sets with spend > 0 and at least 1 purchase
+  // Only include ad sets with spend > 0 and at least 1 inquiry
   const eligible = [...grouped.entries()]
-    .filter(([, g]) => g.total_spend > 0 && g.total_purchases > 0)
+    .filter(([, g]) => g.total_spend > 0 && g.total_inquiries > 0)
     .map(([name, g]) => {
-      // Laplace-smoothed efficiency: add a pseudo-count of 1 purchase at the group's own CPA
-      // so that ad sets with very few purchases don't appear artificially superior
-      const cpaEstimate = g.total_spend / Math.max(g.total_purchases, 1)
-      const smoothedPurchases = g.total_purchases + 1
-      const smoothedSpend = g.total_spend + cpaEstimate
+      // Laplace-smoothed efficiency: add a pseudo-count of 1 inquiry at the group's own CPI
+      // so that ad sets with very few inquiries don't appear artificially superior
+      const cpiEstimate = g.total_spend / Math.max(g.total_inquiries, 1)
+      const smoothedInquiries = g.total_inquiries + 1
+      const smoothedSpend = g.total_spend + cpiEstimate
       return {
         name,
-        efficiency: smoothedPurchases / smoothedSpend,
+        efficiency: smoothedInquiries / smoothedSpend,
         reach_per_peso:     g.total_reach / g.total_spend,
         messaging_per_peso: g.total_messaging / g.total_spend,
-        historical_cpa: g.total_purchases > 0 ? g.total_spend / g.total_purchases : null,
-        historical_purchases: g.total_purchases,
+        historical_cpi: g.total_inquiries > 0 ? g.total_spend / g.total_inquiries : null,
+        historical_inquiries: g.total_inquiries,
       }
     })
 
-  if (eligible.length === 0) throw new Error('No ad sets with purchase data found. Ensure your uploaded ads include purchase counts.')
+  if (eligible.length === 0) throw new Error('No ad sets with inquiry data found. Ensure your uploaded ads include inquiry counts.')
 
   // Global average ratios — fallback when an ad set has no historical data for a metric
   const globalReachPerPeso     = eligible.reduce((s, g) => s + g.reach_per_peso, 0)     / eligible.length
@@ -110,7 +110,7 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
     const projected_reach     = Math.round(allocated_spend * (g.reach_per_peso     || globalReachPerPeso))
     const projected_messaging = Math.round(allocated_spend * (g.messaging_per_peso || globalMessagingPerPeso))
 
-    const projected_purchases = Math.max(
+    const projected_inquiries = Math.max(
       0,
       predictFromModel(m, projected_reach, projected_messaging, allocated_spend),
     )
@@ -121,19 +121,19 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
       pct,
       projected_reach,
       projected_messaging,
-      projected_purchases,
-      interval_lower: Math.max(0, projected_purchases - Z_80 * predSE),
-      interval_upper: projected_purchases + Z_80 * predSE,
-      historical_cpa: g.historical_cpa,
-      historical_purchases: g.historical_purchases,
+      projected_inquiries,
+      interval_lower: Math.max(0, projected_inquiries - Z_80 * predSE),
+      interval_upper: projected_inquiries + Z_80 * predSE,
+      historical_cpi: g.historical_cpi,
+      historical_inquiries: g.historical_inquiries,
     }
   })
 
-  const total_projected_purchases = allocations.reduce((s, a) => s + a.projected_purchases, 0)
+  const total_projected_inquiries = allocations.reduce((s, a) => s + a.projected_inquiries, 0)
 
   return {
     total_budget: totalBudget,
-    total_projected_purchases,
+    total_projected_inquiries,
     allocations,
     model_r_squared: m.r_squared,
     model_type: modelType,
