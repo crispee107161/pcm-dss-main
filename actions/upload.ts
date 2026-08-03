@@ -21,15 +21,13 @@ import { revalidatePath } from 'next/cache'
 import type { UploadResult, UploadType } from '@/types/index'
 
 export async function revalidateDashboards() {
-  revalidatePath('/dashboard/marketing')
-  revalidatePath('/dashboard/marketing/page-metrics')
-  revalidatePath('/dashboard/sales')
+  revalidatePath('/dashboard/marketing', 'layout')
+  revalidatePath('/dashboard/sales', 'layout')
 }
 
 export async function uploadCSV(
   prevState: UploadResult | null,
-  formData: FormData,
-  skipRevalidate = false
+  formData: FormData
 ): Promise<UploadResult> {
   const session = await auth()
 
@@ -118,7 +116,9 @@ export async function uploadCSV(
         records_inserted  = inserted
         records_updated   = updated
         records_unchanged = unchanged
-        retrained = await maybeRetrainRegression()
+        if (inserted > 0 || updated > 0) {
+          retrained = await maybeRetrainRegression()
+        }
 
       } else if (csvType === 'POSTS_CSV') {
         const postRecords = validatePostsRows(rows)
@@ -165,12 +165,6 @@ export async function uploadCSV(
         error_message: null,
       },
     })
-
-    if (!skipRevalidate) {
-      revalidatePath('/dashboard/marketing')
-      revalidatePath('/dashboard/marketing/page-metrics')
-      revalidatePath('/dashboard/sales')
-    }
 
     return {
       status: 'SUCCESS',

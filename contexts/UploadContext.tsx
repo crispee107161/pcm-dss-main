@@ -61,7 +61,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       pending.map(async (entry) => {
         const formData = new FormData()
         formData.append('file', entry.file)
-        const result = await uploadCSV(null, formData, true)
+        const result = await uploadCSV(null, formData)
         setQueue((prev) =>
           prev.map((f) =>
             f.id === entry.id
