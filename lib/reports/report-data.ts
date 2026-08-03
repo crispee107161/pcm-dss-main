@@ -49,6 +49,16 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
   const totalImpressions = allAds.reduce((s, a) => s + a.impressions, 0)
   const totalLinkClicks = allAds.reduce((s, a) => s + (a.link_clicks ?? 0), 0)
   const cpa = totalPurchases > 0 ? totalSpend / totalPurchases : null
+  const ctr = totalImpressions > 0 ? totalLinkClicks / totalImpressions : null
+  const cpc = totalLinkClicks > 0 ? totalSpend / totalLinkClicks : null
+  const frequency = totalReach > 0 ? totalImpressions / totalReach : null
+
+  const campaignStart = allAds.length > 0
+    ? new Date(Math.min(...allAds.map(a => new Date(a.reporting_starts).getTime())))
+    : null
+  const campaignEnd = allAds.length > 0
+    ? new Date(Math.max(...allAds.map(a => new Date(a.reporting_ends).getTime())))
+    : null
 
   const top5Ads = [...allAds]
     .filter(a => (a.purchases ?? 0) > 0)
@@ -111,6 +121,7 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
   return {
     generatedAt: new Date(),
     totalSpend, totalPurchases, totalReach, totalImpressions, totalLinkClicks, cpa,
+    ctr, cpc, frequency, campaignStart, campaignEnd,
     top5Ads,
     monthlyData,
     allAdsCount: allAds.length,

@@ -6,7 +6,6 @@ import { PageHeader } from '@/components/nav/PageHeader'
 import LaggedCorrelationPanel from '@/components/analytics/LaggedCorrelationPanel'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
 import { MovingAverageForecastChart } from '@/components/marketing/PageMetricsCharts'
-import AIInsightCard from '@/components/analytics/AIInsightCard'
 import InsightHeader from '@/components/analytics/InsightHeader'
 import {
   ReportHeader, ReportSection, ReportMetricRow, ReportFooter,
@@ -115,6 +114,21 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
         ]} />
       </Section>
 
+      <Section variant={variant} title="Campaign Overview">
+        <MetricGrid variant={variant} items={[
+          {
+            label: 'Campaigns Run', value: data.allAdsCount.toLocaleString(),
+            sub: data.campaignStart && data.campaignEnd
+              ? `${formatDate(data.campaignStart)} – ${formatDate(data.campaignEnd)}`
+              : undefined,
+            tone: 'neutral',
+          },
+          { label: 'Click-Through Rate', value: data.ctr !== null ? `${(data.ctr * 100).toFixed(2)}%` : '—', sub: 'link clicks / impressions', tone: 'neutral' },
+          { label: 'Cost per Click', value: data.cpc !== null ? formatPHP(data.cpc) : '—', sub: 'avg CPC', tone: 'negative' },
+          { label: 'Ad Frequency', value: data.frequency !== null ? `${data.frequency.toFixed(2)}x` : '—', sub: 'impressions per person reached', tone: 'neutral' },
+        ]} />
+      </Section>
+
       {data.top5Ads.length > 0 && (
         <Section variant={variant} title="Top 5 Ads by Purchases">
           <div className="overflow-x-auto">
@@ -200,7 +214,7 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
 
       {data.latestModel && (
         <Section variant={variant} title="Predictive Model">
-          <RegressionSummary model={data.latestModel} insight={data.regressionInsight} disclosure="always" tone={isPrint ? 'print' : 'app'} />
+          <RegressionSummary model={data.latestModel} insight={data.regressionInsight} disclosure="always" tone={isPrint ? 'print' : 'app'} showDetails={false} />
         </Section>
       )}
 
@@ -246,24 +260,6 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
             ))}
           </div>
         </Section>
-      )}
-
-      {!isPrint && (
-        <AIInsightCard data={{
-          totalSpend: data.totalSpend,
-          totalPurchases: data.totalPurchases,
-          totalReach: data.totalReach,
-          cpa: data.cpa,
-          bestLag: data.lagData.best_lag,
-          bestMetric: data.lagData.best_metric,
-          bestR: data.lagData.best_r,
-          rSquared: data.latestModel?.r_squared ?? null,
-          isMLR: data.latestModel?.coef_reach != null,
-          rse: data.latestModel?.residual_std_error ?? null,
-          n: data.latestModel?.n ?? null,
-          forecastBaseline: data.dailyMetricsCount >= 7 ? data.viewsForecast.lastLevel : null,
-          avgEngagement: data.hasOrganicPosts ? data.avgEngagement : null,
-        }} />
       )}
 
       <Section variant={variant} title="Key Takeaways">

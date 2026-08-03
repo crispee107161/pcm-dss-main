@@ -8,6 +8,7 @@ interface RegressionSummaryProps {
   insight?: RegressionInsight | null
   disclosure?: InsightDisclosure
   tone?: InsightTone
+  showDetails?: boolean
 }
 
 function formatDate(date: Date): string {
@@ -45,7 +46,7 @@ const TONE_CLASSES: Record<InsightTone, {
   },
 }
 
-export default function RegressionSummary({ model, insight, disclosure = 'collapsible', tone = 'app' }: RegressionSummaryProps) {
+export default function RegressionSummary({ model, insight, disclosure = 'collapsible', tone = 'app', showDetails = true }: RegressionSummaryProps) {
   const t = TONE_CLASSES[tone]
 
   if (!model) {
@@ -65,16 +66,7 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
   const confidence = insight?.confidence ?? (model.r_squared >= 0.7 ? 'high' : model.r_squared >= 0.4 ? 'medium' : 'low')
   const headline = insight?.headline ?? `${meta.label} trained on ${model.n} ad records`
 
-  return (
-    <div className="space-y-4">
-      <InsightHeader
-        confidence={confidence}
-        headline={headline}
-        detail={insight?.detail ?? insight?.confidenceDetail}
-        mathLabel="See the model behind this"
-        disclosure={disclosure}
-        tone={tone}
-      >
+  const details = (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${t.badge}`}>
@@ -139,6 +131,18 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
             Model trained {formatDate(model.trained_at)} using {model.n} records with known purchase outcomes.
           </p>
         </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      <InsightHeader
+        confidence={confidence}
+        headline={headline}
+        detail={insight?.detail ?? insight?.confidenceDetail}
+        disclosure={disclosure}
+        tone={tone}
+      >
+        {showDetails ? details : null}
       </InsightHeader>
     </div>
   )
