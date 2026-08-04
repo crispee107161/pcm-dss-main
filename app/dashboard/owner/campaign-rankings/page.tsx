@@ -187,7 +187,7 @@ export default async function OwnerCampaignRankingsPage({
             <div className="flex-1 h-px bg-gray-100" />
           </div>
           <RankingTable rows={bySpend} valueLabel="Amount Spent" formatValue={v => formatPHP(v)} />
-          <div className="px-5 pb-4">
+          <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
               From the &quot;Amount spent (PHP)&quot; column of each uploaded Facebook Ads CSV row, ranked
               highest first, top 10. Filtered by the date range above, applied to each ad&apos;s
@@ -204,7 +204,7 @@ export default async function OwnerCampaignRankingsPage({
             <div className="flex-1 h-px bg-gray-100" />
           </div>
           <RankingTable rows={byInquiries} valueLabel="Inquiries" formatValue={v => v.toLocaleString()} />
-          <div className="px-5 pb-4">
+          <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
               From the &quot;Purchases&quot; column of the Facebook Ads export, stored as inquiries. Only
               ads with at least 1 inquiry are included, ranked highest first, top 10. Filtered by
@@ -221,7 +221,7 @@ export default async function OwnerCampaignRankingsPage({
             <div className="flex-1 h-px bg-gray-100" />
           </div>
           <RankingTable rows={byReach} valueLabel="Reach" formatValue={v => v.toLocaleString()} />
-          <div className="px-5 pb-4">
+          <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
               From the &quot;Reach&quot; column — the number of unique accounts that saw the ad — ranked
               highest first, top 10. Filtered by the date range above, applied to each ad&apos;s
@@ -245,7 +245,7 @@ export default async function OwnerCampaignRankingsPage({
             <div className="flex-1 h-px bg-gray-100" />
           </div>
           <RankingTable rows={bestCostPerInquiry} valueLabel="Cost / Inquiry" formatValue={v => formatPHP(v)} />
-          <div className="px-5 pb-4">
+          <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
               Amount spent ÷ inquiries, per ad. Lower is better, so ranked ascending, top 10. Only
               ads with at least {MIN_INQUIRIES_FOR_CPI} inquiries are included — below that, a
@@ -263,7 +263,7 @@ export default async function OwnerCampaignRankingsPage({
             <div className="flex-1 h-px bg-gray-100" />
           </div>
           <RankingTable rows={bestCtr} valueLabel="CTR" formatValue={v => `${(v * 100).toFixed(2)}%`} />
-          <div className="px-5 pb-4">
+          <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
               Link clicks ÷ impressions, per ad. Higher is better, so ranked descending, top 10.
               Only ads with at least {MIN_IMPRESSIONS_FOR_CTR.toLocaleString()} impressions are
@@ -283,7 +283,7 @@ export default async function OwnerCampaignRankingsPage({
             <div className="flex-1 h-px bg-gray-100" />
           </div>
           <RankingTable rows={bestCostPerClick} valueLabel="Cost / Click" formatValue={v => formatPHP(v)} />
-          <div className="px-5 pb-4">
+          <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
               Amount spent ÷ link clicks, per ad. Lower is better, so ranked ascending, top 10.
               Only ads with at least {MIN_CLICKS_FOR_CPC} link clicks are included, to filter out
