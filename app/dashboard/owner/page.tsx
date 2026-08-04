@@ -2,11 +2,11 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { getGreeting } from '@/lib/greeting'
-import Link from 'next/link'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
 import { computeRegressionInsight } from '@/lib/insights/regression-insight'
 import FollowerSparkline from '@/components/analytics/FollowerSparkline'
-import { IconRanking, IconTrendUp, IconMetrics, IconPlay, IconCategory, IconReport } from '@/components/nav/icons'
+import { SpendInquiriesChart } from '@/components/marketing/TrendCharts'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
 function formatPhp(amount: number): string {
   return new Intl.NumberFormat('en-PH', {
@@ -85,7 +85,7 @@ function KpiCard({ label, value, sub, delta, valueClass = 'text-gray-900', icon,
         </span>
       </div>
       <div>
-        <p className={`sensitive text-kpi-value font-bold tracking-tight tabular ${valueClass}`}>{value}</p>
+        <p className={`sensitive text-kpi-value font-medium tracking-tight tabular ${valueClass}`}>{value}</p>
         <div className="flex items-center mt-2 flex-wrap gap-1">
           {sub && (
             <span className="inline-block text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
@@ -134,7 +134,7 @@ export default async function OwnerDashboard() {
     totalInquiriesAgg,
     totalReachAgg,
     latestFollower,
-    topCampaign,
+    topCampaigns,
     lastUpload,
     follower7dRaw,
     thisWeekAgg,
@@ -148,12 +148,11 @@ export default async function OwnerDashboard() {
     prisma.ad.aggregate({ _sum: { inquiries: true } }),
     prisma.ad.aggregate({ _sum: { reach: true } }),
     prisma.followerHistory.findFirst({ orderBy: { date: 'desc' } }),
-    prisma.ad.findFirst({
+    // Ranked in JS below by computed cost-per-inquiry (amount_spent / inquiries) —
+    // `cost_per_result` is a different Facebook metric (cost per generic "result",
+    // not per inquiry) and would rank differently than the CPI this table displays.
+    prisma.ad.findMany({
       where: { inquiries: { gt: 0 }, amount_spent: { gt: 0 } },
-      orderBy: [
-        { cost_per_result: { sort: 'asc', nulls: 'last' } },
-        { inquiries: 'desc' },
-      ],
     }),
     prisma.uploadLog.findFirst({
       where: { status: 'SUCCESS' },
@@ -172,8 +171,8 @@ export default async function OwnerDashboard() {
       where: { reporting_ends: { gte: twoWeeksAgo, lt: weekAgo } },
     }),
     prisma.ad.findMany({
-      where: { inquiries: { not: null } },
-      select: { reach: true, total_messaging_contacts: true, amount_spent: true },
+      select: { reach: true, total_messaging_contacts: true, amount_spent: true, reporting_starts: true, inquiries: true },
+      orderBy: { reporting_starts: 'desc' },
     }),
   ])
 
@@ -204,10 +203,49 @@ export default async function OwnerDashboard() {
     followers: f.followers,
   }))
 
-  // Top campaign cost per inquiry
-  const topCampaignCpi = topCampaign && topCampaign.inquiries && topCampaign.inquiries > 0
-    ? topCampaign.amount_spent / topCampaign.inquiries
-    : null
+  // Rank by computed cost-per-inquiry (query guarantees inquiries > 0 and
+  // amount_spent > 0, so cpi is always a positive finite number here) and
+  // take the 5 most efficient — the bar for each row is relative to the best.
+  const topCampaignsWithCpi = topCampaigns
+    .map(ad => ({ ...ad, cpi: ad.amount_spent / ad.inquiries! }))
+    .sort((a, b) => a.cpi - b.cpi)
+    .slice(0, 5)
+  const bestCpi = topCampaignsWithCpi[0]?.cpi ?? null
+
+  // Monthly spend/inquiries trend (last 3 distinct months present in the ad data).
+  const monthKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}`
+  const seenMonths = new Set<string>()
+  const targetMonths: { label: string; year: number; month: number }[] = []
+  for (const { reporting_starts } of adHistory) {
+    const d = new Date(reporting_starts)
+    const key = monthKey(d)
+    if (!seenMonths.has(key)) {
+      seenMonths.add(key)
+      targetMonths.push({
+        label: new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(d),
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+      })
+      if (targetMonths.length === 3) break
+    }
+  }
+  targetMonths.reverse()
+
+  const monthlyTrend = targetMonths.map(({ label, year, month }) => {
+    const start = new Date(year, month - 1, 1)
+    const end = new Date(year, month, 0, 23, 59, 59)
+    const monthAds = adHistory.filter(a => {
+      const d = new Date(a.reporting_starts)
+      return d >= start && d <= end
+    })
+    return {
+      period: label,
+      total_spend: monthAds.reduce((s, a) => s + a.amount_spent, 0),
+      total_inquiries: monthAds.reduce((s, a) => s + (a.inquiries ?? 0), 0),
+      total_reach: monthAds.reduce((s, a) => s + (a.reach ?? 0), 0),
+      ad_count: monthAds.length,
+    }
+  })
 
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-4">
@@ -272,37 +310,16 @@ export default async function OwnerDashboard() {
         </div>
       )}
 
-      {/* Quick navigation + Follower sparkline */}
+      {/* Spend & Inquiries trend + Follower sparkline */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="md:col-span-2 bg-card rounded-2xl card-shadow p-5 flex flex-col"
           style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
-          <SectionLabel>Quick Navigation</SectionLabel>
-          {/* This card sits next to the taller Follower Sparkline card in the
-              same row and gets stretched to match its height by the grid —
-              centering the button grid in the remaining space spreads that
-              extra height evenly instead of leaving it as dead space below. */}
-          <div className="flex-1 flex items-center">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
-              <Link href="/dashboard/owner/campaign-rankings"
-                className="inline-flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 active:bg-primary/80 text-white rounded-full px-3 py-1.5 text-sm font-semibold text-center transition-colors">
-                <IconRanking className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">Campaign Rankings</span>
-              </Link>
-              {[
-                { label: 'Trend Analysis',        href: '/dashboard/owner/trend-analysis',      icon: IconTrendUp },
-                { label: 'Page Metrics',          href: '/dashboard/owner/page-metrics',        icon: IconMetrics },
-                { label: 'Budget Simulator',      href: '/dashboard/owner/simulation',           icon: IconPlay },
-                { label: 'Category Performance',  href: '/dashboard/owner/category-performance', icon: IconCategory },
-                { label: 'Generate Report',       href: '/dashboard/owner/report',               icon: IconReport },
-              ].map(({ label, href, icon: Icon }) => (
-                <Link key={href} href={href}
-                  className="inline-flex items-center justify-center gap-1.5 bg-card hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-crimson-200 hover:text-crimson-500 rounded-full px-3 py-1.5 text-sm font-medium text-center transition-colors">
-                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">{label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <SectionLabel>Spend &amp; Inquiries Trend</SectionLabel>
+          {monthlyTrend.length > 0 ? (
+            <SpendInquiriesChart data={monthlyTrend} />
+          ) : (
+            <p className="text-sm text-gray-400 py-10 text-center">Not enough monthly data yet.</p>
+          )}
         </div>
 
         {latestFollower && (
@@ -318,42 +335,60 @@ export default async function OwnerDashboard() {
         )}
       </div>
 
-      {/* Top Campaign + Last Upload */}
+      {/* Top Campaigns + Last Upload */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-        {topCampaign && (
-          <div className="bg-card rounded-2xl card-shadow p-5"
+        {topCampaignsWithCpi.length > 0 && (
+          <div className="bg-card rounded-2xl card-shadow overflow-hidden"
             style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
-            <SectionLabel>Top Performing Campaign</SectionLabel>
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <p className="text-sm font-bold text-gray-800 leading-snug line-clamp-2">
-                {topCampaign.ad_name}
-              </p>
-              <span className="flex-shrink-0 text-[10px] font-semibold bg-green-500/10 border border-green-500/30 text-green-400 rounded-full px-2.5 py-0.5">
-                Most Efficient Campaign
-              </span>
+            <div className="p-5 pb-0">
+              <SectionLabel>Top Campaigns</SectionLabel>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Inquiries</p>
-                <p className="sensitive text-xl font-bold text-gray-900">{formatNumber(topCampaign.inquiries ?? 0)}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Ad Spend</p>
-                <p className="sensitive text-xl font-bold text-gray-900">{formatPhp(topCampaign.amount_spent)}</p>
-              </div>
-              <div className="bg-green-500/10 rounded-xl p-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Cost / Inquiry</p>
-                <p className="sensitive text-xl font-bold text-green-400">
-                  {topCampaignCpi !== null ? formatPhp(topCampaignCpi) : '—'}
-                </p>
-              </div>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-3">
-              {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(topCampaign.reporting_starts))}
-              {' – '}
-              {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(topCampaign.reporting_ends))}
-            </p>
+            <Table className="text-sm">
+              <TableHeader>
+                <TableRow className="border-b border-gray-100 hover:bg-transparent">
+                  <TableHead className="text-left px-5 py-2 w-8">
+                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">#</span>
+                  </TableHead>
+                  <TableHead className="text-left px-3 py-2">
+                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Campaign</span>
+                  </TableHead>
+                  <TableHead className="text-right px-3 py-2">
+                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Spend</span>
+                  </TableHead>
+                  <TableHead className="text-right px-5 py-2">
+                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Cost / Inquiry</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topCampaignsWithCpi.map((ad, i) => (
+                  <TableRow key={ad.id} className="border-t border-gray-100 hover:bg-secondary/50">
+                    <TableCell className="px-5 py-3 text-gray-400 text-xs">{i + 1}</TableCell>
+                    <TableCell className="px-3 py-3">
+                      <div className="font-semibold text-gray-800 text-sm max-w-[160px] truncate" title={ad.ad_name}>
+                        {ad.ad_name}
+                      </div>
+                      <div className="text-xs text-gray-400 truncate max-w-[160px]">{ad.ad_set_name}</div>
+                    </TableCell>
+                    <TableCell className="sensitive px-3 py-3 text-right font-semibold text-gray-700 tabular">
+                      {formatPhp(ad.amount_spent)}
+                    </TableCell>
+                    <TableCell className="px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-crimson-500"
+                            style={{ width: `${bestCpi !== null ? Math.min(100, (bestCpi / ad.cpi) * 100) : 100}%` }}
+                          />
+                        </div>
+                        <span className="sensitive font-semibold text-gray-700 tabular text-xs">{formatPhp(ad.cpi)}</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
 

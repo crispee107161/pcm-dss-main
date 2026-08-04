@@ -610,10 +610,11 @@
   color: #FFFFFF;
 }
 
-/* Tabular numerals for all KPI/stat values — Sure renders numeric/financial
-   figures in Geist Mono rather than the sans face. */
+/* Tabular numerals for all KPI/stat values — stays on the sans face (Geist
+   supports tabular figures via OpenType "tnum") instead of switching to
+   Geist Mono, which read too heavy/wide at the bold weights KPI values use. */
 .tabular {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-feature-settings: "tnum";
   font-variant-numeric: tabular-nums;
 }

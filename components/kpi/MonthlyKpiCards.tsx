@@ -45,7 +45,7 @@ export default function MonthlyKpiCards({ data }: { data: MonthlyKpi[] }) {
                 </svg>
                 <p className="text-[11px] text-gray-400">Total Spend</p>
               </div>
-              <p className="sensitive text-4xl font-bold text-gray-900 tracking-tight tabular">{formatPhp(kpi.total_spend)}</p>
+              <p className="sensitive text-4xl font-medium text-gray-900 tracking-tight tabular">{formatPhp(kpi.total_spend)}</p>
             </div>
 
             <div className="h-px bg-gray-100" />
@@ -56,14 +56,14 @@ export default function MonthlyKpiCards({ data }: { data: MonthlyKpi[] }) {
                   <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
                   <p className="text-[11px] text-gray-400">Inquiries</p>
                 </div>
-                <p className="sensitive text-lg font-bold text-green-500 tabular">{formatNumber(kpi.total_inquiries)}</p>
+                <p className="sensitive text-lg font-medium text-green-500 tabular">{formatNumber(kpi.total_inquiries)}</p>
               </div>
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <span className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
                   <p className="text-[11px] text-gray-400">Reach</p>
                 </div>
-                <p className="sensitive text-lg font-bold text-gray-700 tabular">{formatNumber(kpi.total_reach)}</p>
+                <p className="sensitive text-lg font-medium text-gray-700 tabular">{formatNumber(kpi.total_reach)}</p>
               </div>
             </div>
           </div>

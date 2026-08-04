@@ -28,7 +28,6 @@ export default async function SalesLayout({ children }: { children: React.ReactN
       navItems={navItems}
       email={session.user.email ?? ''}
       roleLabel="Sales Director"
-      roleBadgeClass="bg-gray-50 text-gray-500 border border-gray-100"
     >
       {children}
     </Sidebar>

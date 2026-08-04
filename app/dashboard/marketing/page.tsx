@@ -48,7 +48,7 @@ function KpiCard({ label, value, sub, valueClass = 'text-gray-900', icon, accent
         </span>
       </div>
       <div>
-        <p className={`text-kpi-value font-bold tracking-tight tabular ${sensitive ? 'sensitive' : ''} ${valueClass}`}>{value}</p>
+        <p className={`text-kpi-value font-medium tracking-tight tabular ${sensitive ? 'sensitive' : ''} ${valueClass}`}>{value}</p>
         {sub && (
           <span className="inline-block mt-2 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5">
             {sub}

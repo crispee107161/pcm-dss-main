@@ -110,7 +110,7 @@ Dark values first (the primary design target), light-theme counterpart in parent
 ## 3. Typography
 
 **Body Font:** Geist (with `ui-sans-serif, system-ui` fallback)
-**Label/Mono Font:** Geist Mono (with `ui-monospace` fallback)
+**Equation/Code Font:** Geist Mono (with `ui-monospace` fallback)
 
 **Character:** One typeface family used at multiple weights instead of a display/body pairing — this is a data tool, not an editorial surface, so hierarchy comes from weight and size steps, not typeface contrast.
 
@@ -118,7 +118,7 @@ Dark values first (the primary design target), light-theme counterpart in parent
 - **Title** (700, 14–16px, 1.2 line-height): panel headers, card titles.
 - **Body** (400, 14px, 1.5 line-height): default UI text, table cells, form labels.
 - **Label** (600, 12px, 1.2 line-height, `0.05em` tracking, uppercase for section headers only): sidebar section headers, role badges, chip text.
-- **Mono** (400, 13px, Geist Mono): numeric/data values where alignment matters (KPI figures, table numbers).
+- **Numeric** (500, Geist Sans, tabular figures via `font-feature-settings: "tnum"`): numeric/data values where alignment matters (KPI figures, table numbers). Not Geist Mono — mono read too heavy/wide at the bold weights these values use; Geist Sans supports tabular figures natively, so columns still align under the One Typeface Rule. Geist Mono is reserved for genuinely code-like content: regression equations, filenames.
 
 ### Named Rules
 **The One Typeface Rule.** Geist for everything, including headings (`--font-heading` resolves to `--font-sans`). Do not introduce a second sans-serif for "hierarchy" — use weight/size instead.

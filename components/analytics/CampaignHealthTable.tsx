@@ -35,7 +35,7 @@ function ScoreBar({ score, grade }: { score: number; grade: ScoredAd['grade'] })
           }}
         />
       </div>
-      <span className={`text-xs font-bold tabular w-7 text-right ${style.text}`}>{score}</span>
+      <span className={`text-xs font-medium tabular w-7 text-right ${style.text}`}>{score}</span>
     </div>
   )
 }

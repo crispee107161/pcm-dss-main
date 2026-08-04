@@ -34,7 +34,6 @@ export default async function MarketingLayout({ children }: { children: React.Re
         navItems={navItems}
         email={session.user.email ?? ''}
         roleLabel="Marketing Manager"
-        roleBadgeClass="bg-gray-50 text-gray-500 border border-gray-100"
       >
         {children}
       </Sidebar>

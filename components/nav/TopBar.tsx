@@ -8,6 +8,7 @@ import type { NavItem } from './Sidebar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { Menu01Icon } from '@animateicons/react/huge'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useBlur } from '@/contexts/BlurContext'
 import ThemeToggle from '@/components/nav/ThemeToggle'
 import { logoutAction } from '@/actions/auth'
@@ -17,10 +18,12 @@ interface TopBarProps {
   navItems: NavItem[]
   email: string
   roleLabel: string
+  expanded: boolean
+  onToggleExpanded: () => void
   onMobileMenuOpen: () => void
 }
 
-export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }: TopBarProps) {
+export default function TopBar({ navItems, email, roleLabel, expanded, onToggleExpanded, onMobileMenuOpen }: TopBarProps) {
   const pathname = usePathname()
   const { blurred, toggleBlur } = useBlur()
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -113,6 +116,18 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
     >
       {/* Left */}
       <div className="flex items-center gap-2 min-w-0">
+        {/* Sidebar collapse toggle — desktop only */}
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-expanded={expanded}
+          aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          className="hidden md:flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
+        >
+          {expanded ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+        </button>
+
         {/* Mobile hamburger */}
         <button
           onClick={onMobileMenuOpen}
@@ -172,17 +187,15 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
             </svg>
           )}
         </button>
+
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(v => !v)}
             aria-haspopup="menu"
+            aria-label="Account menu"
             aria-expanded={dropdownOpen}
-            className="flex items-center gap-2 rounded-lg pl-1 pr-1.5 py-1 hover:bg-gray-100 transition-[background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="flex items-center rounded-full p-0.5 hover:bg-gray-100 transition-[background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           >
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-semibold text-gray-700 leading-none">{roleLabel}</p>
-              <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[180px]">{email}</p>
-            </div>
             <Avatar className="w-8 h-8 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
               <AvatarFallback className="bg-crimson-500 text-white text-xs font-bold">{initial}</AvatarFallback>
             </Avatar>
@@ -191,16 +204,21 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
           {dropdownOpen && (
             <div className="animate-fade-slide-up absolute z-10 top-full mt-2 right-0 w-64 bg-card border border-border rounded-xl overflow-hidden card-shadow-floating">
               {/* Identity */}
-              <div className="px-4 py-3 border-b border-border sm:hidden">
-                <p className="text-sm font-medium text-gray-800 truncate">{email}</p>
-                <p className="text-xs text-gray-400">{roleLabel}</p>
+              <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
+                <Avatar className="w-10 h-10 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
+                  <AvatarFallback className="bg-crimson-500 text-white text-sm font-bold">{initial}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{roleLabel}</p>
+                  <p className="text-xs text-gray-400 truncate">{email}</p>
+                </div>
               </div>
 
               <div className="p-1.5 space-y-0.5">
                 {/* Change password toggle */}
                 <button
                   onClick={() => setChangePwOpen(v => !v)}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-left"
                 >
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -255,12 +273,14 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
                     </form>
                   </div>
                 </div>
+              </div>
 
-                {/* Sign out */}
+              {/* Sign out */}
+              <div className="p-1.5 pt-0 border-t border-border">
                 <form action={logoutAction}>
                   <button
                     type="submit"
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                    className="w-full flex items-center gap-3 px-3 py-2 mt-1.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
                   >
                     <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

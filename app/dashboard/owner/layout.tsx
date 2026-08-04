@@ -30,7 +30,6 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
       navItems={navItems}
       email={session.user.email ?? ''}
       roleLabel="Business Owner"
-      roleBadgeClass="bg-gray-50 text-gray-500 border border-gray-100"
     >
       {children}
     </Sidebar>
