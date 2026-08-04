@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import WhatIfSimulator from '@/components/analytics/WhatIfSimulator'
 import BudgetAllocator from '@/components/analytics/BudgetAllocator'
+import CostCuttingScenario from '@/components/analytics/CostCuttingScenario'
 
 function formatPhp(amount: number): string {
   return new Intl.NumberFormat('en-PH', {
@@ -39,6 +40,12 @@ export default async function SimulationView() {
         <h2 className="text-lg font-semibold text-gray-800 mb-1">Budget Allocation Recommender</h2>
         <p className="text-sm text-gray-400 mb-5">Distribute a total budget across your best-performing ad sets based on historical efficiency.</p>
         <BudgetAllocator />
+      </div>
+
+      <div className="bg-card rounded-2xl card-shadow p-6 mb-8">
+        <h2 className="text-lg font-semibold text-gray-800 mb-1">Cost-Cutting Scenario</h2>
+        <p className="text-sm text-gray-400 mb-5">See which ad sets to cut to hit a budget reduction target, and what it costs you in inquiries.</p>
+        <CostCuttingScenario />
       </div>
 
       <div className="bg-card rounded-2xl card-shadow p-6">

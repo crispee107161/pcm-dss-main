@@ -183,8 +183,8 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
               <p className="text-xs font-semibold text-gray-700 leading-none">{roleLabel}</p>
               <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[180px]">{email}</p>
             </div>
-            <Avatar className="w-8 h-8 flex-shrink-0 ring-2 ring-red-200 rounded-full">
-              <AvatarFallback className="bg-red-400 text-white text-xs font-bold">{initial}</AvatarFallback>
+            <Avatar className="w-8 h-8 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
+              <AvatarFallback className="bg-crimson-500 text-white text-xs font-bold">{initial}</AvatarFallback>
             </Avatar>
           </button>
 
@@ -248,7 +248,7 @@ export default function TopBar({ navItems, email, roleLabel, onMobileMenuOpen }:
                       <button
                         type="submit"
                         disabled={pwPending}
-                        className="w-full bg-primary hover:bg-green-600 disabled:bg-green-900 disabled:text-green-400 text-white text-xs rounded-lg py-1.5 font-medium transition-[background-color]"
+                        className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:text-white/60 text-white text-xs rounded-lg py-1.5 font-medium transition-[background-color]"
                       >
                         {pwPending ? 'Updating...' : 'Update Password'}
                       </button>

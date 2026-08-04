@@ -8,7 +8,7 @@ import {
 
 const navItems: NavItem[] = [
   { section: 'Overview',        label: 'Executive Dashboard',   href: '/dashboard/owner',                    icon: <IconHome /> },
-  { section: 'Analytics', collapsible: true, label: 'Correlation', href: '/dashboard/owner/correlation', icon: <IconChart /> },
+  { section: 'Analytics', label: 'Correlation', href: '/dashboard/owner/correlation', icon: <IconChart /> },
   {                             label: 'Regression',            href: '/dashboard/owner/regression',         icon: <IconRegression /> },
   {                             label: 'What-If Simulation',    href: '/dashboard/owner/simulation',         icon: <IconPlay /> },
   {                             label: 'Campaign Rankings',     href: '/dashboard/owner/campaign-rankings',  icon: <IconRanking /> },

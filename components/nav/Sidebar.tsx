@@ -25,7 +25,6 @@ const REDUCED_TRANSITION = { duration: 0.01 }
 // v2: default flipped to expanded — versioned so anyone with a stale
 // "collapsed" value from before that change doesn't get stuck on it.
 const SIDEBAR_EXPANDED_KEY = 'pcm-dss-sidebar-expanded-v2'
-const NAV_CLOSED_SECTIONS_KEY = 'pcm-dss-nav-closed-sections'
 
 // Fades and collapses text in lockstep with the sidebar's width animation
 // instead of snapping via a `md:hidden` class, which can't be animated.
@@ -54,9 +53,6 @@ export interface NavItem {
   href: string
   icon: React.ReactNode
   section?: string
-  // Only meaningful on the item that opens a `section` — renders that
-  // section as a disclosure instead of a plain always-visible label.
-  collapsible?: boolean
 }
 
 interface SidebarProps {
@@ -76,7 +72,6 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [changePwOpen, setChangePwOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
-  const [closedSections, setClosedSections] = useState<Set<string>>(new Set())
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const collapsed = !expanded
@@ -86,24 +81,12 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
   useEffect(() => {
     const storedExpanded = localStorage.getItem(SIDEBAR_EXPANDED_KEY)
     setExpanded(storedExpanded === null ? true : storedExpanded === 'true')
-    const raw = localStorage.getItem(NAV_CLOSED_SECTIONS_KEY)
-    setClosedSections(new Set(raw ? raw.split(',').filter(Boolean) : []))
   }, [])
 
   function toggleExpanded() {
     setExpanded((prev) => {
       const next = !prev
       localStorage.setItem(SIDEBAR_EXPANDED_KEY, String(next))
-      return next
-    })
-  }
-
-  function toggleSection(section: string) {
-    setClosedSections((prev) => {
-      const next = new Set(prev)
-      if (next.has(section)) next.delete(section)
-      else next.add(section)
-      localStorage.setItem(NAV_CLOSED_SECTIONS_KEY, [...next].join(','))
       return next
     })
   }
@@ -175,38 +158,14 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
     return false
   }
 
-  // If navigation lands on a route inside a manually-closed section, force it back
-  // open — a collapsed group must never hide the page the user is currently on.
-  useEffect(() => {
-    const activeIndex = navItems.findIndex((item) => isActive(item.href))
-    if (activeIndex === -1) return
-    let owningSection: string | undefined
-    for (let i = activeIndex; i >= 0; i--) {
-      if (navItems[i].section) {
-        owningSection = navItems[i].section
-        break
-      }
-    }
-    if (!owningSection) return
-    setClosedSections((prev) => {
-      if (!prev.has(owningSection!)) return prev
-      const next = new Set(prev)
-      next.delete(owningSection!)
-      localStorage.setItem(NAV_CLOSED_SECTIONS_KEY, [...next].join(','))
-      return next
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, navItems])
-
   const initial = email.charAt(0).toUpperCase()
 
-  // Group nav items under their section header so a `collapsible` section
-  // can wrap its items in a single disclosure.
-  interface NavGroup { section?: string; collapsible?: boolean; items: NavItem[] }
+  // Group nav items under their section header.
+  interface NavGroup { section?: string; items: NavItem[] }
   const groups: NavGroup[] = []
   for (const item of navItems) {
     if (item.section) {
-      groups.push({ section: item.section, collapsible: item.collapsible, items: [item] })
+      groups.push({ section: item.section, items: [item] })
     } else {
       groups[groups.length - 1]?.items.push(item)
     }
@@ -219,15 +178,15 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
         key={item.href}
         href={item.href}
         title={!showText ? item.label : undefined}
-        className={`relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors px-3 py-1.5 overflow-hidden ${
+        className={`group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors px-3 py-1.5 overflow-hidden ${
           active ? 'text-sidebar-foreground bg-sidebar-accent' : 'text-gray-500 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
         } ${!showText ? 'justify-center' : ''}`}
       >
         <span
-          className={`absolute -left-3 top-1 bottom-1 w-0.5 rounded-r-full bg-red-400 ${active ? '' : 'hidden'}`}
+          className={`absolute -left-3 top-1 bottom-1 w-0.5 rounded-r-full bg-crimson-500 ${active ? '' : 'hidden'}`}
           aria-hidden
         />
-        <span className={`w-5 h-5 flex-shrink-0 ${active ? 'text-red-400' : ''}`}>
+        <span className={`w-5 h-5 flex-shrink-0 ${active ? 'text-crimson-500' : 'group-hover:text-crimson-500'}`}>
           {item.icon}
         </span>
         <FadeText show={showText} className="whitespace-nowrap">
@@ -291,47 +250,16 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
             if (!group.section) {
               return <div key="ungrouped">{group.items.map(renderNavItem)}</div>
             }
-            // Icon-only rail has no room for a disclosure interaction — always
-            // render flat there, same as a non-collapsible section.
-            const isCollapsible = Boolean(group.collapsible) && showText
-            const isClosed = isCollapsible && closedSections.has(group.section)
-            const sectionId = `nav-section-${group.section}`
             return (
               <div key={group.section}>
-                {isCollapsible ? (
-                  <button
-                    type="button"
-                    onClick={() => toggleSection(group.section!)}
-                    aria-expanded={!isClosed}
-                    aria-controls={sectionId}
-                    className="w-full flex items-center gap-1 px-3 pt-4 pb-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-500 transition-colors"
-                  >
-                    <FadeText show={showText} className="flex-1 text-left text-xs font-semibold uppercase tracking-widest whitespace-nowrap">
-                      {group.section}
-                    </FadeText>
-                    <svg
-                      className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${isClosed ? '-rotate-90' : ''}`}
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                ) : (
-                  <FadeText
-                    as="p"
-                    show={showText}
-                    className="px-3 pt-4 pb-1 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-widest whitespace-nowrap"
-                  >
-                    {group.section}
-                  </FadeText>
-                )}
-                {isCollapsible ? (
-                  <div id={sectionId} className={`expand-grid${isClosed ? '' : ' open'}`}>
-                    <div className="space-y-0.5">{group.items.map(renderNavItem)}</div>
-                  </div>
-                ) : (
-                  <div id={sectionId} className="space-y-0.5">{group.items.map(renderNavItem)}</div>
-                )}
+                <FadeText
+                  as="p"
+                  show={showText}
+                  className="px-3 pt-4 pb-1 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-widest whitespace-nowrap"
+                >
+                  {group.section}
+                </FadeText>
+                <div className="space-y-0.5">{group.items.map(renderNavItem)}</div>
               </div>
             )
           })}
@@ -350,7 +278,7 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
               <div className="px-4 py-3 border-b border-sidebar-border">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-9 h-9 flex-shrink-0">
-                    <AvatarFallback className="bg-red-400 text-white text-sm font-bold">{initial}</AvatarFallback>
+                    <AvatarFallback className={`bg-crimson-500 text-white text-sm font-bold`}>{initial}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
                     <p className="text-sidebar-foreground text-sm font-medium truncate">{email}</p>
@@ -414,7 +342,7 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
                       <button
                         type="submit"
                         disabled={pwPending}
-                        className="w-full bg-primary hover:bg-green-600 disabled:bg-green-900 disabled:text-green-400 text-white text-xs rounded-lg py-1.5 font-medium transition-[background-color]"
+                        className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:text-white/60 text-white text-xs rounded-lg py-1.5 font-medium transition-[background-color]"
                       >
                         {pwPending ? 'Updating...' : 'Update Password'}
                       </button>
@@ -446,7 +374,7 @@ export default function Sidebar({ navItems, email, roleLabel, roleBadgeClass, ch
             className={`w-full flex items-center gap-3 px-4 py-3 overflow-hidden transition-[background-color] hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${!showText ? 'justify-center' : ''}`}
           >
             <Avatar className="w-8 h-8 flex-shrink-0">
-              <AvatarFallback className="bg-red-400 text-white text-xs font-bold">{initial}</AvatarFallback>
+              <AvatarFallback className={`bg-crimson-500 text-white text-xs font-bold`}>{initial}</AvatarFallback>
             </Avatar>
             <FadeText show={showText} as="div" className="min-w-0 flex-1 text-left">
               <p className="text-gray-500 text-xs truncate">{email}</p>

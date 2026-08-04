@@ -218,7 +218,7 @@ export default async function PageMetricsPage({
               </div>
             ))}
           </div>
-          <Link href="/dashboard/marketing/upload" className="inline-flex items-center bg-primary hover:bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+          <Link href="/dashboard/marketing/upload" className="inline-flex items-center bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors">
             Upload Data →
           </Link>
         </div>

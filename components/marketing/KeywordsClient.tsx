@@ -127,8 +127,8 @@ export default function KeywordsClient({ categories }: Props) {
           <button
             onClick={handleAnalyze}
             disabled={isAnalyzing || cooldown > 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-green-600 active:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
-            style={{ boxShadow: !isAnalyzing && cooldown === 0 ? '0 4px 14px rgba(18,183,106,0.25)' : undefined }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
+            style={{ boxShadow: !isAnalyzing && cooldown === 0 ? '0 4px 14px color-mix(in srgb, var(--primary) 25%, transparent)' : undefined }}
           >
             {isAnalyzing ? (
               <>
@@ -222,7 +222,7 @@ export default function KeywordsClient({ categories }: Props) {
                 <button
                   onClick={handleAddAll}
                   disabled={isAdding}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {isAdding ? (
                     <>
@@ -321,7 +321,7 @@ export default function KeywordsClient({ categories }: Props) {
           </Select>
           <button
             type="submit"
-            className="bg-primary hover:bg-green-600 active:bg-green-700 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-[background-color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="bg-primary hover:bg-primary/90 active:bg-primary/80 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-[background-color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           >
             Add Keyword
           </button>

@@ -284,7 +284,7 @@ export default async function OwnerDashboard() {
           <div className="flex-1 flex items-center">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full">
               <Link href="/dashboard/owner/campaign-rankings"
-                className="inline-flex items-center justify-center gap-1.5 bg-primary hover:bg-green-600 active:bg-green-700 text-white rounded-full px-3 py-1.5 text-sm font-semibold text-center transition-colors">
+                className="inline-flex items-center justify-center gap-1.5 bg-primary hover:bg-primary/90 active:bg-primary/80 text-white rounded-full px-3 py-1.5 text-sm font-semibold text-center transition-colors">
                 <IconRanking className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">Campaign Rankings</span>
               </Link>
@@ -296,7 +296,7 @@ export default async function OwnerDashboard() {
                 { label: 'Generate Report',       href: '/dashboard/owner/report',               icon: IconReport },
               ].map(({ label, href, icon: Icon }) => (
                 <Link key={href} href={href}
-                  className="inline-flex items-center justify-center gap-1.5 bg-card hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-red-200 hover:text-red-400 rounded-full px-3 py-1.5 text-sm font-medium text-center transition-colors">
+                  className="inline-flex items-center justify-center gap-1.5 bg-card hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-crimson-200 hover:text-crimson-500 rounded-full px-3 py-1.5 text-sm font-medium text-center transition-colors">
                   <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="truncate">{label}</span>
                 </Link>

@@ -12,6 +12,7 @@ import type { RegressionInsight } from '@/lib/insights/regression-insight'
 import WhatIfSimulator from '@/components/analytics/WhatIfSimulator'
 import CampaignHealthTable from '@/components/analytics/CampaignHealthTable'
 import BudgetAllocator from '@/components/analytics/BudgetAllocator'
+import CostCuttingScenario from '@/components/analytics/CostCuttingScenario'
 import type { MonthlyKpi, SpearmanRow } from '@/types/index'
 import type { ScoredAd } from '@/lib/stats/health-score'
 
@@ -365,6 +366,14 @@ export default function SalesDashboardTabs({
               Distribute a total budget across your best-performing ad sets, weighted by historical inquiry efficiency.
             </p>
             <BudgetAllocator />
+          </div>
+
+          <div className={`${cardClass} p-5`} style={cardStyle}>
+            <SLabel>Cost-Cutting Scenario</SLabel>
+            <p className="text-xs text-gray-400 -mt-2 mb-4">
+              See which ad sets to cut to hit a budget reduction target, and what it costs you in inquiries.
+            </p>
+            <CostCuttingScenario />
           </div>
         </TabsContent>
 

@@ -40,7 +40,7 @@ export default function AIInsightCard({ data }: AIInsightCardProps) {
         {!insight && !loading && (
           <Button
             onClick={handleGenerate}
-            className="bg-primary hover:bg-green-600 active:bg-green-700 text-white whitespace-nowrap px-4"
+            className="bg-primary hover:bg-primary/90 active:bg-primary/80 text-white whitespace-nowrap px-4"
           >
             {error ? 'Try Again' : 'Generate Insights'}
           </Button>

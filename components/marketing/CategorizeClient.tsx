@@ -180,7 +180,7 @@ function PostsTable({ posts, categories }: { posts: PostRow[]; categories: Categ
                   <Button
                     type="submit"
                     size="sm"
-                    className="bg-primary hover:bg-green-600 text-white text-xs whitespace-nowrap h-7 px-3"
+                    className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3"
                   >
                     Save
                   </Button>
@@ -266,7 +266,7 @@ function AdsTable({ ads, categories }: { ads: AdRow[]; categories: Category[] })
                   <Button
                     type="submit"
                     size="sm"
-                    className="bg-primary hover:bg-green-600 text-white text-xs whitespace-nowrap h-7 px-3"
+                    className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3"
                   >
                     Save
                   </Button>
@@ -374,8 +374,8 @@ export default function CategorizeClient({ posts, ads, categories }: Props) {
           <button
             onClick={handleAutoCategorize}
             disabled={isPending || totalUncategorized === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-green-600 active:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-            style={{ boxShadow: totalUncategorized > 0 && !isPending ? '0 4px 14px rgba(18,183,106,0.25)' : undefined }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            style={{ boxShadow: totalUncategorized > 0 && !isPending ? '0 4px 14px color-mix(in srgb, var(--primary) 25%, transparent)' : undefined }}
           >
             {isPending ? (
               <>

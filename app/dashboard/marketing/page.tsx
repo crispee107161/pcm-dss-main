@@ -284,7 +284,7 @@ export default async function MarketingDashboard() {
         <SectionLabel>Quick Actions</SectionLabel>
         <div className="flex flex-wrap gap-2">
           <Link href="/dashboard/marketing/upload"
-            className="bg-primary hover:bg-green-600 active:bg-green-700 text-white rounded-full px-4 py-1.5 text-sm font-semibold transition-colors">
+            className="bg-primary hover:bg-primary/90 active:bg-primary/80 text-white rounded-full px-4 py-1.5 text-sm font-semibold transition-colors">
             Upload Data
           </Link>
           {[

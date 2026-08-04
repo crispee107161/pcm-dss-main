@@ -4,9 +4,10 @@ description: A dark, flat, data-dense decision support dashboard for Facebook Ad
 colors:
   background: "#0B0B0B"
   card: "#171717"
-  primary-gain: "#12B76A"
-  destructive-red: "#ED4E4E"
-  identity-accent-red: "#F13636"
+  primary-brand: "#D41135"
+  destructive: "#E8536E"
+  status-positive: "#32D583"
+  status-negative: "#FD853A"
   foreground: "#FAFAFA"
   muted-foreground: "#9E9E9E"
   chart-blue: "#53B1FD"
@@ -49,12 +50,12 @@ components:
     rounded: "{rounded.lg}"
     padding: "16px"
   button-primary:
-    backgroundColor: "{colors.primary-gain}"
-    textColor: "#0B0B0B"
+    backgroundColor: "{colors.primary-brand}"
+    textColor: "#FFFFFF"
     rounded: "{rounded.md}"
     padding: "8px 16px"
   button-destructive:
-    backgroundColor: "{colors.destructive-red}"
+    backgroundColor: "{colors.destructive}"
     textColor: "#FAFAFA"
     rounded: "{rounded.md}"
     padding: "8px 16px"
@@ -69,38 +70,40 @@ components:
 
 ## 1. Overview
 
-**Creative North Star: "The Trading Terminal"**
+**Creative North Star: "The Trading Terminal, in PC Merchandise's own colors"**
 
-This is a near-black canvas built for someone reading numbers all day, not a first-touch marketing surface. Every screen exists to answer one question fast: what's driving ad and page performance, and what should a Marketing Manager, Sales Director, or Business Owner do next. Green (`#12B76A`) reads as gain, red (`#ED4E4E`) as loss or danger, exactly like a terminal's up/down semantics, with the flat `#0B0B0B` canvas and `#171717` card layer doing all the depth work instead of shadows.
+This is a canvas built for someone reading numbers all day, not a first-touch marketing surface. Every screen exists to answer one question fast: what's driving ad and page performance, and what should a Marketing Manager, Sales Director, or Business Owner do next. Crimson (`#D41135` dark / `#BB061E` light) — PC Merchandise's actual brand color — is the action/brand color: buttons, links, focus rings, active nav. Green still reads as gain and rust as loss, terminal-style, kept deliberately off the brand hue so a KPI reading can never be mistaken for a button (see the Fill-vs-Read Rule below). The flat canvas and one-step-up card layer do all the depth work instead of shadows. **Dark is the default and primary-designed theme** (near-black canvas `#0B0B0B`, card `#171717`); a light theme (canvas `#F9F8F7`, card `#FFFFFF`, matching PC Merchandise's own site) shipped 2026-07-26 via `next-themes`, re-skinned to the brand palette 2026-08-04, using the identical token names re-defined per theme (`:root` = light, `.dark` = dark) so every component and utility class works unchanged in both — see `app/globals.css`.
 
-This system explicitly rejects the generic SaaS/AI-slop dashboard playbook: no purple/indigo gradients, no default Tailwind blue as a primary, no hero-metric stat-card clichés, no side-stripe colored borders, no gradient text, no glassmorphism. It is a direct, hand-ported adaptation of Sure's (`app.sure.am`) production design system, not a fresh invention — consistency with that source wins over novelty.
+This system explicitly rejects the generic SaaS/AI-slop dashboard playbook: no purple/indigo gradients, no default Tailwind blue as a primary, no hero-metric stat-card clichés, no side-stripe colored borders, no gradient text, no glassmorphism. It is a direct, hand-ported adaptation of Sure's (`app.sure.am`) production design system, re-skinned to PC Merchandise's brand palette rather than a fresh invention — consistency with structure and behavior wins over novelty, even where the hue changed.
 
 **Key Characteristics:**
-- Dark-only canvas (`#0B0B0B`), no light mode exists or is planned.
-- Green (`#12B76A`) is the only "positive/primary action" color; red is reserved for destructive actions and one deliberate identity-accent use (avatars, active-nav indicator).
-- Flat by default: cards separate from the canvas via a lighter fill (`#171717`), not shadows or borders.
+- Dual-theme: dark (`#0B0B0B` canvas, the original/primary design target) and light (`#F9F8F7` canvas, matching pcmerchandise.com.ph), toggled via `next-themes`; both share the same semantic token names, so this doc's dark-mode hex values are the reference and the light-mode counterpart is always "the same token, re-defined" — never a separately designed surface.
+- Crimson (`#D41135` dark / `#BB061E` light) is the only "primary action" color in both themes — fills and chrome only, never a data mark or "bad number." Green is the only "positive" reading; rust (a retuned `red-*` ramp) is the only "negative" reading. See the Fill-vs-Read Rule.
+- Flat by default: cards separate from the canvas via a lighter (dark theme) or bordered (light theme) fill, not shadows.
 - Single typeface (Geist + Geist Mono) throughout; no display/body pairing.
-- Hairline borders (`rgba(255,255,255,0.10)`) instead of visible strokes for structural separation.
+- Hairline borders (`rgba(255,255,255,0.10)` dark / `rgba(11,11,11,0.10)` light) instead of visible strokes for structural separation.
 
 ## 2. Colors
 
-A near-monochrome dark palette with two semantic accents and a small chart palette; the palette's job is legibility and status signaling, not decoration.
+PC Merchandise's brand crimson as the action color, split from a separate green/rust gain-loss reading — the palette's job is legibility and status signaling, not decoration.
 
 ### Primary
-- **Gain Green** (`#12B76A`): the primary action color and the "positive" signal across the app — primary buttons, positive KPI deltas, the active brand mark. Sure's own logo/gain color, ported directly.
+- **Brand Crimson** `#D41135` (light: `#BB061E`, pcmerchandise.com.ph's own primary) — the action color: primary buttons, links, active nav indicator, focus rings. Fills and chrome only; see the Fill-vs-Read Rule below for why it never appears as data.
 
 ### Secondary
-- **Destructive / Identity Red** (`#ED4E4E` family, e.g. `#F13636`): carries two deliberate jobs. (1) Semantic destructive/negative — delete actions, negative KPI deltas, error states. (2) A separate identity-accent role confined to the sidebar: user avatar fills, the active-nav-item left indicator, and focus rings on sidebar controls. These two uses are intentional, not drift — red is never used as a second "primary" action color outside the sidebar's own chrome.
+- **Destructive** `#E8536E` (light: `#9A0518`) — delete/sign-out/irreversible actions. Distinguished from Primary by depth within the same crimson family, not by hue: destructive is still an *action*, so it belongs to the action family rather than the decline-reading ramp.
+- **Status Positive / Negative** — `--status-positive` (`#32D583` dark / `#078C52` light) and `--status-negative` (`#FD853A` dark / `#C4320A` light): the gain/loss *reading* colors, entirely separate from Primary/Destructive. See the Fill-vs-Read Rule.
 
 ### Neutral
-- **Canvas Black** (`#0B0B0B`): page background (`--background`, `--sidebar`).
-- **Card Charcoal** (`#171717`): the one step up from canvas — cards, popovers, dropdown surfaces (`--card`, `--popover`).
-- **Foreground White** (`#FAFAFA`): primary text.
-- **Muted Gray** (`#9E9E9E`): secondary text, timestamps, helper copy (`--muted-foreground`).
-- **Hairline White** (`rgba(255,255,255,0.10)`): all structural borders/dividers (`--border`, `--sidebar-border`).
+Dark values first (the primary design target), light-theme counterpart in parentheses — same token, re-defined per theme in `app/globals.css`.
+- **Canvas** `#0B0B0B` (light: `#F9F8F7`): page background (`--background`, `--sidebar`).
+- **Card** `#171717` (light: `#FFFFFF`): the one step up from canvas — cards, popovers, dropdown surfaces (`--card`, `--popover`).
+- **Foreground** `#FAFAFA` (light: `#0F090B`): primary text.
+- **Muted Gray** `#9E9E9E` (light: `#5A5355`): secondary text, timestamps, helper copy (`--muted-foreground`).
+- **Hairline** `rgba(255,255,255,0.10)` (light: `#D8D7D4`): all structural borders/dividers (`--border`, `--sidebar-border`).
 
 ### Named Rules
-**The Terminal Semantics Rule.** Green means gain/go/primary. Red means loss/destructive, with the one confined exception of sidebar identity chrome (avatars, active indicator). Never introduce a third color as a competing "primary."
+**The Fill-vs-Read Rule.** Crimson appears only as a filled surface or a chrome indicator — never as colored text or a data mark. Decline signals (the `red-*` ramp, retuned to rust — `#FD853A`/`#E04F16`/`#C4320A` etc.) appear only as colored text, icons, or chart marks on a neutral surface — never as a fill. Role separates the two families even where hue drifts close. Because green-vs-rust is a weaker pair than green-vs-red for red-green color-vision deficiency (~8% of men), KPI delta components must keep a non-color cue (▲/▼ glyph or +/− sign) alongside the color — never color alone.
 
 **The No-Blue-No-Purple Rule.** Tailwind's default `blue-*`/`indigo-*`/`violet-*` scale is never used as a primary or accent. `chart-2` (`#53B1FD` blue) and `chart-4` (`#A48AFB` violet) exist only inside multi-series chart legends, never as UI chrome.
 
@@ -138,8 +141,8 @@ Flat and functional: no shadow at rest, minimal ornament, every interactive elem
 
 ### Buttons
 - **Shape:** 8px radius (`--radius-md`).
-- **Primary:** `background: #12B76A`, text `#0B0B0B`, `padding: 8px 16px`.
-- **Destructive:** `background: #ED4E4E` family (e.g. sign-out/delete), text `#FAFAFA`.
+- **Primary:** `background: #D41135` (light: `#BB061E`), text `#FFFFFF`, `padding: 8px 16px`.
+- **Destructive:** `background: #E8536E` family (e.g. sign-out/delete), text `#FAFAFA`.
 - **Hover / Focus:** background-color transition only (never `transition-all`); `focus-visible` ring in the accent color, offset from the surface.
 - **Ghost / Secondary:** `background: #242424` (`--secondary`), same radius, used for lower-emphasis actions inside dropdowns and toolbars.
 
@@ -152,28 +155,29 @@ Flat and functional: no shadow at rest, minimal ornament, every interactive elem
 
 ### Inputs / Fields
 - **Style:** `background: #242424` (`--secondary`/zinc-800 equivalent), `border: zinc-700`, 8px radius.
-- **Focus:** ring shifts to the contextual accent color (green for standard forms, red for the sidebar's password-change form) with a background-matched ring offset.
+- **Focus:** ring uses `--ring` (crimson) by default; the sidebar's password-change form keeps its own red-family ring for the error/change-password context.
 - **Placeholder:** `#71717a`-range gray, kept at reading contrast rather than default light-gray.
 
 ### Navigation (Sidebar)
 - **Style:** fixed-position icon rail, `#0B0B0B` background, `border-r: rgba(255,255,255,0.10)`, sitting flush against the TopBar's `border-b` of the same color so the two hairlines cross at the shared corner (Sure's own corner treatment).
-- **Default/Hover/Active states:** default nav items are muted gray text; hover fills `zinc-900`/lightens text; active items get a `#171717`-toned fill plus a 2px red left-indicator bar (the confined identity-red use).
+- **Default/Hover/Active states:** default nav items are muted gray text; hover fills `zinc-900`/lightens text; active items get a `#171717`-toned fill plus a 2px crimson left-indicator bar.
 - **Collapse behavior:** hover-to-expand rail (80px collapsed → 240px expanded), animated via Framer Motion; text labels fade via opacity rather than snap via `display: none`, so width and label opacity move in lockstep.
 - **Mobile treatment:** full-width slide-in drawer (not a rail), triggered by a TopBar hamburger; a `bg-black/60` backdrop dismisses on click-outside.
 
 ### User Menu (Sidebar footer)
-- **Trigger:** avatar (red fill) + truncated email/role, expands a floating card (`card-shadow-floating`) above the trigger, positioned to the side when the rail is collapsed.
+- **Trigger:** avatar (crimson fill) + truncated email/role, expands a floating card (`card-shadow-floating`) above the trigger, positioned to the side when the rail is collapsed.
 - **Contents:** identity block, inline "Change Password" accordion (`expand-grid` height transition), Sign Out — grouped in a single dropdown rather than separate menus.
 
 ## 6. Do's and Don'ts
 
 ### Do:
-- **Do** use `#12B76A` green as the only primary/positive action color.
+- **Do** use crimson (`#D41135` dark / `#BB061E` light) as the only primary/brand action color — buttons, links, active nav, focus rings.
+- **Do** keep crimson confined to fills and chrome; never use it for text or a data mark (the Fill-vs-Read Rule).
 - **Do** keep cards flat (`box-shadow: none`) at rest; reserve shadow for genuinely floating surfaces (dropdowns, popovers, the mobile drawer).
 - **Do** use hairline borders (`rgba(255,255,255,0.10)`) for structural separation instead of visible strokes.
 - **Do** give every interactive element explicit hover, focus-visible, and active states.
 - **Do** animate state changes (sidebar width, text opacity, dropdown open) together, not independently — a width change without a matching text-opacity change reads as broken, not fast.
-- **Do** keep red confined to destructive actions plus the sidebar's identity chrome (avatars, active indicator) — its two roles, and no more.
+- **Do** keep a non-color cue (▲/▼, +/−) on every KPI delta alongside its green/rust color.
 
 ### Don't:
 - **Don't** use Tailwind's default `blue-*`/`indigo-*`/`violet-*` as a primary or accent color — reserve them strictly for multi-series chart legends.
@@ -183,3 +187,56 @@ Flat and functional: no shadow at rest, minimal ornament, every interactive elem
 - **Don't** use `transition-all` — animate only the specific properties that change (`background-color`, `opacity`, `transform`, `width`).
 - **Don't** introduce a second sans-serif "for hierarchy" — Geist at different weights carries the whole type scale.
 - **Don't** ship generic SaaS/AI-slop patterns: hero-metric stat-card templates, identical repeated card grids, glassmorphism as decoration, tiny uppercase tracked eyebrows above every section.
+
+## Appendix: pcmerchandise.com.ph Brand Reference
+
+**Applied 2026-08-04.** This was originally a reference-only capture of the marketing site's
+actual palette; §2 above now documents the palette live in `app/globals.css`. Kept here for
+provenance and as the record of how the conflict below was resolved.
+
+### Provenance
+
+Extracted 2026-08-04 from the live site's compiled CSS, not from the CSS Peeper export in
+`Downloads\colors` (that export was corrupt — the `.sketchpalette` had out-of-range channel values
+and the `figma-colors.json` contained only black/white). The real tokens came from fetching the
+site's two Next.js stylesheet chunks directly:
+
+- `https://www.pcmerchandise.com.ph/_next/static/chunks/13rfms16juua~.css`
+- `https://www.pcmerchandise.com.ph/_next/static/chunks/0fl-inrpwrob0.css`
+
+These filenames are content-hashed and will change on the site's next deploy — re-derive by
+fetching the page, reading the `<link rel="stylesheet">` hrefs, and grepping the CSS for `--primary`.
+
+### Token values
+
+```
+--background: #f9f8f7    --foreground: #0f090b    --card: #ffffff
+--card-foreground: #0f090b    --popover: #ffffff    --popover-foreground: #0f090b
+--primary: #bb061e       --primary-foreground: #ffffff
+--secondary: #f2f2ee     --secondary-foreground: #0f090b
+--muted: #ecebe7         --muted-foreground: #5a5355
+--accent: #0f090b        --accent-foreground: #ffffff
+--destructive: #bb061e   --destructive-foreground: #ffffff
+--border: #d8d7d4        --input: #e5e5e1         --ring: #bb061e
+--chart-1: #bb061e  --chart-2: #262021  --chart-3: #ca5551  --chart-4: #4d4647  --chart-5: #d6857f
+--radius: .5rem
+--sidebar: #f9f8f7  --sidebar-foreground: #0f090b  --sidebar-primary: #bb061e
+--sidebar-primary-foreground: #ffffff  --sidebar-accent: #ecebe7
+--sidebar-accent-foreground: #0f090b   --sidebar-border: #d8d7d4  --sidebar-ring: #bb061e
+Fonts: Inter (sans, via --font-inter), Geist Mono (mono)
+```
+
+Crimson red (`#bb061e`) on warm off-white neutrals — a light, editorial palette, the inverse of
+the DSS's near-black terminal canvas.
+
+### How the conflict was resolved
+
+The site sets **both** `--primary` and `--destructive` to `#bb061e`. That's fine for a marketing
+site with no up/down semantics to protect, but adopting it as-is would have made every crimson
+KPI reading ambiguous with a crimson button. Resolution: split by role, not just hue — crimson
+became `--primary`/`--destructive` (fills and chrome only), while the `red-*` ramp used for
+declining KPI deltas was retuned to rust (`#FD853A`/`#E04F16`/`#C4320A`, etc.) and moved
+semantically to `--status-negative`, so it can never be confused with the brand accent even
+though both are technically warm hues. This is the Fill-vs-Read Rule in §2 above. See
+`app/globals.css` lines ~64–92 for the ramp definitions and ~258–379 for the per-theme
+`--primary`/`--status-negative` tokens.

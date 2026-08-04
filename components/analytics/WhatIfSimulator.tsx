@@ -70,7 +70,7 @@ export default function WhatIfSimulator() {
           <button
             type="submit"
             disabled={isPending}
-            className="bg-primary hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm flex items-center gap-2 h-[38px]"
+            className="bg-primary hover:bg-primary/90 disabled:bg-primary/40 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm flex items-center gap-2 h-[38px]"
           >
             {isPending ? (
               <>

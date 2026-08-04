@@ -183,7 +183,7 @@ export default function UploadForm() {
         <Button
           onClick={runBatchUpload}
           disabled={isPending || pendingCount === 0}
-          className="bg-primary hover:bg-green-600 text-white px-4 gap-2 w-full sm:w-auto h-11 sm:h-8 text-base sm:text-sm"
+          className="bg-primary hover:bg-primary/90 text-white px-4 gap-2 w-full sm:w-auto h-11 sm:h-8 text-base sm:text-sm"
         >
           {isPending ? (
             <>
