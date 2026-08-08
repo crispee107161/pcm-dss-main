@@ -7,15 +7,15 @@
 A role-gated Facebook ad and page performance analytics dashboard for a PC merchandise business. It ingests Facebook CSV exports, runs statistical analysis server-side, and surfaces the results to three roles (Marketing Manager, Sales Director, Business Owner) so they can make decisions **about the Facebook marketing channel** without doing the math by hand.
 
 Concretely, in scope:
-- Ad performance: spend, reach, impressions, link clicks, inquiries (as reported by Facebook), messaging contacts.
+- Ad performance: spend, reach, impressions, link clicks, messaging conversations started (as reported by Facebook's daily export).
 - Page performance: follows, interactions, link clicks, views, visits, follower growth, viewer demographics.
 - Organic post performance: reach, reactions, comments, shares, engagement rate.
-- Derived analysis: Spearman/Pearson correlation, multiple linear regression (inquiries ~ reach + messaging + spend), Holt-Winters forecasting (page views, 7-day horizon), Monte Carlo what-if simulation, budget-allocation recommendations across ad sets, and an AI chat/insights layer that summarizes the above.
+- Derived analysis: Spearman/Pearson correlation, multiple linear regression (messaging conversations ~ reach + spend), Holt-Winters forecasting (page views, 7-day horizon), Monte Carlo what-if simulation, budget-allocation recommendations across ad sets, and an AI chat/insights layer that summarizes the above.
 
 ## What PCM DSS is not
 
 - **Not an inventory system.** No stock levels, reorder points, or supplier data.
-- **Not a sales or financial/cash-flow system.** No margin, cost-of-goods, purchase, or transaction data — "inquiries" here means Facebook's reported ad-attributed count of customers reaching out (the CSV column Facebook labels "Purchases"), not a sale, order, or verified revenue event. The system deliberately drops all sales/purchase framing to stay honest about what it can see: ad efficiency and engagement, not transactions.
+- **Not a sales or financial/cash-flow system.** No margin, cost-of-goods, purchase, or transaction data. The system's outcome metric is "messaging conversations started" — Facebook's count of ad-attributed customers who opened a chat — not a sale, order, or verified revenue event. **This is a deliberate pivot, not the original design:** Facebook's own "Purchases" figure (the column this project used to treat as its outcome metric) was found to be unusable — in the one month both export formats overlap, only 19 of 65 ads recorded any purchase at all (40 events total, no monetary value on any row), and the ad campaigns themselves are optimized for messaging, not purchases. Messaging conversations started is a shallower indicator of customer intent than a completed purchase, but it is the honest, statistically usable signal this data actually supports — declared as a stated limitation, not hidden behind a larger sample size. See `DV-PIVOT-PLAN.md` for the full analysis. The system deliberately drops all sales/purchase framing to stay honest about what it can see: ad efficiency and engagement, not transactions.
 - **Not a pricing tool.** No price-elasticity or competitor data.
 - **Not a general business DSS.** Every input, output, and decision surface in the system is downstream of one channel: Facebook. A perfectly accurate version of this system would still only ever answer "how is our Facebook marketing doing and what should we do about ad spend" — not "should we restock X" or "should we raise prices."
 
@@ -33,4 +33,8 @@ This is a stronger position for a defense than an unqualified "DSS" claim: it's 
 
 ## Note: sales/revenue data is intentionally out of scope
 
-An earlier draft of this document proposed connecting a non-marketing data source (e.g. actual units sold or revenue) as an optional future path to broaden the "DSS" claim. That direction was explicitly rejected: the project's scope is now locked to ad efficiency, expense reduction, engagement, and customer inquiries — no sales, purchases, or transaction data, full stop. The "Purchases" column Facebook exports is treated purely as an inquiry-volume signal, never as a proxy for revenue or sales performance. This keeps the system's claims falsifiable and matched to the data it actually has.
+An earlier draft of this document proposed connecting a non-marketing data source (e.g. actual units sold or revenue) as an optional future path to broaden the "DSS" claim. That direction was explicitly rejected: the project's scope is now locked to ad efficiency, expense reduction, engagement, and customer messaging conversations — no sales, purchases, or transaction data, full stop. This keeps the system's claims falsifiable and matched to the data it actually has.
+
+## Title (updated 2026-08-08)
+
+The paper's official title is now **"A Decision Support System (DSS) for Facebook Content Performance and Advertising Efficiency Analysis at PC Merchandise,"** replacing "Linking Facebook Engagement to Sales: A Decision Support System for Targeted Marketing at PC Merchandise." The retitling drops sales/purchases framing entirely — matching the messaging-conversations DV pivot above, not a separate decision.

@@ -87,5 +87,13 @@ export async function loginAction(
 
 export async function logoutAction() {
   await signOut({ redirect: false })
-  redirect('/login')
+  redirect('/login?reason=logout')
+}
+
+// Distinct from logoutAction so only the automatic idle-timeout path shows
+// the "signed out due to inactivity" notice — a user who explicitly clicks
+// Sign Out already knows why they're back at /login.
+export async function idleLogoutAction() {
+  await signOut({ redirect: false })
+  redirect('/login?reason=idle')
 }

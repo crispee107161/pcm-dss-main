@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { pearsonCorrelation } from '@/lib/stats/spearman'
+import { isDailyGranularity } from '@/lib/stats/campaign-rankings'
 
 interface DailyPoint {
   reach: number
   messaging: number
   amount_spent: number
-  inquiries: number
 }
 
 function diffDays(a: Date, b: Date): number {
@@ -18,7 +18,6 @@ export function expandAndAggregate(ads: Array<{
   reach: number | null
   total_messaging_contacts: number | null
   amount_spent: number
-  inquiries: number | null
 }>): Map<string, DailyPoint> {
   const map = new Map<string, DailyPoint>()
 
@@ -30,18 +29,16 @@ export function expandAndAggregate(ads: Array<{
     const dailyReach = (ad.reach ?? 0) / days
     const dailyMessaging = (ad.total_messaging_contacts ?? 0) / days
     const dailySpend = ad.amount_spent / days
-    const dailyInquiries = (ad.inquiries ?? 0) / days
 
     for (let i = 0; i < days; i++) {
       const d = new Date(start)
       d.setDate(d.getDate() + i)
       const key = d.toISOString().slice(0, 10)
 
-      const existing = map.get(key) ?? { reach: 0, messaging: 0, amount_spent: 0, inquiries: 0 }
+      const existing = map.get(key) ?? { reach: 0, messaging: 0, amount_spent: 0 }
       existing.reach += dailyReach
       existing.messaging += dailyMessaging
       existing.amount_spent += dailySpend
-      existing.inquiries += dailyInquiries
       map.set(key, existing)
     }
   }
@@ -72,7 +69,9 @@ function computeLaggedPearson(
   const reachX: number[] = []
   const messagingX: number[] = []
   const spendX: number[] = []
-  const inquiriesY: number[] = []
+  // Outcome variable is messaging conversations `lag` days later (not
+  // Facebook-reported inquiries, which are dropped from this system).
+  const outcomeY: number[] = []
 
   for (const dateStr of dates) {
     const d = new Date(dateStr)
@@ -85,19 +84,19 @@ function computeLaggedPearson(
       reachX.push(today.reach)
       messagingX.push(today.messaging)
       spendX.push(today.amount_spent)
-      inquiriesY.push(future.inquiries)
+      outcomeY.push(future.messaging)
     }
   }
 
-  if (inquiriesY.length < 3) {
-    return { reach_r: null, messaging_r: null, spend_r: null, n: inquiriesY.length }
+  if (outcomeY.length < 3) {
+    return { reach_r: null, messaging_r: null, spend_r: null, n: outcomeY.length }
   }
 
   return {
-    reach_r: pearsonCorrelation(reachX, inquiriesY),
-    messaging_r: pearsonCorrelation(messagingX, inquiriesY),
-    spend_r: pearsonCorrelation(spendX, inquiriesY),
-    n: inquiriesY.length,
+    reach_r: pearsonCorrelation(reachX, outcomeY),
+    messaging_r: pearsonCorrelation(messagingX, outcomeY),
+    spend_r: pearsonCorrelation(spendX, outcomeY),
+    n: outcomeY.length,
   }
 }
 
@@ -128,7 +127,10 @@ export async function computeLaggedCorrelations(): Promise<LaggedCorrelationOutp
     return { results: [], best_lag: 1, best_metric: null, best_r: null, best_p: null, has_data: false }
   }
 
-  const dailyMap = expandAndAggregate(ads)
+  // Daily-granularity only: a surviving monthly-aggregate row, spread evenly
+  // across its span by expandAndAggregate below, would otherwise sit on top
+  // of genuine daily rows for the same dates and inflate every lag bucket.
+  const dailyMap = expandAndAggregate(ads.filter(isDailyGranularity))
   const results: LagResult[] = []
 
   // Extended lag range: adds 2, 5, 14 to capture shorter cycles and bi-weekly patterns
@@ -166,17 +168,22 @@ export async function computeLaggedCorrelations(): Promise<LaggedCorrelationOutp
     }
   }
 
+  // Messaging is excluded from best-metric selection (but still computed and
+  // shown in the results table): its lag-1 value is today's messaging vs.
+  // tomorrow's messaging, an autocorrelation that will almost always have
+  // the largest |r| of the three metrics for a daily conversation series.
+  // Letting it win here would headline "messaging conversations predict
+  // messaging conversations" — true but circular, not the actionable
+  // reach/spend timing insight this panel exists to surface.
   // First pass: significant only
   for (const res of results) {
     tryUpdate(res.reach_r, res.reach_p, 'reach', res.lag, true)
-    tryUpdate(res.messaging_r, res.messaging_p, 'messaging', res.lag, true)
     tryUpdate(res.spend_r, res.spend_p, 'spend', res.lag, true)
   }
   // Second pass: any if none significant
   if (best_r === null) {
     for (const res of results) {
       tryUpdate(res.reach_r, res.reach_p, 'reach', res.lag, false)
-      tryUpdate(res.messaging_r, res.messaging_p, 'messaging', res.lag, false)
       tryUpdate(res.spend_r, res.spend_p, 'spend', res.lag, false)
     }
   }

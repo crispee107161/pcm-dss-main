@@ -14,7 +14,7 @@ export default async function CorrelationView() {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Correlation Analysis"
-        description="Spearman rank correlation between ad metrics and inquiry outcomes"
+        description="Spearman rank correlation between ad metrics and messaging conversation outcomes"
       />
 
       <div className="bg-card rounded-2xl card-shadow p-6 mb-8">
@@ -30,10 +30,10 @@ export default async function CorrelationView() {
       <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
         <h2 className="text-base font-semibold text-gray-800 mb-2">How to read this</h2>
         <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
-          <li>Values close to <strong>+1</strong> mean a strong positive relationship — as one metric rises, inquiries tend to rise too.</li>
+          <li>Values close to <strong>+1</strong> mean a strong positive relationship — as one metric rises, messaging conversations tend to rise too.</li>
           <li>Values close to <strong>-1</strong> mean a strong negative relationship.</li>
           <li>Values close to <strong>0</strong> mean little or no relationship.</li>
-          <li>The lag analysis distributes each ad&rsquo;s metrics across its campaign period and checks whether today&rsquo;s metrics predict future inquiries.</li>
+          <li>The lag analysis distributes each ad&rsquo;s metrics across its campaign period and checks whether today&rsquo;s metrics predict future messaging conversations.</li>
         </ul>
       </div>
     </div>

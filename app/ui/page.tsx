@@ -205,7 +205,7 @@ function CardPanel() {
           </Card>
           <Card size="sm" className="w-56">
             <CardHeader>
-              <CardTitle>Total Inquiries</CardTitle>
+              <CardTitle>Total Messaging Conversations</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-foreground">168</p>
@@ -303,22 +303,22 @@ function TablePanel() {
                   <TableHead>Ad Name</TableHead>
                   <TableHead>Period</TableHead>
                   <TableHead className="text-right">Spend (PHP)</TableHead>
-                  <TableHead className="text-right">Inquiries</TableHead>
+                  <TableHead className="text-right">Messaging Conversations</TableHead>
                   <TableHead className="text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {[
-                  { name: 'Summer Promo Campaign',  period: 'Sep 2025', spend: '₱12,400', inquiries: 42, status: 'Active' },
-                  { name: 'New Arrivals — Laptops', period: 'Dec 2025', spend: '₱8,200',  inquiries: 28, status: 'Ended'  },
-                  { name: 'Promo: Year-End Deals',  period: 'Jan 2026', spend: '₱15,000', inquiries: 63, status: 'Active' },
-                  { name: 'Back-to-School Bundle',  period: 'Aug 2025', spend: '₱9,750',  inquiries: 35, status: 'Ended'  },
+                  { name: 'Summer Promo Campaign',  period: 'Sep 2025', spend: '₱12,400', messagingConversations: 42, status: 'Active' },
+                  { name: 'New Arrivals — Laptops', period: 'Dec 2025', spend: '₱8,200',  messagingConversations: 28, status: 'Ended'  },
+                  { name: 'Promo: Year-End Deals',  period: 'Jan 2026', spend: '₱15,000', messagingConversations: 63, status: 'Active' },
+                  { name: 'Back-to-School Bundle',  period: 'Aug 2025', spend: '₱9,750',  messagingConversations: 35, status: 'Ended'  },
                 ].map((row) => (
                   <TableRow key={row.name}>
                     <TableCell className="font-medium">{row.name}</TableCell>
                     <TableCell className="text-muted-foreground">{row.period}</TableCell>
                     <TableCell className="text-right">{row.spend}</TableCell>
-                    <TableCell className="text-right text-primary font-semibold">{row.inquiries}</TableCell>
+                    <TableCell className="text-right text-primary font-semibold">{row.messagingConversations}</TableCell>
                     <TableCell className="text-right">
                       <Badge variant={row.status === 'Active' ? 'default' : 'secondary'}>
                         {row.status}

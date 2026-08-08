@@ -1,3 +1,6 @@
+// `total_inquiries` keeps its legacy field name (components/analytics/pages/TrendAnalysisView.tsx
+// constructs these objects and is out of scope for this pass) but now carries
+// messaging-conversation totals, not Facebook-reported "Purchases".
 export interface TrendPeriodPoint {
   period: string
   total_spend: number
@@ -31,7 +34,7 @@ export function computeTrendInsight(
     return {
       confidence: 'low',
       headline: `Not enough data to compare ${prev.period} and ${curr.period}`,
-      detail: 'Upload more ad data with inquiry counts to see a period-over-period trend.',
+      detail: 'Upload more ad data with messaging conversation counts to see a period-over-period trend.',
     }
   }
 
@@ -40,13 +43,13 @@ export function computeTrendInsight(
 
   const spendDir = spendDelta >= 0 ? 'up' : 'down'
   const inquiryDir = inquiryDelta >= 0 ? 'up' : 'down'
-  const headline = `Spend is ${spendDir} ${Math.abs(spendDelta).toFixed(0)}%, inquiries are ${inquiryDir} ${Math.abs(inquiryDelta).toFixed(0)}% from ${prev.period} to ${curr.period}`
+  const headline = `Spend is ${spendDir} ${Math.abs(spendDelta).toFixed(0)}%, messaging conversations are ${inquiryDir} ${Math.abs(inquiryDelta).toFixed(0)}% from ${prev.period} to ${curr.period}`
 
   const detailParts: string[] = []
   if (prevCpi !== null && currCpi !== null) {
     const cpiWord = currCpi > prevCpi ? 'up from' : currCpi < prevCpi ? 'down from' : 'about the same as'
     detailParts.push(
-      `Each inquiry cost ₱${Math.round(currCpi).toLocaleString()} in ${curr.period}, ${cpiWord} ₱${Math.round(prevCpi).toLocaleString()} in ${prev.period}.`
+      `Each messaging conversation cost ₱${Math.round(currCpi).toLocaleString()} in ${curr.period}, ${cpiWord} ₱${Math.round(prevCpi).toLocaleString()} in ${prev.period}.`
     )
   }
   if (!isConsecutive) {

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import DateRangeFilter from '@/components/ui/DateRangeFilter'
+import { isDailyGranularity } from '@/lib/stats/campaign-rankings'
 
 function formatPHP(value: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(value)
@@ -98,31 +99,40 @@ export default async function CampaignRankingsPage({
   const hasDateFilter = Boolean(from || to)
   const adWhere = hasDateFilter ? { reporting_starts: dateFilter } : {}
 
-  const [topSpend, topInquiries, topReach, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
+  // Fetch a larger candidate pool than the top-10 shown, then filter out
+  // monthly-granularity survivor rows (see findSurvivingMonthlyRows in
+  // lib/db/upsert-ads.ts) before slicing to 10 — otherwise a handful of
+  // month-sized totals dominate every "top by X" table over real daily ads.
+  const VOLUME_CANDIDATE_POOL = 300
+
+  const [topSpendCandidates, topInquiriesCandidates, topReachCandidates, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
     prisma.ad.findMany({
       where: adWhere,
       orderBy: { amount_spent: 'desc' },
-      take: 10,
+      take: VOLUME_CANDIDATE_POOL,
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
+    // total_messaging_contacts, not the deprecated `inquiries` field — this
+    // export has no "Purchases" column, so `inquiries` is permanently null
+    // (see DV-PIVOT-PLAN.md). Querying it here always returned an empty table.
     prisma.ad.findMany({
-      where: { ...adWhere, inquiries: { gt: 0 } },
-      orderBy: { inquiries: 'desc' },
-      take: 10,
-      select: { ad_name: true, ad_set_name: true, inquiries: true, reporting_starts: true, reporting_ends: true },
+      where: { ...adWhere, total_messaging_contacts: { gt: 0 } },
+      orderBy: { total_messaging_contacts: 'desc' },
+      take: VOLUME_CANDIDATE_POOL,
+      select: { ad_name: true, ad_set_name: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { ...adWhere, reach: { not: null } },
       orderBy: { reach: 'desc' },
-      take: 10,
+      take: VOLUME_CANDIDATE_POOL,
       select: { ad_name: true, ad_set_name: true, reach: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.count({ where: adWhere }),
     prisma.ad.aggregate({ where: adWhere, _sum: { amount_spent: true } }),
-    prisma.ad.count({ where: { ...adWhere, inquiries: { gt: 0 } } }),
+    prisma.ad.count({ where: { ...adWhere, total_messaging_contacts: { gt: 0 } } }),
   ])
 
-  const bySpend: RankRow[] = topSpend.map(a => ({
+  const bySpend: RankRow[] = topSpendCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
     name: a.ad_name,
     adSetName: a.ad_set_name,
     value: a.amount_spent,
@@ -130,15 +140,15 @@ export default async function CampaignRankingsPage({
     reportingEnds: a.reporting_ends,
   }))
 
-  const byInquiries: RankRow[] = topInquiries.map(a => ({
+  const byInquiries: RankRow[] = topInquiriesCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
     name: a.ad_name,
     adSetName: a.ad_set_name,
-    value: a.inquiries ?? 0,
+    value: a.total_messaging_contacts ?? 0,
     reportingStarts: a.reporting_starts,
     reportingEnds: a.reporting_ends,
   }))
 
-  const byReach: RankRow[] = topReach.map(a => ({
+  const byReach: RankRow[] = topReachCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
     name: a.ad_name,
     adSetName: a.ad_set_name,
     value: a.reach ?? 0,
@@ -152,7 +162,7 @@ export default async function CampaignRankingsPage({
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Campaign Rankings"
-        description="Top 10 ads ranked by spend, inquiries, and reach"
+        description="Top 10 ads ranked by spend, messaging conversations, and reach"
       />
       <DateRangeFilter from={from} to={to} className="mb-6" />
 
@@ -167,7 +177,7 @@ export default async function CampaignRankingsPage({
           <p className="text-2xl font-bold text-red-400 mt-1">{formatPHP(totalSpendValue)}</p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5 col-span-2 md:col-span-1">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Inquiries</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Messaging Conversations</p>
           <p className="text-2xl font-bold text-green-400 mt-1">{adsWithInquiries}</p>
         </div>
       </div>
@@ -186,15 +196,15 @@ export default async function CampaignRankingsPage({
           />
         </div>
 
-        {/* By Inquiries */}
+        {/* By Messaging Conversations */}
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <span className="text-lg">🛒</span>
-            <h2 className="font-semibold text-gray-800">Top by Inquiries</h2>
+            <span className="text-lg">💬</span>
+            <h2 className="font-semibold text-gray-800">Top by Messaging Conversations</h2>
           </div>
           <RankingTable
             rows={byInquiries}
-            valueLabel="Inquiries"
+            valueLabel="Messaging Conversations"
             formatValue={v => v.toLocaleString()}
           />
         </div>

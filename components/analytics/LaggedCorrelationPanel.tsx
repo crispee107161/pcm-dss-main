@@ -66,7 +66,7 @@ function CorrCell({ r, p, tone }: { r: number | null; p: number | null; tone: In
 
 const METRIC_LABELS: Record<string, string> = {
   reach: 'Reach',
-  messaging: 'Messaging Contacts',
+  messaging: 'Messaging Conversations (same day)',
   spend: 'Amount Spent',
 }
 
@@ -92,7 +92,7 @@ export default function LaggedCorrelationPanel({ data, disclosure = 'collapsible
   const isSignificant = data.best_p !== null && data.best_p < 0.05
 
   const headline = data.best_r !== null && bestMetricLabel
-    ? `Inquiries peak ${data.best_lag} day${data.best_lag !== 1 ? 's' : ''} after ${bestMetricLabel.toLowerCase()} changes`
+    ? `Messaging conversations peak ${data.best_lag} day${data.best_lag !== 1 ? 's' : ''} after ${bestMetricLabel.toLowerCase()} changes`
     : 'No clear time lag found yet'
 
   const detail = data.best_r !== null && bestMetricLabel
@@ -108,15 +108,15 @@ export default function LaggedCorrelationPanel({ data, disclosure = 'collapsible
               <th className={`text-left text-xs font-medium uppercase tracking-wider px-3 py-3 ${t.th}`}>Lag</th>
               <th className={`text-left text-xs font-medium uppercase tracking-wider px-3 py-3 hidden sm:table-cell ${t.th}`}>n pairs</th>
               <th className={`text-left text-xs font-medium uppercase tracking-wider px-3 py-3 ${t.th}`}>
-                <span className="hidden sm:inline">Reach × Inquiries</span>
+                <span className="hidden sm:inline">Reach × Messaging Conversations</span>
                 <span className="sm:hidden">Reach</span>
               </th>
               <th className={`text-left text-xs font-medium uppercase tracking-wider px-3 py-3 ${t.th}`}>
-                <span className="hidden sm:inline">Messaging × Inquiries</span>
+                <span className="hidden sm:inline">Messaging Conversations (same day) × Later Messaging Conversations</span>
                 <span className="sm:hidden">Messaging</span>
               </th>
               <th className={`text-left text-xs font-medium uppercase tracking-wider px-3 py-3 ${t.th}`}>
-                <span className="hidden sm:inline">Spend × Inquiries</span>
+                <span className="hidden sm:inline">Spend × Messaging Conversations</span>
                 <span className="sm:hidden">Spend</span>
               </th>
             </tr>
@@ -141,8 +141,8 @@ export default function LaggedCorrelationPanel({ data, disclosure = 'collapsible
       </div>
 
       <div className={`border rounded-xl p-4 mt-4 text-xs space-y-1 ${t.footnoteBox} ${t.footnoteText}`}>
-        <p><strong>How to read this:</strong> A lag of N days means: &ldquo;do today&rsquo;s ad metrics predict inquiries N days from now?&rdquo;</p>
-        <p>Pearson r is computed by expanding each ad campaign to daily rows (metrics distributed proportionally) then pairing day-D metrics with day-(D+N) inquiries.</p>
+        <p><strong>How to read this:</strong> A lag of N days means: &ldquo;do today&rsquo;s ad metrics predict messaging conversations N days from now?&rdquo;</p>
+        <p>Pearson r is computed by expanding each ad campaign to daily rows (metrics distributed proportionally) then pairing day-D metrics with day-(D+N) messaging conversations.</p>
         <p><strong>✓</strong> = statistically significant (p &lt; 0.05). Green = positive relationship, Red = negative.</p>
       </div>
     </>

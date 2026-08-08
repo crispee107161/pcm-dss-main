@@ -1,7 +1,7 @@
 # Data Catalog — PC Merchandise DSS
 
-**Generated:** 2026-04-05  
-**Project:** Linking Facebook Engagement to Sales: A Decision Support System for Targeted Marketing at PC Merchandise
+**Generated:** 2026-04-05 (title updated 2026-08-08)  
+**Project:** A Decision Support System (DSS) for Facebook Content Performance and Advertising Efficiency Analysis at PC Merchandise
 
 This document maps every raw CSV file in `data/` to its corresponding ERD table, records actual data statistics, flags quality issues, and explains how each file feeds the DSS.
 
@@ -38,10 +38,29 @@ data/
 
 ## 1. Ads CSVs → T4 (`ads`)
 
-**Source:** Facebook Ads Manager, exported by John Bernard Olermo (Marketing Manager).  
-**DSS role:** Core predictor dataset. `amount_spent` is the regression predictor; `inquiries` is the outcome variable. These records drive Stages 1, 2, and 3 of the analytics pipeline.
+> **⚠️ Superseded by the daily export, 2026-08-08.** The 3-file monthly
+> dataset documented below (`data/Ads/`) was the original data source and
+> its numbers are historical fact, kept for the record — but it has since
+> been superseded by a 12-file daily export (`data/FB_Ads_Data/`, Aug
+> 2025–Jul 2026) that carries no `Purchases` column at all. The regression
+> outcome variable changed accordingly from Facebook's reported "Purchases"
+> (mapped to `inquiries`) to "Messaging conversations started" (mapped to
+> `total_messaging_contacts`) — see `DV-PIVOT-PLAN.md` for the full
+> rationale. After the daily upload ran, the DB holds 8,220 daily ad rows
+> plus 133 monthly-survivor rows (ads with zero-delivery days the daily
+> export omits), and the regression retrains at **n≈186 unique ads**
+> (aggregated to one row per ad — see `ALGORITHMS.md` §1.4), not the `n=42`
+> figure below.
 
-### Files
+**Source:** Facebook Ads Manager, exported by John Bernard Olermo (Marketing Manager).  
+**DSS role (historical):** Core predictor dataset for the original 3-file
+monthly export. `amount_spent` was the regression predictor; `inquiries`
+(Facebook's "Purchases" column) was the outcome variable. **Current DSS
+role:** superseded as described above — `total_messaging_contacts` is now
+the outcome variable, sourced from the daily export's `Results` column
+filtered by `Result type == 'Messaging conversations started'`.
+
+### Files (original 3-file monthly export — historical)
 
 | File | Period | Ad Records | PHP Spent | Records with Inquiries | Total Inquiries |
 |---|---|---|---|---|---|
@@ -50,7 +69,11 @@ data/
 | `John-Bernard-Olermo-Ads-Jan-1-2026-Jan-27-2026.csv` | Jan 1–27, 2026 | 72 | ₱71,583.85 | 9 | 47 |
 | **Total** | | **230 records** | **₱215,330.26** | **42 records** | **180 inquiries** |
 
-> The 42 inquiry-bearing records across 3 files correspond exactly to the `n = 42` in the Chapter 3 regression equation (`Inquiries = 1.8168 + 0.000705 × Amount Spent`, R² = 0.2658).
+> The 42 inquiry-bearing records across 3 files correspond exactly to the
+> `n = 42` in the Chapter 3 regression equation as originally drafted
+> (`Inquiries = 1.8168 + 0.000705 × Amount Spent`, R² = 0.2658) — **this
+> equation and n are historical**; see the superseded-dataset note above for
+> the current formula and sample size.
 
 ### Schema (T4 field mapping)
 
@@ -65,8 +88,8 @@ data/
 | Impressions | `impressions` | — |
 | Link clicks | `link_clicks` | 27% missing — retained, excluded from computations |
 | Amount spent (PHP) | `amount_spent` | **Primary regression predictor** |
-| Total messaging contacts | `total_messaging_contacts` | 43.5% missing — retained, excluded from computations |
-| Purchases | `inquiries` | Facebook's literal CSV header; interpreted as customer inquiries, not sales. **Regression outcome variable** — 81.7% missing |
+| Total messaging contacts | `total_messaging_contacts` | Populated on the daily export from `Results` where `Result type == 'Messaging conversations started'` — **not** a literal "Total messaging contacts" CSV column. **Current regression outcome variable** (see superseded-dataset note above). On the original 3-file monthly export shown in this table, this field was 43.5% missing and excluded from computations. |
+| Purchases | `inquiries` | Facebook's literal CSV header on the monthly export only; interpreted as customer inquiries, not sales. **Historical regression outcome variable, now retired** — 81.7% missing on the monthly export, and the daily export that superseded it carries no `Purchases` column at all, so `inquiries` is permanently null going forward. |
 | Results | `results` | 28.7% missing |
 | Cost per results | `cost_per_result` | Stored as-is |
 | Attribution setting | `attribution_setting` | Always "7-day click or 1-day view" |

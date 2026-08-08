@@ -2,11 +2,25 @@
 
 **Date:** 2026-04-05
 
+> **⚠️ Partially superseded (2026-08-08).** This is the original MVP scoping
+> doc — the regression formula and terminology below predate the
+> messaging-conversations DV pivot. Facebook's reported "Purchases" figure
+> (interpreted here as `inquiries`) was found unusable as an outcome
+> variable, and the daily export format that replaced the original 3-file
+> monthly export carries no `Purchases` column at all. The outcome variable
+> is now "Messaging conversations started" (`total_messaging_contacts`), and
+> the regression dropped `messaging` from its predictor set since it can't
+> be both predictor and outcome. See `DV-PIVOT-PLAN.md` for the full
+> rationale and `ALGORITHMS.md` §1.4 for the current formula. Historical
+> figures below (`n=42`, the `Inquiries = 1.8168 + 0.000705 × Amount Spent`
+> equation) reflect the original 3-file dataset, not current state — current
+> regression trains at n≈186 unique ads.
+
 ---
 
 ## Core Purpose
 
-The DSS exists to do one thing: **let PC Merchandise upload Facebook CSV data and find out how ad spend relates to inquiries**, then simulate "what if I spend X amount?" This is the entire analytical value proposition.
+The DSS exists to do one thing: **let PC Merchandise upload Facebook CSV data and find out how ad spend relates to messaging conversations**, then simulate "what if I spend X amount?" This is the entire analytical value proposition. (Originally scoped around "inquiries" — see the superseded-doc note above.)
 
 Everything else — trend charts, campaign rankings, demographic dashboards, report downloads, content categorization — is secondary to this core loop.
 
@@ -21,8 +35,8 @@ Upload CSV → Preprocess → Store → Correlate → Regress → Simulate → D
 1. Marketing Manager uploads Facebook Ads Manager CSV
 2. System validates, preprocesses, stores ad records
 3. Spearman correlation identifies `amount_spent` as the strongest predictor
-4. Simple Linear Regression trains: `Inquiries = 1.8168 + 0.000705 × Amount Spent`
-5. Any user runs a What-If: "If I spend ₱X, how many inquiries?"
+4. Multiple Linear Regression trains: `MessagingConversations = β₀ + β₁·Reach + β₂·AmountSpent` (originally Simple Linear Regression against `inquiries` — see superseded-doc note above)
+5. Any user runs a What-If: "If I spend ₱X, how many messaging conversations?"
 6. Results displayed on role-appropriate dashboard
 
 ---
@@ -50,17 +64,17 @@ Upload CSV → Preprocess → Store → Correlate → Regress → Simulate → D
 
 ### Feature 3: Analytics Pipeline — 3 Stages (FR-12)
 - **Stage 1 — Spearman Rank Correlation**
-  - Between engagement metrics (reach, impressions, reactions, comments, shares, engagement_rate, amount_spent, link_clicks) and outcome variables (total_messaging_contacts, inquiries)
+  - Between engagement metrics (reach, impressions, reactions, comments, shares, engagement_rate, amount_spent, link_clicks) and the outcome variable (`total_messaging_contacts`)
   - Show coefficient table + heatmap
   - Runs on all records currently in the database
-- **Stage 2 — Simple Linear Regression**
-  - Uses strongest predictor from Stage 1 (`amount_spent`) against `inquiries`
+- **Stage 2 — Multiple Linear Regression**
+  - Uses Reach and Amount Spent as predictors against `total_messaging_contacts` (originally Simple Linear Regression against `inquiries` alone — see superseded-doc note above)
   - Displays regression equation, R² value, residual plot
-  - Auto-retrains whenever a new ads CSV upload adds records with non-null inquiry values
+  - Auto-retrains whenever a new ads CSV upload adds records with non-null messaging-conversation values, aggregated to one row per ad
   - Minimum sample check before retraining — skip if not met
 - **Stage 3 — What-If Simulation**
-  - Input: hypothetical `amount_spent` value
-  - Output: projected inquiry count using stored regression equation
+  - Input: hypothetical Reach and Amount Spent values
+  - Output: projected messaging-conversation count using stored regression equation
   - Displays alongside historical baseline comparison
   - Only available after Stage 2 has a trained model
   - Accessible to all three user roles
@@ -73,7 +87,7 @@ Upload CSV → Preprocess → Store → Correlate → Regress → Simulate → D
 
 ### Feature 5: Basic KPI Display (FR-11, minimal)
 - Engagement rate per post (already a stored derived field)
-- Total reach, total spend, total inquiries per reporting month (simple GROUP BY aggregations on T4)
+- Total reach, total spend, total messaging conversations per reporting month (simple GROUP BY aggregations on T4)
 - These feed the dashboard summaries — no separate KPI module needed for MVP
 
 ---
@@ -106,7 +120,7 @@ Only the tables the MVP actually needs:
 | `users` (T1) | Auth and role storage | Seeded manually / Django admin |
 | `upload_logs` (T2) | Audit every upload attempt | System on each upload |
 | `facebook_posts` (T3) | Organic post engagement data | Facebook Insights CSV |
-| `ads` (T4) | Ad spend + inquiry outcome data | Facebook Ads Manager CSV |
+| `ads` (T4) | Ad spend + messaging-conversation outcome data | Facebook Ads Manager CSV |
 | `regression_model` (T7) | Trained SLR parameters | Auto-computed after upload |
 | `simulation_results` (T8) | History of simulation runs | User-triggered simulation |
 
@@ -122,7 +136,7 @@ The existing codebase diverges from the Chapter 3 spec in important ways:
 | Issue | Current Code | Spec (MVP) |
 |---|---|---|
 | Ads schema | Separate `Campaign` + `Ad` models + `PostCampaign` junction | Flat `Ads` table (T4) — `ad_name` + `reporting_starts` as unique key, no Campaign model |
-| Sales data | `Sale` model (POS system) | No POS — inquiries come from Ads Manager CSV's `Purchases` column, interpreted as customer inquiries, not sales |
+| Sales data | `Sale` model (POS system) | No POS — outcome data comes from the Ads Manager CSV; originally the `Purchases` column (interpreted as customer inquiries, not sales), now the daily export's `Results`/`total_messaging_contacts` field since the DV pivot (see `DV-PIVOT-PLAN.md`) |
 | Forecasting | `utils/forecasting.py` runs ARIMA | Explicitly not ARIMA — month-over-month aggregation only |
 | `data_processor.py` | Maps many CSV column aliases for flexible ingestion | Should map exactly to the 11 known CSV sources from the spec |
 | Models count | 12 models | MVP needs 6 active tables |
@@ -149,9 +163,9 @@ Build strictly in dependency order — each step depends on the previous being s
 The MVP is complete when:
 - [ ] Marketing Manager can log in, upload a Facebook Insights CSV and an Ads Manager CSV, and see records stored in the database
 - [ ] Spearman correlation runs and shows a coefficient table with heatmap
-- [ ] Regression trains on records with non-null inquiries and shows the equation + R²
-- [ ] Regression auto-retrains after a new upload adds inquiry records
-- [ ] Any user can run a What-If simulation and get a projected inquiry estimate
+- [ ] Regression trains on records with non-null messaging conversations and shows the equation + R²
+- [ ] Regression auto-retrains after a new upload adds messaging-conversation records
+- [ ] Any user can run a What-If simulation and get a projected messaging-conversation estimate
 - [ ] All three role dashboards load with relevant outputs
 - [ ] Every upload is logged to `upload_logs` regardless of success or failure
 - [ ] Invalid or malformed CSV files show specific error messages, not crashes

@@ -32,7 +32,7 @@ export default async function CategoryPerformancePage() {
   const [categories, allAds, allPosts] = await Promise.all([
     prisma.category.findMany({ orderBy: { name: 'asc' } }),
     prisma.ad.findMany({
-      select: { category_id: true, amount_spent: true, inquiries: true, reach: true },
+      select: { category_id: true, amount_spent: true, total_messaging_contacts: true, reach: true },
     }),
     prisma.facebookPost.findMany({
       select: { category_id: true, engagement_rate: true, reach: true },
@@ -46,7 +46,7 @@ export default async function CategoryPerformancePage() {
 
     const ad_count       = ads.length
     const total_spend    = ads.reduce((s, a) => s + a.amount_spent, 0)
-    const total_inquiries = ads.reduce((s, a) => s + (a.inquiries ?? 0), 0)
+    const total_inquiries = ads.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
     const total_reach    = ads.reduce((s, a) => s + (a.reach ?? 0), 0)
     const cpi            = total_inquiries > 0 ? total_spend / total_inquiries : null
     const inquiry_rate   = total_reach > 0 && total_inquiries > 0 ? total_inquiries / total_reach : null
@@ -77,7 +77,7 @@ export default async function CategoryPerformancePage() {
   const maxEngagement = Math.max(...sorted.map(r => r.avg_engagement ?? 0), 1)
 
   const totalSpend     = allAds.reduce((s, a) => s + a.amount_spent, 0)
-  const totalInquiries = allAds.reduce((s, a) => s + (a.inquiries ?? 0), 0)
+  const totalInquiries = allAds.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
 
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-6">
@@ -91,7 +91,7 @@ export default async function CategoryPerformancePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { label: 'Categories tracked', value: active.length, sub: `of ${categories.length} total` },
-            { label: 'Top by inquiries', value: sorted[0]?.cat.name ?? '—', sub: `${formatNum(sorted[0]?.total_inquiries ?? 0)} inquiries` },
+            { label: 'Top by messaging conversations', value: sorted[0]?.cat.name ?? '—', sub: `${formatNum(sorted[0]?.total_inquiries ?? 0)} messaging conversations` },
             { label: 'Lowest CPI', value: (() => {
                 const withCpi = sorted.filter(r => r.cpi !== null)
                 if (!withCpi.length) return '—'
@@ -147,9 +147,9 @@ export default async function CategoryPerformancePage() {
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-left">Category</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Ads</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Total Spend</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Inquiries</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Messaging Conversations</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">CPI</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Inquiry Rate</th>
+                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Conversation Rate</th>
                   <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden md:table-cell">Reach</th>
                 </tr>
               </thead>

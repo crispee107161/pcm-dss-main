@@ -5,6 +5,20 @@
 **Stack:** Next.js 15 (App Router) · React 19 · React Compiler · TypeScript · Prisma · NextAuth.js v5 · Tailwind CSS v4 · Vercel Analytics  
 **Scope:** Full MVP as defined in `docs/mvp.md`
 
+> **⚠️ Historical / partially superseded (2026-08-08).** This document
+> captures the original MVP design phase, including worked examples against
+> the early 3-file monthly dataset (n=42, Purchases-based `inquiries`
+> outcome). The regression outcome variable has since been switched to
+> messaging conversations started (`total_messaging_contacts`), with the
+> formula reduced from `Inquiries = β₀ + β₁·Reach + β₂·Messaging + β₃·Spend`
+> to `MessagingConversations = β₀ + β₁·Reach + β₂·Spend` — see
+> `DV-PIVOT-PLAN.md` for why and `ALGORITHMS.md` §1.4 for the current,
+> accurate description of the regression engine. The stack references below
+> (Next.js 15, SQLite dev) also predate the current app (Next.js 16,
+> PostgreSQL) — treat this file as a record of early design intent, not a
+> live spec. Kept as-is rather than rewritten so the original worked
+> examples and reasoning remain available for the defense narrative.
+
 ---
 
 ## 1. Architecture Overview

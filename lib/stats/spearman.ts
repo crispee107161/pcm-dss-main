@@ -82,6 +82,11 @@ function spearmanFiltered(
   return pearsonCorrelation(rankedX, rankedY)
 }
 
+// Outcome set intentionally excludes Facebook-reported "Purchases"
+// (`inquiries` in this schema) — the capstone's no-sales/no-purchases-framing
+// policy drops it entirely, and `total_messaging_contacts` is the sole
+// regression/correlation outcome now. `vs_inquiries` stays on `SpearmanRow`
+// (types/index.ts is out of scope for this pass) but is always null.
 export async function computeSpearmanMatrix(): Promise<SpearmanRow[]> {
   const ads = await prisma.ad.findMany()
 
@@ -89,7 +94,6 @@ export async function computeSpearmanMatrix(): Promise<SpearmanRow[]> {
   const reach = ads.map((a) => a.reach)
   const impressions = ads.map((a) => a.impressions ?? null)
   const link_clicks = ads.map((a) => a.link_clicks)
-  const inquiries = ads.map((a) => a.inquiries)
   const messaging = ads.map((a) => a.total_messaging_contacts)
 
   const predictors: { name: string; values: (number | null)[] }[] = [
@@ -101,7 +105,7 @@ export async function computeSpearmanMatrix(): Promise<SpearmanRow[]> {
 
   return predictors.map(({ name, values }) => ({
     variable: name,
-    vs_inquiries: spearmanFiltered(values, inquiries),
+    vs_inquiries: null,
     vs_messaging: spearmanFiltered(values, messaging),
   }))
 }

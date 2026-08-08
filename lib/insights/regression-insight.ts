@@ -4,7 +4,6 @@ export interface RegressionModelLike {
   model_type?: string | null
   intercept: number
   coef_reach?: number | null
-  coef_messaging?: number | null
   coef_amount_spent?: number | null
   coefficient: number
   r_squared: number
@@ -13,7 +12,6 @@ export interface RegressionModelLike {
 
 export interface RegressionHistoryPoint {
   reach: number
-  messaging: number
   amount_spent: number
 }
 
@@ -55,18 +53,17 @@ export function computeRegressionInsight(
   if (history.length === 0) return null
 
   const medReach = median(history.map(h => h.reach))
-  const medMsg = median(history.map(h => h.messaging))
   const medSpend = median(history.map(h => h.amount_spent))
 
   if (medSpend <= 0) return null
 
-  const base = predictFromModel(model, medReach, medMsg, medSpend)
+  const base = predictFromModel(model, medReach, medSpend)
 
   const candidates: MarginalEffect[] = [
     {
       label: 'Ad Spend',
       deltaInputLabel: `+₱${Math.round(medSpend * BUMP).toLocaleString()}`,
-      deltaInquiries: predictFromModel(model, medReach, medMsg, medSpend * (1 + BUMP)) - base,
+      deltaInquiries: predictFromModel(model, medReach, medSpend * (1 + BUMP)) - base,
     },
   ]
 
@@ -74,15 +71,7 @@ export function computeRegressionInsight(
     candidates.push({
       label: 'Reach',
       deltaInputLabel: `+${Math.round(medReach * BUMP).toLocaleString()} people`,
-      deltaInquiries: predictFromModel(model, medReach * (1 + BUMP), medMsg, medSpend) - base,
-    })
-  }
-
-  if (medMsg > 0) {
-    candidates.push({
-      label: 'Messaging Contacts',
-      deltaInputLabel: `+${Math.round(medMsg * BUMP).toLocaleString()}`,
-      deltaInquiries: predictFromModel(model, medReach, medMsg * (1 + BUMP), medSpend) - base,
+      deltaInquiries: predictFromModel(model, medReach * (1 + BUMP), medSpend) - base,
     })
   }
 
@@ -99,14 +88,14 @@ export function computeRegressionInsight(
   const hasSignal = top && Math.abs(top.deltaInquiries) >= 0.05
 
   const headline = hasSignal
-    ? `${top.label} is your best lever for more inquiries`
+    ? `${top.label} is your best lever for more messaging conversations`
     : `No single lever stands out yet`
 
   const roundedBase = Math.max(0, Math.round(base))
-  const deltaWord = Math.abs(top?.deltaInquiries ?? 0) >= 1.5 ? 'inquiries' : 'inquiry'
+  const deltaWord = Math.abs(top?.deltaInquiries ?? 0) >= 1.5 ? 'conversations' : 'conversation'
   const detail = hasSignal
-    ? `A typical campaign spends around ₱${Math.round(medSpend).toLocaleString()} and gets about ${roundedBase} inquiries. Raising ${top.label.toLowerCase()} by 10% (${top.deltaInputLabel}) is projected to add about ${Math.abs(top.deltaInquiries) < 1 ? Math.abs(top.deltaInquiries).toFixed(1) : Math.round(Math.abs(top.deltaInquiries))} more ${deltaWord}.`
-    : `Reach, messaging, and spend don't show a strong individual effect on their own yet — more ad data will sharpen this.`
+    ? `A typical campaign spends around ₱${Math.round(medSpend).toLocaleString()} and gets about ${roundedBase} messaging conversations. Raising ${top.label.toLowerCase()} by 10% (${top.deltaInputLabel}) is projected to add about ${Math.abs(top.deltaInquiries) < 1 ? Math.abs(top.deltaInquiries).toFixed(1) : Math.round(Math.abs(top.deltaInquiries))} more ${deltaWord}.`
+    : `Reach and spend don't show a strong individual effect on their own yet — more ad data will sharpen this.`
 
   return { confidence, confidenceDetail, headline, detail, marginalEffects }
 }

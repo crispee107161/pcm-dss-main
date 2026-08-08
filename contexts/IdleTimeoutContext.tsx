@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { logoutAction } from '@/actions/auth'
+import { logoutAction, idleLogoutAction } from '@/actions/auth'
 import {
   Dialog,
   DialogContent,
@@ -53,8 +53,8 @@ export function IdleTimeoutProvider({ children }: { children: ReactNode }) {
 
   const forceLogout = useCallback(() => {
     channel.current?.postMessage({ type: 'logout' } satisfies BroadcastMessage)
-    logoutAction().catch(() => {
-      window.location.assign('/login')
+    idleLogoutAction().catch(() => {
+      window.location.assign('/login?reason=idle')
     })
   }, [])
 
@@ -91,7 +91,7 @@ export function IdleTimeoutProvider({ children }: { children: ReactNode }) {
         if (event.data.type === 'activity') {
           dismissWarning()
         } else if (event.data.type === 'logout') {
-          window.location.assign('/login')
+          window.location.assign('/login?reason=idle')
         }
       }
     }

@@ -8,6 +8,7 @@ import {
   rankByCostPerInquiry,
   rankByCtr,
   rankByCostPerClick,
+  isDailyGranularity,
   MIN_IMPRESSIONS_FOR_CTR,
   MIN_CLICKS_FOR_CPC,
   MIN_INQUIRIES_FOR_CPI,
@@ -39,13 +40,14 @@ interface RankRow {
   reportingEnds: Date | null
 }
 
-function RankingTable({ rows, valueLabel, formatValue }: {
+function RankingTable({ rows, valueLabel, formatValue, emptyMessage }: {
   rows: RankRow[]
   valueLabel: string
   formatValue: (v: number) => string
+  emptyMessage?: string
 }) {
   if (rows.length === 0) {
-    return <p className="text-gray-500 text-sm p-6">No data available. Upload an Ads CSV first.</p>
+    return <p className="text-gray-500 text-sm p-6">{emptyMessage ?? 'No data available. Upload an Ads CSV first.'}</p>
   }
   return (
     <div className="table-scroll rounded-lg">
@@ -92,37 +94,44 @@ export default async function OwnerCampaignRankingsPage({
   const range = manilaDayRange(from, to)
   const adWhere = range ? { reporting_starts: range } : {}
 
-  const [topSpend, topInquiries, topReach, rankingPoolAds, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
+  // Volume rankings fetch a larger candidate pool than the top-10 shown, then
+  // filter out monthly-granularity survivor rows (see findSurvivingMonthlyRows
+  // in lib/db/upsert-ads.ts) before slicing to 10 — otherwise a handful of
+  // month-sized totals dominate every "top by X" table over real daily ads.
+  const VOLUME_CANDIDATE_POOL = 300
+
+  const [topSpendCandidates, topInquiriesCandidates, topReachCandidates, rankingPoolAds, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
     prisma.ad.findMany({
       where: adWhere,
       orderBy: { amount_spent: 'desc' },
-      take: 10,
+      take: VOLUME_CANDIDATE_POOL,
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
-      where: { ...adWhere, inquiries: { gt: 0 } },
-      orderBy: { inquiries: 'desc' },
-      take: 10,
-      select: { ad_name: true, ad_set_name: true, inquiries: true, reporting_starts: true, reporting_ends: true },
+      where: { ...adWhere, total_messaging_contacts: { gt: 0 } },
+      orderBy: { total_messaging_contacts: 'desc' },
+      take: VOLUME_CANDIDATE_POOL,
+      select: { ad_name: true, ad_set_name: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { ...adWhere, reach: { not: null } },
       orderBy: { reach: 'desc' },
-      take: 10,
+      take: VOLUME_CANDIDATE_POOL,
       select: { ad_name: true, ad_set_name: true, reach: true, reporting_starts: true, reporting_ends: true },
     }),
     // Efficiency rankings (cost/inquiry, CTR, cost/click) are computed ratios,
     // which Prisma cannot `orderBy` — fetch the filtered pool and rank in JS.
+    // rankBy* functions apply their own daily-granularity guard internally.
     prisma.ad.findMany({
       where: adWhere,
       select: {
         ad_name: true, ad_set_name: true, amount_spent: true, impressions: true,
-        link_clicks: true, inquiries: true, reporting_starts: true, reporting_ends: true,
+        link_clicks: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true,
       },
     }),
     prisma.ad.count({ where: adWhere }),
     prisma.ad.aggregate({ where: adWhere, _sum: { amount_spent: true } }),
-    prisma.ad.count({ where: { ...adWhere, inquiries: { gt: 0 } } }),
+    prisma.ad.count({ where: { ...adWhere, total_messaging_contacts: { gt: 0 } } }),
   ])
 
   const bestCostPerInquiry: RankRow[] = rankByCostPerInquiry(rankingPoolAds).map(r => ({
@@ -138,15 +147,15 @@ export default async function OwnerCampaignRankingsPage({
     reportingStarts: r.reportingStarts, reportingEnds: r.reportingEnds,
   }))
 
-  const bySpend: RankRow[] = topSpend.map(a => ({
+  const bySpend: RankRow[] = topSpendCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
     name: a.ad_name, adSetName: a.ad_set_name, value: a.amount_spent,
     reportingStarts: a.reporting_starts, reportingEnds: a.reporting_ends,
   }))
-  const byInquiries: RankRow[] = topInquiries.map(a => ({
-    name: a.ad_name, adSetName: a.ad_set_name, value: a.inquiries ?? 0,
+  const byInquiries: RankRow[] = topInquiriesCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
+    name: a.ad_name, adSetName: a.ad_set_name, value: a.total_messaging_contacts ?? 0,
     reportingStarts: a.reporting_starts, reportingEnds: a.reporting_ends,
   }))
-  const byReach: RankRow[] = topReach.map(a => ({
+  const byReach: RankRow[] = topReachCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
     name: a.ad_name, adSetName: a.ad_set_name, value: a.reach ?? 0,
     reportingStarts: a.reporting_starts, reportingEnds: a.reporting_ends,
   }))
@@ -155,7 +164,7 @@ export default async function OwnerCampaignRankingsPage({
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <PageHeader title="Campaign Rankings" description="Top 10 ads by volume (spend, inquiries, reach) and by efficiency (cost per inquiry, click-through rate, cost per click)" />
+      <PageHeader title="Campaign Rankings" description="Top 10 ads by volume (spend, messaging conversations, reach) and by efficiency (cost per messaging conversation, click-through rate, cost per click)" />
       <DateRangeFilter from={from} to={to} className="mb-6" />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
@@ -168,7 +177,7 @@ export default async function OwnerCampaignRankingsPage({
           <p className="text-2xl font-bold text-red-400 mt-1">{formatPHP(totalSpendValue)}</p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5 col-span-2 md:col-span-1">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Inquiries</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Messaging Conversations</p>
           <p className="text-2xl font-bold text-green-400 mt-1">{adsWithInquiries}</p>
         </div>
       </div>
@@ -200,15 +209,17 @@ export default async function OwnerCampaignRankingsPage({
             <span className="w-7 h-7 rounded-lg bg-green-500/10 text-green-400 flex items-center justify-center flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
             </span>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top by Inquiries</p>
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top by Messaging Conversations</p>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
-          <RankingTable rows={byInquiries} valueLabel="Inquiries" formatValue={v => v.toLocaleString()} />
+          <RankingTable rows={byInquiries} valueLabel="Messaging Conversations" formatValue={v => v.toLocaleString()} />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              From the &quot;Purchases&quot; column of the Facebook Ads export, stored as inquiries. Only
-              ads with at least 1 inquiry are included, ranked highest first, top 10. Filtered by
-              the date range above, applied to each ad&apos;s Reporting starts date.
+              From the daily Facebook Ads export&apos;s &quot;Results&quot; column, counted only for rows
+              where &quot;Result type&quot; is &quot;Messaging conversations started&quot; — Facebook&apos;s
+              indicator that someone started a Messenger conversation after seeing the ad. Only ads
+              with at least 1 messaging conversation are included, ranked highest first, top 10.
+              Filtered by the date range above, applied to each ad&apos;s Reporting starts date.
             </MethodologyNote>
           </div>
         </div>
@@ -241,16 +252,17 @@ export default async function OwnerCampaignRankingsPage({
             <span className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 7h16a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z" /></svg>
             </span>
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Best Cost per Inquiry</p>
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Best Cost per Messaging Conversation</p>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
-          <RankingTable rows={bestCostPerInquiry} valueLabel="Cost / Inquiry" formatValue={v => formatPHP(v)} />
+          <RankingTable rows={bestCostPerInquiry} valueLabel="Cost / Msg. Conv." formatValue={v => formatPHP(v)} />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              Amount spent ÷ inquiries, per ad. Lower is better, so ranked ascending, top 10. Only
-              ads with at least {MIN_INQUIRIES_FOR_CPI} inquiries are included — below that, a
-              single lucky inquiry on tiny spend would otherwise top the list. Filtered by the date
-              range above, applied to each ad&apos;s Reporting starts date.
+              Amount spent ÷ messaging conversations, per ad. Lower is better, so ranked ascending,
+              top 10. Only ads with at least {MIN_INQUIRIES_FOR_CPI} messaging conversations are
+              included — below that, a single lucky conversation on tiny spend would otherwise top
+              the list. Filtered by the date range above, applied to each ad&apos;s Reporting starts
+              date.
             </MethodologyNote>
           </div>
         </div>
@@ -262,7 +274,12 @@ export default async function OwnerCampaignRankingsPage({
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Best Click-Through Rate</p>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
-          <RankingTable rows={bestCtr} valueLabel="CTR" formatValue={v => `${(v * 100).toFixed(2)}%`} />
+          <RankingTable
+            rows={bestCtr}
+            valueLabel="CTR"
+            formatValue={v => `${(v * 100).toFixed(2)}%`}
+            emptyMessage="Link clicks aren't captured in Facebook's daily ads export, so CTR can't be calculated for current data."
+          />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
               Link clicks ÷ impressions, per ad. Higher is better, so ranked descending, top 10.
@@ -282,7 +299,12 @@ export default async function OwnerCampaignRankingsPage({
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Best Cost per Click</p>
             <div className="flex-1 h-px bg-gray-100" />
           </div>
-          <RankingTable rows={bestCostPerClick} valueLabel="Cost / Click" formatValue={v => formatPHP(v)} />
+          <RankingTable
+            rows={bestCostPerClick}
+            valueLabel="Cost / Click"
+            formatValue={v => formatPHP(v)}
+            emptyMessage="Link clicks aren't captured in Facebook's daily ads export, so cost per click can't be calculated for current data."
+          />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
               Amount spent ÷ link clicks, per ad. Lower is better, so ranked ascending, top 10.

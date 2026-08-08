@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
 import { computeRegressionInsight } from '@/lib/insights/regression-insight'
+import { aggregateAdsForTraining } from '@/lib/stats/regression'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 const MODEL_TYPE_LABELS: Record<string, string> = {
@@ -34,8 +35,8 @@ export default async function RegressionView() {
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
     prisma.regressionModel.findMany({ orderBy: { trained_at: 'desc' } }),
     prisma.ad.findMany({
-      where: { inquiries: { not: null } },
-      select: { reach: true, total_messaging_contacts: true, amount_spent: true },
+      where: { total_messaging_contacts: { not: null } },
+      select: { ad_name: true, ad_set_name: true, reach: true, amount_spent: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true },
     }),
   ])
 
@@ -43,7 +44,7 @@ export default async function RegressionView() {
   const insight = latestModel
     ? computeRegressionInsight(
         latestModel,
-        adHistory.map(a => ({ reach: a.reach ?? 0, messaging: a.total_messaging_contacts ?? 0, amount_spent: a.amount_spent })),
+        aggregateAdsForTraining(adHistory),
       )
     : null
 
@@ -52,8 +53,8 @@ export default async function RegressionView() {
       <PageHeader
         title={isMLR ? 'Multiple Linear Regression' : 'Simple Linear Regression'}
         description={isMLR
-          ? 'Log-transformed MLR predicting inquiries from Reach, Messaging Contacts, and Amount Spent'
-          : 'Predicts inquiries based on ad spend'}
+          ? 'Predicting messaging conversations from Reach and Amount Spent'
+          : 'Predicts messaging conversations based on ad spend'}
       />
 
       {latestModel ? (

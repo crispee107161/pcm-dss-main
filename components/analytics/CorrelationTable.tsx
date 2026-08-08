@@ -89,13 +89,7 @@ export default function CorrelationTable({ rows }: CorrelationTableProps) {
                       Variable
                     </th>
                     <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">
-                      vs. Inquiries
-                    </th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">
-                      Strength
-                    </th>
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">
-                      vs. Messaging Contacts
+                      vs. Messaging Conversations
                     </th>
                     <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">
                       Strength
@@ -107,14 +101,6 @@ export default function CorrelationTable({ rows }: CorrelationTableProps) {
                     <tr key={row.variable}>
                       <td className="px-4 py-3 text-gray-800 font-medium border-t border-gray-100">
                         {row.variable}
-                      </td>
-                      <td className={`px-4 py-3 border-t border-gray-100 ${getCellBg(row.vs_inquiries)}`}>
-                        <span className={getCellColor(row.vs_inquiries)}>
-                          {formatCorr(row.vs_inquiries)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 border-t border-gray-100 hidden sm:table-cell">
-                        <CorrelationStrengthBar value={row.vs_inquiries} />
                       </td>
                       <td className={`px-4 py-3 border-t border-gray-100 ${getCellBg(row.vs_messaging)}`}>
                         <span className={getCellColor(row.vs_messaging)}>

@@ -51,7 +51,7 @@ export function SpendInquiriesChart({ data }: { data: MonthlyAdTrend[] }) {
         />
         <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
         <Bar yAxisId="spend" dataKey="total_spend" name="Total Spend" fill={CHART_COLORS.blue} radius={[4, 4, 0, 0]} />
-        <Bar yAxisId="inquiries" dataKey="total_inquiries" name="Inquiries" fill={CHART_COLORS.green} radius={[4, 4, 0, 0]} />
+        <Bar yAxisId="inquiries" dataKey="total_inquiries" name="Messaging Conversations" fill={CHART_COLORS.green} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
@@ -103,8 +103,8 @@ export default function TrendCharts({ adTrends, postTrends }: Props) {
   return (
     <div className="space-y-6">
       <div className="bg-card rounded-2xl card-shadow p-6">
-        <h2 className="font-semibold text-gray-800 mb-1">Ad Spend vs. Inquiries by Reporting Period</h2>
-        <p className="text-xs text-gray-500 mb-4">Total ad spend (PHP, left axis) and resulting inquiries (right axis) — separate scales, not directly comparable by bar height</p>
+        <h2 className="font-semibold text-gray-800 mb-1">Ad Spend vs. Messaging Conversations by Reporting Period</h2>
+        <p className="text-xs text-gray-500 mb-4">Total ad spend (PHP, left axis) and resulting messaging conversations (right axis) — separate scales, not directly comparable by bar height</p>
         <SpendInquiriesChart data={adTrends} />
       </div>
 

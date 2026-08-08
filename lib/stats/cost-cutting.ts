@@ -38,7 +38,7 @@ export async function computeCostCuttingScenario(reductionPct: number): Promise<
     throw new Error('Reduction percentage must be between 1% and 99%.')
   }
 
-  const { model, eligible, zeroInquiry, globalReachPerPeso, globalMessagingPerPeso } = await computeAdSetMetrics()
+  const { model, eligible, zeroInquiry, globalReachPerPeso } = await computeAdSetMetrics()
 
   // Zero-inquiry ad sets are pure waste for a cost-cutting tool — spend with
   // no return — so unlike the budget allocator they belong in the pool, sorted
@@ -67,9 +67,8 @@ export async function computeCostCuttingScenario(reductionPct: number): Promise<
   // over ad sets, not once per ad set. Multiplying it by ad-set count biased
   // the baseline/after-cut comparison by however many ad sets were cut.
   const marginalInquiries = (g: AdSetMetrics): number => {
-    const projectedReach     = g.total_spend * (g.reach_per_peso     || globalReachPerPeso)
-    const projectedMessaging = g.total_spend * (g.messaging_per_peso || globalMessagingPerPeso)
-    return predictFromModel(model, projectedReach, projectedMessaging, g.total_spend) - model.intercept
+    const projectedReach = g.total_spend * (g.reach_per_peso || globalReachPerPeso)
+    return predictFromModel(model, projectedReach, g.total_spend) - model.intercept
   }
 
   const baselineProjectedInquiries = Math.max(0, model.intercept + pool.reduce((s, g) => s + marginalInquiries(g), 0))

@@ -9,6 +9,7 @@ import { DatabaseIcon, CircleCheckIcon, type CircleCheckIconHandle } from 'lucid
 
 const UPLOAD_TYPE_LABELS: Record<string, string> = {
   ADS_CSV: 'Ads CSV',
+  ADS_DAILY_CSV: 'Ads Daily CSV',
   POSTS_CSV: 'Posts CSV',
   PAGE_METRIC_CSV: 'Page Metric',
   FOLLOWER_HISTORY_CSV: 'Follower History',
@@ -155,6 +156,33 @@ export default function UploadForm() {
                       )}
                     </div>
                   )}
+                  {entry.result?.status === 'SUCCESS' && entry.result.filter_summary && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {entry.result.filter_summary.keptRows} of {entry.result.filter_summary.totalRows} rows kept
+                      (messaging-objective ads only)
+                      {entry.result.filter_summary.rescuedBlankRows > 0 &&
+                        ` · ${entry.result.filter_summary.rescuedBlankRows} blank-result rows retained as zero-result days`}
+                      {entry.result.filter_summary.supersededMonthlyRows > 0 &&
+                        ` · ${entry.result.filter_summary.supersededMonthlyRows} monthly-summary rows replaced with daily detail`}
+                      {Object.keys(entry.result.filter_summary.droppedByResultType).length > 0 && (
+                        <>
+                          {' · dropped: '}
+                          {Object.entries(entry.result.filter_summary.droppedByResultType)
+                            .map(([type, count]) => `${type} (${count})`)
+                            .join(', ')}
+                        </>
+                      )}
+                    </p>
+                  )}
+                  {entry.result?.status === 'SUCCESS' &&
+                    entry.result.filter_summary &&
+                    entry.result.filter_summary.unmatchedMonthlyRows > 0 && (
+                      <p role="alert" className="text-xs text-amber-600 mt-0.5">
+                        {entry.result.filter_summary.unmatchedMonthlyRows} monthly-summary row(s) couldn&apos;t be
+                        matched by ad name and were left in place — likely renamed between exports. Safe to leave,
+                        but worth a review.
+                      </p>
+                    )}
                   {entry.result?.status === 'FAILED' && (
                     <p role="alert" className="text-xs text-red-600 mt-0.5">{entry.result.error_message}</p>
                   )}

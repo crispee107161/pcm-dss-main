@@ -12,9 +12,9 @@ function ad(overrides: Partial<AdForRanking> & { ad_name: string }): AdForRankin
     amount_spent: 0,
     impressions: 0,
     link_clicks: null,
-    inquiries: null,
+    total_messaging_contacts: null,
     reporting_starts: new Date('2026-01-01'),
-    reporting_ends: new Date('2026-01-07'),
+    reporting_ends: new Date('2026-01-01'),
     ...overrides,
   }
 }
@@ -22,8 +22,8 @@ function ad(overrides: Partial<AdForRanking> & { ad_name: string }): AdForRankin
 describe('rankByCostPerInquiry', () => {
   it('ranks ascending — cheapest cost per inquiry first', () => {
     const ads = [
-      ad({ ad_name: 'expensive', amount_spent: 1000, inquiries: 10 }), // 100/inquiry
-      ad({ ad_name: 'cheap',     amount_spent: 100,  inquiries: 10 }), // 10/inquiry
+      ad({ ad_name: 'expensive', amount_spent: 1000, total_messaging_contacts: 10 }), // 100/inquiry
+      ad({ ad_name: 'cheap',     amount_spent: 100,  total_messaging_contacts: 10 }), // 10/inquiry
     ]
     const ranked = rankByCostPerInquiry(ads)
     expect(ranked.map(r => r.name)).toEqual(['cheap', 'expensive'])
@@ -33,8 +33,8 @@ describe('rankByCostPerInquiry', () => {
   it('excludes ads below the minimum inquiry sample size', () => {
     const ads = [
       // 1 inquiry at very low spend looks amazing but is noise, not signal
-      ad({ ad_name: 'lucky-fluke', amount_spent: 5, inquiries: 1 }),
-      ad({ ad_name: 'proven',      amount_spent: 500, inquiries: 50 }),
+      ad({ ad_name: 'lucky-fluke', amount_spent: 5, total_messaging_contacts: 1 }),
+      ad({ ad_name: 'proven',      amount_spent: 500, total_messaging_contacts: 50 }),
     ]
     const ranked = rankByCostPerInquiry(ads)
     expect(ranked.map(r => r.name)).toEqual(['proven'])
@@ -42,9 +42,9 @@ describe('rankByCostPerInquiry', () => {
 
   it('skips ads with null or zero inquiries, and zero spend, without producing Infinity/NaN', () => {
     const ads = [
-      ad({ ad_name: 'no-inquiries', amount_spent: 100, inquiries: null }),
-      ad({ ad_name: 'zero-inquiries', amount_spent: 100, inquiries: 0 }),
-      ad({ ad_name: 'zero-spend', amount_spent: 0, inquiries: 10 }),
+      ad({ ad_name: 'no-inquiries', amount_spent: 100, total_messaging_contacts: null }),
+      ad({ ad_name: 'zero-inquiries', amount_spent: 100, total_messaging_contacts: 0 }),
+      ad({ ad_name: 'zero-spend', amount_spent: 0, total_messaging_contacts: 10 }),
     ]
     const ranked = rankByCostPerInquiry(ads)
     expect(ranked).toEqual([])
@@ -52,11 +52,25 @@ describe('rankByCostPerInquiry', () => {
 
   it('respects the limit and returns [] for empty input', () => {
     const ads = Array.from({ length: 15 }, (_, i) =>
-      ad({ ad_name: `ad-${i}`, amount_spent: 100, inquiries: 10 })
+      ad({ ad_name: `ad-${i}`, amount_spent: 100, total_messaging_contacts: 10 })
     )
     expect(rankByCostPerInquiry(ads)).toHaveLength(10)
     expect(rankByCostPerInquiry(ads, 3)).toHaveLength(3)
     expect(rankByCostPerInquiry([])).toEqual([])
+  })
+
+  it('excludes monthly-granularity rows even when they would otherwise rank best', () => {
+    const ads = [
+      // A month's totals blended into one ratio isn't comparable to a daily one -
+      // must never outrank real daily performance, in either direction.
+      ad({
+        ad_name: 'stale-monthly-survivor', amount_spent: 100, total_messaging_contacts: 100,
+        reporting_starts: new Date('2025-09-01'), reporting_ends: new Date('2025-09-30'),
+      }),
+      ad({ ad_name: 'real-daily', amount_spent: 500, total_messaging_contacts: 50 }),
+    ]
+    const ranked = rankByCostPerInquiry(ads)
+    expect(ranked.map(r => r.name)).toEqual(['real-daily'])
   })
 })
 

@@ -53,7 +53,7 @@ interface TrendAnalysisViewProps {
 export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnalysisViewProps) {
   const [allAds, allPosts] = await Promise.all([
     prisma.ad.findMany({
-      select: { reporting_starts: true, amount_spent: true, inquiries: true, reach: true },
+      select: { reporting_starts: true, amount_spent: true, total_messaging_contacts: true, reach: true },
     }),
     prisma.facebookPost.findMany({
       select: { publish_time: true, engagement_rate: true, reach: true },
@@ -68,7 +68,7 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
       return d >= start && d <= end
     })
     const total_spend = ads.reduce((s, a) => s + a.amount_spent, 0)
-    const total_inquiries = ads.reduce((s, a) => s + (a.inquiries ?? 0), 0)
+    const total_inquiries = ads.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
     const total_reach = ads.reduce((s, a) => s + (a.reach ?? 0), 0)
     const ad_count = ads.length
     return { period: label, total_spend, total_inquiries, total_reach, ad_count }
@@ -137,7 +137,7 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
                           <span className="font-semibold text-gray-800 text-sm">{formatPHP(t.total_spend)}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-xs text-gray-500">Inquiries</span>
+                          <span className="text-xs text-gray-500">Messaging Conversations</span>
                           <span className="font-semibold text-green-400 text-sm">{t.total_inquiries}</span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -163,7 +163,7 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                        {lastTwo[0].period} → {lastTwo[1].period} · Inquiries
+                        {lastTwo[0].period} → {lastTwo[1].period} · Messaging Conversations
                       </p>
                       <DeltaBadge value={inquiryDelta} />
                     </div>

@@ -20,7 +20,7 @@ function AdSetRow({ row, tone }: { row: CostCutAdSet; tone: 'cut' | 'kept' }) {
           {row.ad_set_name}
         </div>
         <div className="sensitive text-[11px] text-gray-500 mt-0.5">
-          Hist. CPI: {row.historical_cpi !== null ? formatPHP(row.historical_cpi) : '—'} · {row.historical_inquiries} past inquiries
+          Hist. CPI: {row.historical_cpi !== null ? formatPHP(row.historical_cpi) : '—'} · {row.historical_inquiries} past messaging conversations
         </div>
       </TableCell>
       <TableCell className="px-4 py-3 text-right">
@@ -47,7 +47,7 @@ export default function CostCuttingScenario() {
   return (
     <div className="space-y-5">
       <p className="text-xs text-gray-500">
-        Enter a target budget reduction. The system recommends which ad sets to cut — starting with the least efficient (fewest inquiries per peso, zero-inquiry ad sets first) — until the target savings is reached, and shows the resulting inquiry trade-off. Ad sets are cut whole, so the actual reduction may overshoot your target.
+        Enter a target budget reduction. The system recommends which ad sets to cut — starting with the least efficient (fewest messaging conversations per peso, zero-conversion ad sets first) — until the target savings is reached, and shows the resulting messaging-conversation trade-off. Ad sets are cut whole, so the actual reduction may overshoot your target.
       </p>
 
       <form action={formAction} className="flex flex-wrap items-end gap-3">
@@ -118,7 +118,7 @@ export default function CostCuttingScenario() {
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Inquiries (after)</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Messaging Conversations (after)</p>
               <p className="sensitive text-2xl font-bold text-green-700 dark:text-green-400">
                 {Math.round(result.after_cut_projected_inquiries)}
               </p>
@@ -127,7 +127,7 @@ export default function CostCuttingScenario() {
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Inquiry Loss</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Messaging Conversation Loss</p>
               <p className="sensitive text-2xl font-bold text-red-500">
                 {(result.inquiry_loss_pct * 100).toFixed(1)}%
               </p>
@@ -171,7 +171,7 @@ export default function CostCuttingScenario() {
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
               <p className="text-[11px] text-gray-400">
-                Ad sets are ranked by historical inquiry efficiency (inquiries ÷ spend, Laplace-smoothed); zero-inquiry ad sets rank lowest and are cut first, then the next least efficient, until the target spend reduction is reached. Projected inquiries scale reach and messaging from each ad set&apos;s historical per-peso ratios (global average used as fallback) and run through the current regression model (R² = {(result.model_r_squared * 100).toFixed(1)}%).
+                Ad sets are ranked by historical messaging-conversation efficiency (messaging conversations ÷ spend, Laplace-smoothed); zero-conversion ad sets rank lowest and are cut first, then the next least efficient, until the target spend reduction is reached. Projected messaging conversations scale reach from each ad set&apos;s historical per-peso ratio (global average used as fallback) and run through the current regression model (R² = {(result.model_r_squared * 100).toFixed(1)}%).
               </p>
             </CollapsibleContent>
           </Collapsible>

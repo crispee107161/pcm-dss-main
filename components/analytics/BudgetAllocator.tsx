@@ -53,7 +53,7 @@ function AllocationRow({ row, rank }: { row: AdSetAllocation; rank: number }) {
           {row.ad_set_name}
         </div>
         <div className="sensitive text-[11px] text-gray-500 mt-0.5">
-          Hist. CPI: {row.historical_cpi !== null ? formatPHP(row.historical_cpi) : '—'} · {row.historical_inquiries} past inquiries
+          Hist. CPI: {row.historical_cpi !== null ? formatPHP(row.historical_cpi) : '—'} · {row.historical_inquiries} past messaging conversations
         </div>
       </TableCell>
       <TableCell className="px-4 py-3">
@@ -80,7 +80,7 @@ export default function BudgetAllocator() {
   return (
     <div className="space-y-5">
       <p className="text-xs text-gray-500">
-        Enter a total budget. The system distributes it across your top ad sets, weighted by their historical inquiry efficiency (inquiries per peso spent), then projects inquiries using the regression model.
+        Enter a total budget. The system distributes it across your top ad sets, weighted by their historical messaging-conversation efficiency (messaging conversations per peso spent), then projects messaging conversations using the regression model.
       </p>
 
       <form action={formAction} className="flex flex-wrap items-end gap-3">
@@ -142,7 +142,7 @@ export default function BudgetAllocator() {
               <p className="sensitive text-2xl font-bold text-foreground">{formatPHP(result.total_budget)}</p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Inquiries</p>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Projected Messaging Conversations</p>
               <p className="sensitive text-2xl font-bold text-green-700 dark:text-green-400">{Math.round(result.total_projected_inquiries)}</p>
             </div>
             <div>
@@ -168,7 +168,7 @@ export default function BudgetAllocator() {
                   <TableHead className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Ad Set</TableHead>
                   <TableHead className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Share</TableHead>
                   <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Allocated</TableHead>
-                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Proj. Inquiries</TableHead>
+                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em]">Proj. Msg. Conv.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -191,7 +191,7 @@ export default function BudgetAllocator() {
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
               <p className="text-[11px] text-gray-400">
-                {modelLabel(result.model_type)} model · R² = {(result.model_r_squared * 100).toFixed(1)}%. Allocation weighted by historical inquiry efficiency (inquiries ÷ spend) per ad set. Projected inquiries use reach, messaging, and link clicks scaled from historical per-peso ratios (global average used as fallback when an ad set has no historical data for a metric). Approximate 80% prediction intervals shown below each inquiry count (constant-width, based on model RSE).
+                {modelLabel(result.model_type)} model · R² = {(result.model_r_squared * 100).toFixed(1)}%. Allocation weighted by historical messaging-conversation efficiency (messaging conversations ÷ spend) per ad set. Projected messaging conversations use reach scaled from each ad set&apos;s historical per-peso ratio (global average used as fallback when an ad set has no historical data) together with the allocated spend, run through the regression model. Approximate 80% prediction intervals shown below each count (constant-width, based on model RSE).
               </p>
             </CollapsibleContent>
           </Collapsible>

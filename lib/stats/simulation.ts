@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { predictFromModel } from '@/lib/stats/regression'
+import { predictFromModel, aggregateAdsForTraining } from '@/lib/stats/regression'
 import type { SimulationOutput } from '@/types/index'
 
 const N_ITER = 1000
@@ -15,12 +15,11 @@ function buildEquation(model: {
   model_type?: string | null
   intercept: number
   coef_reach?: number | null
-  coef_messaging?: number | null
   coef_amount_spent?: number | null
   coefficient: number
 }): string {
   const s = (v: number) => (v >= 0 ? `+${v.toFixed(4)}` : v.toFixed(4))
-  return `${model.intercept.toFixed(4)} ${s(model.coef_reach ?? 0)}·Reach ${s(model.coef_messaging ?? 0)}·Msgs ${s(model.coef_amount_spent ?? 0)}·Spend`
+  return `${model.intercept.toFixed(4)} ${s(model.coef_reach ?? 0)}·Reach ${s(model.coef_amount_spent ?? 0)}·Spend`
 }
 
 function computeTrainingStats(vals: number[]) {
@@ -32,14 +31,13 @@ function computeTrainingStats(vals: number[]) {
 export async function runSimulation(
   userId: number,
   reach: number,
-  messaging: number,
   amountSpent: number
 ): Promise<SimulationOutput> {
   const [latestModel, trainingAds] = await Promise.all([
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
     prisma.ad.findMany({
-      where: { inquiries: { not: null } },
-      select: { reach: true, total_messaging_contacts: true, amount_spent: true },
+      where: { total_messaging_contacts: { not: null } },
+      select: { ad_name: true, ad_set_name: true, reach: true, total_messaging_contacts: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
   ])
 
@@ -47,7 +45,7 @@ export async function runSimulation(
     throw new Error('No regression model available. Please upload ad data first so the model can be trained.')
   }
 
-  const basePredict = predictFromModel(latestModel, reach, messaging, amountSpent)
+  const basePredict = predictFromModel(latestModel, reach, amountSpent)
   const rse = latestModel.residual_std_error ?? 1
 
   // Monte Carlo: run N_ITER samples with Gaussian noise from model residuals
@@ -56,32 +54,29 @@ export async function runSimulation(
   )
   samples.sort((a, b) => a - b)
 
+  // Holds a projected messaging-conversations count now, not inquiries — the
+  // DB column/field name is kept as `projected_inquiries` to match the
+  // existing SimulationResult schema column (out of scope for this pass).
   const projected_inquiries = samples[Math.floor(N_ITER / 2)]     // median
   const interval_lower      = samples[Math.floor(0.05 * N_ITER)]  // 5th percentile → 90% interval
   const interval_upper      = samples[Math.floor(0.95 * N_ITER)]  // 95th percentile
 
   // ── Out-of-range warnings ─────────────────────────────────────────────────
   const warnings: string[] = []
-  const trainN = trainingAds.length
+  const aggregated = aggregateAdsForTraining(trainingAds)
+  const trainN = aggregated.length
 
   let reachStats: { rawMin: number; rawMax: number } | null = null
-  let msgStats:   { rawMin: number; rawMax: number } | null = null
   let spendStats: { rawMin: number; rawMax: number } | null = null
 
   if (trainN > 0) {
-    reachStats = computeTrainingStats(trainingAds.map(a => a.reach ?? 0))
-    msgStats   = computeTrainingStats(trainingAds.map(a => a.total_messaging_contacts ?? 0))
-    spendStats = computeTrainingStats(trainingAds.map(a => a.amount_spent))
+    reachStats = computeTrainingStats(aggregated.map(a => a.reach))
+    spendStats = computeTrainingStats(aggregated.map(a => a.amount_spent))
   }
 
   if (reachStats && reach > 0 && (reach < reachStats.rawMin || reach > reachStats.rawMax)) {
     warnings.push(
       `Reach (${reach.toLocaleString()}) is outside the model's training range (${reachStats.rawMin.toLocaleString()}–${reachStats.rawMax.toLocaleString()}). Treat this result as approximate.`
-    )
-  }
-  if (msgStats && messaging > 0 && (messaging < msgStats.rawMin || messaging > msgStats.rawMax)) {
-    warnings.push(
-      `Messaging Contacts (${messaging.toLocaleString()}) is outside the training range (${msgStats.rawMin.toLocaleString()}–${msgStats.rawMax.toLocaleString()}). Treat this result as approximate.`
     )
   }
   if (spendStats && (amountSpent < spendStats.rawMin || amountSpent > spendStats.rawMax)) {
@@ -104,7 +99,7 @@ export async function runSimulation(
     data: {
       user_id: userId,
       reach_input: reach,
-      messaging_input: messaging,
+      messaging_input: null,
       amount_spent_input: amountSpent,
       projected_inquiries,
       interval_lower,
@@ -115,7 +110,6 @@ export async function runSimulation(
 
   return {
     reach_input: reach,
-    messaging_input: messaging,
     amount_spent_input: amountSpent,
     projected_inquiries,
     interval_lower,
@@ -123,7 +117,6 @@ export async function runSimulation(
     model: {
       intercept: latestModel.intercept,
       coef_reach: latestModel.coef_reach ?? 0,
-      coef_messaging: latestModel.coef_messaging ?? 0,
       coef_amount_spent: latestModel.coef_amount_spent ?? latestModel.coefficient,
       r_squared: latestModel.r_squared,
       residual_std_error: latestModel.residual_std_error ?? 0,
@@ -133,10 +126,9 @@ export async function runSimulation(
       coef_spend_sq: 0,
     },
     warnings,
-    training_ranges: reachStats && msgStats && spendStats
+    training_ranges: reachStats && spendStats
       ? {
           reach: [reachStats.rawMin, reachStats.rawMax],
-          messaging: [msgStats.rawMin, msgStats.rawMax],
           spend: [spendStats.rawMin, spendStats.rawMax],
         }
       : undefined,

@@ -1,12 +1,25 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useRef, useState, Suspense } from 'react'
+import type { KeyboardEvent } from 'react'
 import { loginAction } from '@/actions/auth'
-import { FloatingStatCards } from '@/components/login/FloatingStatCards'
+import { SessionNotice } from '@/components/login/SessionNotice'
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
   const [showPassword, setShowPassword] = useState(false)
+  const [capsLock, setCapsLock] = useState(false)
+  const emailRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (state?.error) {
+      emailRef.current?.focus()
+    }
+  }, [state?.error])
+
+  const handleCapsLock = (e: KeyboardEvent<HTMLInputElement>) => {
+    setCapsLock(e.getModifierState('CapsLock'))
+  }
 
   return (
     <>
@@ -62,6 +75,35 @@ export default function LoginPage() {
         .error-in { animation: error-in 0.2s cubic-bezier(0.22,1,0.36,1) both; }
         .pw-toggle { transition: color 0.15s; }
         .pw-toggle:hover { color: var(--foreground); }
+        .pw-toggle:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent), 0 0 24px color-mix(in srgb, var(--primary) 8%, transparent);
+          border-radius: 0.375rem;
+        }
+        .sign-in-btn:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent), 0 0 24px color-mix(in srgb, var(--primary) 8%, transparent);
+        }
+        .auth-card {
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          border-radius: 0;
+          padding: 0;
+        }
+        @media (min-width: 640px) {
+          .auth-card {
+            background: color-mix(in srgb, var(--card) 72%, transparent);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow:
+              inset 0 1px 0 rgba(255,255,255,0.04),
+              0 24px 60px -12px rgba(0,0,0,0.72),
+              0 0 48px -12px color-mix(in srgb, var(--primary) 10%, transparent);
+          }
+        }
       `}</style>
 
       <div className="min-h-dvh flex" style={{ background: 'var(--background)' }}>
@@ -102,10 +144,10 @@ export default function LoginPage() {
           <div className="relative z-10 space-y-10">
             <div>
               <p className="text-primary text-[11px] font-bold tracking-[0.35em] uppercase mb-5">Ad Intelligence Platform</p>
-              <h1 className="text-[3.5rem] font-black text-foreground leading-[1.02] tracking-[-0.03em]">
+              <p className="text-[3.5rem] font-black text-foreground leading-[1.02] tracking-[-0.03em]">
                 Turn ad data<br />
                 into <span className="text-primary">decisions.</span>
-              </h1>
+              </p>
               <p className="text-muted-foreground text-sm mt-5 max-w-[280px] leading-relaxed">
                 Track performance, spot trends, and know what's working — purpose-built for PC&nbsp;Merchandise.
               </p>
@@ -119,9 +161,6 @@ export default function LoginPage() {
               ))}
               <p className="text-muted-foreground text-[10px] ml-2 self-end pb-0.5">Page Views</p>
             </div>
-
-            {/* Floating stat cards (pointer tilt lives in the component) */}
-            <FloatingStatCards />
           </div>
 
           {/* Footer */}
@@ -132,7 +171,7 @@ export default function LoginPage() {
         </div>
 
         {/* ── RIGHT PANEL ── */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 lg:px-16 relative overflow-hidden" style={{ background: 'var(--background)' }}>
+        <div className="flex-1 flex flex-col items-center justify-start sm:justify-center px-6 pt-14 pb-12 sm:py-12 lg:px-16 relative overflow-hidden" style={{ background: 'var(--background)' }}>
           {/* Subtle ambient glow — matches left panel energy */}
           <div className="absolute pointer-events-none"
             style={{ bottom: '-10%', right: '-10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, color-mix(in srgb, var(--primary) 7%, transparent) 0%, transparent 70%)', filter: 'blur(60px)' }} />
@@ -145,29 +184,24 @@ export default function LoginPage() {
             <p className="text-foreground font-black text-xl tracking-tight">PC Merchandise DSS</p>
           </div>
 
-          <div
-            className="card-rise w-full max-w-[400px] relative z-10 rounded-2xl p-6 sm:p-8"
-            style={{
-              background: 'color-mix(in srgb, var(--card) 72%, transparent)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid var(--border)',
-              boxShadow: [
-                'inset 0 1px 0 rgba(255,255,255,0.04)',
-                '0 24px 60px -12px rgba(0,0,0,0.72)',
-                '0 0 48px -12px color-mix(in srgb, var(--primary) 10%, transparent)',
-              ].join(', '),
-            }}
-          >
+          <div className="card-rise auth-card w-full max-w-[400px] relative z-10">
 
             {/* Heading */}
             <div className="r1 mb-8">
-              <h2 className="text-[2rem] font-black text-foreground tracking-tight leading-tight">Welcome back.</h2>
+              <h1 className="text-[2rem] font-black text-foreground tracking-tight leading-tight">Welcome back.</h1>
               <p className="text-muted-foreground text-sm mt-1">Sign in to your dashboard</p>
             </div>
 
+            {/* Session notice (idle timeout / expired session) — hidden once a fresh error takes over */}
+            {!state?.error && (
+              <Suspense fallback={null}>
+                <SessionNotice />
+              </Suspense>
+            )}
+
             {/* Error */}
             {state?.error && (
-              <div className="error-in mb-5 flex items-start gap-2.5 rounded-lg px-4 py-3"
+              <div role="alert" className="error-in mb-5 flex items-start gap-2.5 rounded-lg px-4 py-3"
                 style={{ background: 'color-mix(in srgb, var(--color-red-900) 60%, transparent)', border: '1px solid color-mix(in srgb, var(--color-red-700) 70%, transparent)' }}>
                 <svg className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -182,6 +216,7 @@ export default function LoginPage() {
                   Email Address
                 </label>
                 <input
+                  ref={emailRef}
                   id="email"
                   name="email"
                   type="email"
@@ -189,7 +224,7 @@ export default function LoginPage() {
                   required
                   style={{ background: 'color-mix(in srgb, white 7%, transparent)', border: '1px solid var(--border)', outline: 'none', transition: 'border-color 0.15s, box-shadow 0.15s' }}
                   className="w-full px-4 py-3 rounded-lg text-foreground placeholder-muted-foreground text-base sm:text-sm"
-                  placeholder="you@pcmerchandise.com"
+                  placeholder="Enter your email"
                 />
               </div>
 
@@ -204,16 +239,18 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     required
+                    onKeyUp={handleCapsLock}
+                    onKeyDown={handleCapsLock}
                     style={{ background: 'color-mix(in srgb, white 7%, transparent)', border: '1px solid var(--border)', outline: 'none', transition: 'border-color 0.15s, box-shadow 0.15s' }}
                     className="w-full px-4 py-3 pr-11 rounded-lg text-foreground placeholder-muted-foreground text-base sm:text-sm"
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="pw-toggle absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground p-0.5"
-                    tabIndex={-1}
+                    className="pw-toggle absolute right-0 top-0 h-full w-11 flex items-center justify-center text-muted-foreground"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
                   >
                     {showPassword ? (
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -227,6 +264,13 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
+                <p
+                  aria-live="polite"
+                  className="text-[11px] mt-1.5 h-3.5"
+                  style={{ color: 'var(--status-warning)', visibility: capsLock ? 'visible' : 'hidden' }}
+                >
+                  Caps Lock is on
+                </p>
               </div>
 
               <div className="r4 pt-2">

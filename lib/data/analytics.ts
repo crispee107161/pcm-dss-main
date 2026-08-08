@@ -7,6 +7,10 @@ const TARGET_MONTHS = [
   { label: 'January 2026', year: 2026, month: 1 },
 ]
 
+// `total_inquiries` keeps its legacy name (fixed by the `MonthlyKpi` type in
+// types/index.ts, out of scope for this pass) but now sums messaging
+// conversations, not Facebook-reported "Purchases" — that field is dropped
+// entirely per the no-sales-framing policy.
 export async function getMonthlyKpis(): Promise<MonthlyKpi[]> {
   const kpis: MonthlyKpi[] = []
 
@@ -26,7 +30,7 @@ export async function getMonthlyKpis(): Promise<MonthlyKpi[]> {
     kpis.push({
       period: target.label,
       total_spend: ads.reduce((sum, a) => sum + a.amount_spent, 0),
-      total_inquiries: ads.reduce((sum, a) => sum + (a.inquiries ?? 0), 0),
+      total_inquiries: ads.reduce((sum, a) => sum + (a.total_messaging_contacts ?? 0), 0),
       total_reach: ads.reduce((sum, a) => sum + (a.reach ?? 0), 0),
       ad_count: ads.length,
     })
@@ -49,10 +53,10 @@ export async function getCampaignRankings(): Promise<CampaignRankings> {
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
-      where: { inquiries: { not: null } },
-      orderBy: { inquiries: 'desc' },
+      where: { total_messaging_contacts: { not: null } },
+      orderBy: { total_messaging_contacts: 'desc' },
       take: 10,
-      select: { ad_name: true, ad_set_name: true, inquiries: true, reporting_starts: true, reporting_ends: true },
+      select: { ad_name: true, ad_set_name: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { reach: { not: null } },
@@ -70,10 +74,13 @@ export async function getCampaignRankings(): Promise<CampaignRankings> {
       reportingStarts: a.reporting_starts,
       reportingEnds: a.reporting_ends,
     })),
+    // `byInquiries` keeps its legacy name (this interface is local to this
+    // file, but renaming would still be an unrelated diff) — ranks by
+    // messaging conversations, not Facebook-reported "Purchases".
     byInquiries: topInquiries.map(a => ({
       name: a.ad_name ?? 'Unknown',
       adSetName: a.ad_set_name ?? '',
-      value: a.inquiries ?? 0,
+      value: a.total_messaging_contacts ?? 0,
       reportingStarts: a.reporting_starts,
       reportingEnds: a.reporting_ends,
     })),

@@ -635,12 +635,26 @@
 @keyframes bar-fill {
   from { width: 0; }
 }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to   { opacity: 0; transform: translateX(16px) scale(0.98); }
+}
 
 .animate-fade-slide-up {
   animation: fade-slide-up 0.2s cubic-bezier(0.22,1,0.36,1) both;
 }
 .animate-fade-in {
   animation: fade-in 0.15s ease both;
+}
+.animate-toast-in {
+  animation: toast-in 0.25s cubic-bezier(0.22,1,0.36,1) both;
+}
+.animate-toast-out {
+  animation: toast-out 0.18s ease both;
 }
 .animate-scale-in {
   animation: scale-in 0.18s cubic-bezier(0.22,1,0.36,1) both;

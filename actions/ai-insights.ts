@@ -36,22 +36,22 @@ export async function generateAIInsights(data: InsightData): Promise<AIInsightRe
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return { ok: false, reason: 'AI insights are not configured for this deployment.' }
 
-  const systemPrompt = `You are a business analyst summarizing Facebook ad campaign performance and advertising efficiency for PC Merchandise, a small Philippine merchandise business. The business uses Facebook ads to generate customer inquiries; the 'inquiries' metric counts customers who reached out after seeing an ad. Write 3-4 concise, actionable sentences in plain English for a non-technical business owner. Interpret what the numbers mean and what action to take — do not just repeat raw numbers.`
+  const systemPrompt = `You are a business analyst summarizing Facebook ad campaign performance and advertising efficiency for PC Merchandise, a small Philippine merchandise business. The business uses Facebook ads to generate customer messaging conversations; the metric counts customers who started a Messenger conversation after seeing an ad (Facebook's "Messaging conversations started" result type) — not purchases or sales. Write 3-4 concise, actionable sentences in plain English for a non-technical business owner. Interpret what the numbers mean and what action to take — do not just repeat raw numbers.`
 
   const userPrompt = [
     `Campaign data:`,
     `- Total ad spend: ₱${data.totalSpend.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`,
-    `- Total inquiries from ads: ${data.totalInquiries}`,
+    `- Total messaging conversations from ads: ${data.totalInquiries}`,
     `- Total reach: ${data.totalReach.toLocaleString()} unique people`,
-    data.cpi != null ? `- Cost per inquiry (CPI): ₱${data.cpi.toFixed(2)}` : null,
+    data.cpi != null ? `- Cost per messaging conversation (CPI): ₱${data.cpi.toFixed(2)}` : null,
     data.bestLag != null && data.bestMetric
-      ? `- Inquiries peak ${data.bestLag} day(s) after ad ${data.bestMetric} is recorded (r = ${data.bestR?.toFixed(3)})`
+      ? `- Messaging conversations peak ${data.bestLag} day(s) after ad ${data.bestMetric} is recorded (r = ${data.bestR?.toFixed(3)})`
       : null,
     data.rSquared != null
-      ? `- Predictive model (${data.isMLR ? 'MLR' : 'SLR'}) explains ${(data.rSquared * 100).toFixed(1)}% of inquiry variance`
+      ? `- Predictive model (${data.isMLR ? 'MLR' : 'SLR'}) explains ${(data.rSquared * 100).toFixed(1)}% of messaging conversation variance`
       : null,
     data.rse != null
-      ? `- 80% prediction interval: ±${(data.rse * 1.2816 * Math.sqrt(1 + 1 / Math.max(data.n ?? 1, 1))).toFixed(1)} inquiries`
+      ? `- 80% prediction interval: ±${(data.rse * 1.2816 * Math.sqrt(1 + 1 / Math.max(data.n ?? 1, 1))).toFixed(1)} messaging conversations`
       : null,
     data.forecastBaseline != null
       ? `- 7-day page views forecast baseline: ${data.forecastBaseline.toLocaleString()} views/day`

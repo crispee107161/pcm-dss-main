@@ -58,12 +58,11 @@ export default function WhatIfSimulator() {
   return (
     <div>
       <p className="text-xs text-gray-500 mb-3">
-        Enter hypothetical engagement values to see a projected inquiry count.
+        Enter hypothetical engagement values to see a projected messaging conversation count.
       </p>
 
       <form action={formAction} className="flex flex-wrap gap-3 items-end">
         <InputField id="reach" name="reach" label="Reach (people)" placeholder="5000" max={10_000_000} />
-        <InputField id="messaging" name="messaging" label="Messaging Contacts" placeholder="120" max={500_000} />
         <InputField id="amount_spent" name="amount_spent" label="Ad Spend (PHP)" prefix="₱" placeholder="5000" required max={1_000_000} />
 
         <div className="flex items-end">
@@ -99,17 +98,16 @@ export default function WhatIfSimulator() {
             <div>
               <p className="text-gray-400 text-xs mb-0.5">Inputs</p>
               <p className="text-sm text-gray-500">Reach: <strong className="sensitive text-white">{result.reach_input.toLocaleString()}</strong></p>
-              <p className="text-sm text-gray-500">Messaging: <strong className="sensitive text-white">{result.messaging_input.toLocaleString()}</strong></p>
               <p className="text-sm text-gray-500">Spend: <strong className="sensitive text-white">{formatPhp(result.amount_spent_input)}</strong></p>
             </div>
 
             <div className="text-gray-500 text-2xl hidden sm:block pt-4">&rarr;</div>
 
             <div>
-              <p className="text-gray-400 text-xs mb-1">Predicted Inquiries</p>
+              <p className="text-gray-400 text-xs mb-1">Predicted Messaging Conversations</p>
               <p className="sensitive text-4xl font-bold text-green-400">
                 {point}
-                <span className="text-base font-normal text-gray-400 ml-1">inquiries</span>
+                <span className="text-base font-normal text-gray-400 ml-1">conversations</span>
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-xs text-gray-400">80% prediction interval:</span>
@@ -152,7 +150,6 @@ export default function WhatIfSimulator() {
               {result.training_ranges && (
                 <p className="text-xs text-gray-400">
                   Training ranges · Reach {result.training_ranges.reach[0].toLocaleString()}–{result.training_ranges.reach[1].toLocaleString()}
-                  {' · '}Msgs {result.training_ranges.messaging[0].toLocaleString()}–{result.training_ranges.messaging[1].toLocaleString()}
                   {' · '}Spend {formatPhp(result.training_ranges.spend[0])}–{formatPhp(result.training_ranges.spend[1])}
                 </p>
               )}

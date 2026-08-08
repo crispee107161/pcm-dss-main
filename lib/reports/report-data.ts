@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { computeLaggedCorrelations } from '@/lib/stats/laggedCorrelation'
 import { computeHoltWintersForecast } from '@/lib/stats/forecast'
 import { computeRegressionInsight } from '@/lib/insights/regression-insight'
+import { aggregateAdsForTraining } from '@/lib/stats/regression'
 import { computeForecastInsight } from '@/lib/insights/forecast-insight'
 
 export const REPORT_TARGET_PERIODS = [
@@ -19,7 +20,7 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
     prisma.ad.findMany({
       select: {
         ad_name: true, reporting_starts: true, reporting_ends: true,
-        amount_spent: true, inquiries: true,
+        amount_spent: true, total_messaging_contacts: true,
         reach: true, impressions: true, link_clicks: true, category_id: true,
       },
     }),
@@ -36,15 +37,20 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
     prisma.pageMetricDaily.findMany({ orderBy: { date: 'asc' } }),
     computeLaggedCorrelations(),
     prisma.ad.findMany({
-      where: { inquiries: { not: null } },
-      select: { reach: true, total_messaging_contacts: true, amount_spent: true },
+      where: { total_messaging_contacts: { not: null } },
+      select: { ad_name: true, ad_set_name: true, reach: true, total_messaging_contacts: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
   ])
 
   const catMap = Object.fromEntries(categories.map(c => [c.id, c.name]))
 
+  // `totalInquiries`/`cpi`/`inquiries` keep their legacy names throughout
+  // this file (components/reports/ReportView.tsx reads them directly and is
+  // out of scope for this pass) but now carry messaging-conversation
+  // semantics — Facebook-reported "Purchases" (`inquiries` in the schema) is
+  // dropped entirely per the no-sales-framing policy.
   const totalSpend = allAds.reduce((s, a) => s + a.amount_spent, 0)
-  const totalInquiries = allAds.reduce((s, a) => s + (a.inquiries ?? 0), 0)
+  const totalInquiries = allAds.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
   const totalReach = allAds.reduce((s, a) => s + (a.reach ?? 0), 0)
   const totalImpressions = allAds.reduce((s, a) => s + a.impressions, 0)
   const totalLinkClicks = allAds.reduce((s, a) => s + (a.link_clicks ?? 0), 0)
@@ -61,9 +67,10 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
     : null
 
   const top5Ads = [...allAds]
-    .filter(a => (a.inquiries ?? 0) > 0)
-    .sort((a, b) => (b.inquiries ?? 0) - (a.inquiries ?? 0))
+    .filter(a => (a.total_messaging_contacts ?? 0) > 0)
+    .sort((a, b) => (b.total_messaging_contacts ?? 0) - (a.total_messaging_contacts ?? 0))
     .slice(0, 5)
+    .map(a => ({ ...a, inquiries: a.total_messaging_contacts ?? 0 }))
 
   const monthlyData = REPORT_TARGET_PERIODS.map(({ label, year, month }) => {
     const start = new Date(year, month - 1, 1)
@@ -75,7 +82,7 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
     return {
       period: label,
       spend: ads.reduce((s, a) => s + a.amount_spent, 0),
-      inquiries: ads.reduce((s, a) => s + (a.inquiries ?? 0), 0),
+      inquiries: ads.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0),
       reach: ads.reduce((s, a) => s + (a.reach ?? 0), 0),
       ad_count: ads.length,
     }
@@ -114,7 +121,7 @@ export async function buildReportData({ includeOrganicPosts = true }: ReportOpti
   const regressionInsight = latestModel
     ? computeRegressionInsight(
         latestModel,
-        adHistory.map(a => ({ reach: a.reach ?? 0, messaging: a.total_messaging_contacts ?? 0, amount_spent: a.amount_spent })),
+        aggregateAdsForTraining(adHistory),
       )
     : null
 

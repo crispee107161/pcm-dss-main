@@ -52,7 +52,7 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
   if (!model) {
     return (
       <div className={`text-center py-8 text-sm ${t.label}`}>
-        No regression model trained yet. Upload at least 10 ad records with inquiry data.
+        No regression model trained yet. Upload at least 10 ad records with messaging conversation data.
       </div>
     )
   }
@@ -114,13 +114,20 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
             )}
           </div>
 
+          {model.collinearity_warning && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-sm text-yellow-700 dark:text-yellow-300">
+              <p className="font-semibold mb-1">⚠ Collinearity warning</p>
+              <p className="text-xs">{model.collinearity_warning}</p>
+            </div>
+          )}
+
           {insight && insight.marginalEffects.length > 0 && (
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300">
               <p className="font-semibold mb-2">Marginal effects (from the model&rsquo;s typical operating point)</p>
               <ul className="space-y-1 text-xs">
                 {insight.marginalEffects.map(e => (
                   <li key={e.label}>
-                    {e.label} {e.deltaInputLabel} &rarr; {e.deltaInquiries >= 0 ? '+' : ''}{e.deltaInquiries.toFixed(2)} inquiries
+                    {e.label} {e.deltaInputLabel} &rarr; {e.deltaInquiries >= 0 ? '+' : ''}{e.deltaInquiries.toFixed(2)} messaging conversations
                   </li>
                 ))}
               </ul>
@@ -128,7 +135,7 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
           )}
 
           <p className={`text-xs ${t.footnote}`}>
-            Model trained {formatDate(model.trained_at)} using {model.n} records with known inquiry outcomes.
+            Model trained {formatDate(model.trained_at)} using {model.n} records with known messaging conversation outcomes.
           </p>
         </div>
   )

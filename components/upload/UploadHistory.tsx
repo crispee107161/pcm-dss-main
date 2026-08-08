@@ -25,6 +25,7 @@ function StatusBadge({ status }: { status: UploadStatus }) {
 
 const TYPE_LABELS: Record<UploadType, { label: string; cls: string }> = {
   ADS_CSV:              { label: 'Ads CSV',         cls: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30' },
+  ADS_DAILY_CSV:        { label: 'Ads Daily CSV',   cls: 'bg-cyan-500/10   text-cyan-700 dark:text-cyan-300   border-cyan-500/30'   },
   POSTS_CSV:            { label: 'Posts CSV',       cls: 'bg-blue-500/10   text-blue-700 dark:text-blue-300   border-blue-500/30'   },
   PAGE_METRIC_CSV:      { label: 'Page Metric',     cls: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30' },
   FOLLOWER_HISTORY_CSV: { label: 'Follower History',cls: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30' },
@@ -67,6 +68,11 @@ export default function UploadHistory({ logs }: UploadHistoryProps) {
             </TableCell>
             <TableCell className="px-4 py-3 text-gray-700 max-w-xs truncate">
               {log.filename}
+              {log.records_superseded > 0 && (
+                <p className="text-xs text-gray-400 truncate">
+                  {log.records_superseded} monthly-summary row{log.records_superseded === 1 ? '' : 's'} replaced with daily detail
+                </p>
+              )}
             </TableCell>
             <TableCell className="px-4 py-3">
               <TypeBadge type={log.upload_type} />
@@ -82,9 +88,14 @@ export default function UploadHistory({ logs }: UploadHistoryProps) {
             </TableCell>
             <TableCell className="px-4 py-3">
               <StatusBadge status={log.status} />
-              {log.error_message && (
+              {log.status === 'FAILED' && log.error_message && (
                 <p className="text-red-600 text-xs mt-1 max-w-xs truncate" title={log.error_message}>
                   {log.error_message}
+                </p>
+              )}
+              {log.status === 'SUCCESS' && log.warning_message && (
+                <p className="text-amber-600 text-xs mt-1 max-w-xs truncate" title={log.warning_message}>
+                  {log.warning_message}
                 </p>
               )}
             </TableCell>

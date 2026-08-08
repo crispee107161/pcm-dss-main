@@ -5,6 +5,7 @@ import { getGreeting } from '@/lib/greeting'
 import Link from 'next/link'
 import RegressionSummary from '@/components/analytics/RegressionSummary'
 import { computeRegressionInsight } from '@/lib/insights/regression-insight'
+import { aggregateAdsForTraining } from '@/lib/stats/regression'
 import UploadHistory from '@/components/upload/UploadHistory'
 
 function formatPhp(amount: number): string {
@@ -86,7 +87,7 @@ export default async function MarketingDashboard() {
     adHistory,
   ] = await Promise.all([
     prisma.ad.count(),
-    prisma.ad.count({ where: { inquiries: { gt: 0 } } }),
+    prisma.ad.count({ where: { total_messaging_contacts: { gt: 0 } } }),
     prisma.regressionModel.findFirst({ orderBy: { trained_at: 'desc' } }),
     prisma.uploadLog.findMany({
       orderBy: { uploaded_at: 'desc' },
@@ -104,18 +105,18 @@ export default async function MarketingDashboard() {
       _count: { _all: true },
     }),
     prisma.category.findMany({
-      include: { ads: { select: { inquiries: true, amount_spent: true } } },
+      include: { ads: { select: { total_messaging_contacts: true, amount_spent: true } } },
     }),
     prisma.ad.findMany({
-      where: { inquiries: { not: null } },
-      select: { reach: true, total_messaging_contacts: true, amount_spent: true },
+      where: { total_messaging_contacts: { not: null } },
+      select: { ad_name: true, ad_set_name: true, reach: true, total_messaging_contacts: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
   ])
 
   const regressionInsight = latestModel
     ? computeRegressionInsight(
         latestModel,
-        adHistory.map(a => ({ reach: a.reach ?? 0, messaging: a.total_messaging_contacts ?? 0, amount_spent: a.amount_spent })),
+        aggregateAdsForTraining(adHistory),
       )
     : null
 
@@ -127,7 +128,7 @@ export default async function MarketingDashboard() {
   const categoriesWithStats = categories
     .map(cat => ({
       name: cat.name,
-      totalInquiries: cat.ads.reduce((s, a) => s + (a.inquiries ?? 0), 0),
+      totalInquiries: cat.ads.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0),
       totalSpend: cat.ads.reduce((s, a) => s + a.amount_spent, 0),
       adCount: cat.ads.length,
     }))
@@ -152,7 +153,7 @@ export default async function MarketingDashboard() {
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
         />
         <KpiCard
-          label="With Inquiries" value={adsWithInquiries} valueClass="text-green-600 dark:text-green-400" accent="green"
+          label="With Messaging Conversations" value={adsWithInquiries} valueClass="text-green-600 dark:text-green-400" accent="green"
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
         />
         <KpiCard
@@ -201,7 +202,7 @@ export default async function MarketingDashboard() {
           {topCategory && (
             <div className="bg-card rounded-2xl card-shadow p-5"
               style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
-              <SectionLabel>Top Category by Inquiries</SectionLabel>
+              <SectionLabel>Top Category by Messaging Conversations</SectionLabel>
               <div className="flex items-start justify-between gap-3 mb-4">
                 <p className="text-sm font-bold text-gray-800">{topCategory.name}</p>
                 <span className="flex-shrink-0 text-[10px] font-semibold bg-green-500/10 border border-green-500/30 text-green-400 rounded-full px-2.5 py-0.5">
@@ -210,7 +211,7 @@ export default async function MarketingDashboard() {
               </div>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Inquiries</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Messaging Conversations</p>
                   <p className="sensitive text-xl font-bold text-gray-900">{topCategory.totalInquiries.toLocaleString()}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">

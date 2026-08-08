@@ -108,9 +108,9 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
       <Section variant={variant} title="Executive Summary" noBreak>
         <MetricGrid variant={variant} items={[
           { label: 'Total Ad Spend', value: formatPHP(data.totalSpend), sub: '3-month period', tone: 'negative' },
-          { label: 'Total Inquiries', value: data.totalInquiries.toLocaleString(), sub: 'from ads', tone: 'positive' },
+          { label: 'Total Messaging Conversations', value: data.totalInquiries.toLocaleString(), sub: 'from ads', tone: 'positive' },
           { label: 'Total Ad Reach', value: data.totalReach.toLocaleString(), sub: 'unique people', tone: 'neutral' },
-          { label: 'Cost per Inquiry', value: data.cpi ? formatPHP(data.cpi) : '—', sub: 'avg CPI', tone: 'neutral' },
+          { label: 'Cost per Messaging Conversation', value: data.cpi ? formatPHP(data.cpi) : '—', sub: 'avg CPI', tone: 'neutral' },
         ]} />
       </Section>
 
@@ -130,7 +130,7 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
       </Section>
 
       {data.top5Ads.length > 0 && (
-        <Section variant={variant} title="Top 5 Ads by Inquiries">
+        <Section variant={variant} title="Top 5 Ads by Messaging Conversations">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -139,7 +139,7 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
                   <th className={th}>Ad Name</th>
                   <th className={`${th} hidden sm:table-cell`}>Period</th>
                   <th className={thRight}>Spend</th>
-                  <th className={thRight}>Inquiries</th>
+                  <th className={thRight}>Messaging Conversations</th>
                   <th className={`${thRight} hidden sm:table-cell`}>CPI</th>
                 </tr>
               </thead>
@@ -175,7 +175,7 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
                 <th className={th}>Period</th>
                 <th className={`${thRight} hidden sm:table-cell`}>Ads Run</th>
                 <th className={thRight}>Total Spend</th>
-                <th className={thRight}>Inquiries</th>
+                <th className={thRight}>Messaging Conversations</th>
                 <th className={`${thRight} hidden sm:table-cell`}>Reach</th>
                 <th className={`${thRight} hidden sm:table-cell`}>CPI</th>
               </tr>
@@ -273,15 +273,15 @@ export default function ReportView({ variant, role, data }: ReportViewProps) {
           {data.cpi && (
             <li className="flex gap-2">
               <span className={isPrint ? 'text-neutral-400 mt-0.5' : 'text-red-400 mt-0.5'}>•</span>
-              Average cost per inquiry across all campaigns: <strong className={isPrint ? "text-neutral-900" : ""}>{formatPHP(data.cpi)}</strong>
+              Average cost per messaging conversation across all campaigns: <strong className={isPrint ? "text-neutral-900" : ""}>{formatPHP(data.cpi)}</strong>
             </li>
           )}
           {data.lagData.has_data && (
             <li className="flex gap-2">
               <span className={isPrint ? 'text-neutral-400 mt-0.5' : 'text-red-400 mt-0.5'}>•</span>
               {data.lagData.best_r !== null && data.lagData.best_metric
-                ? <>Inquiries peak <strong className={isPrint ? 'text-neutral-900' : ''}>{data.lagData.best_lag} day{data.lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics change — strongest driver is {data.lagData.best_metric.toLowerCase()}.</>
-                : 'No clear time-lag pattern found yet between ad metrics and inquiries.'}
+                ? <>Messaging conversations peak <strong className={isPrint ? 'text-neutral-900' : ''}>{data.lagData.best_lag} day{data.lagData.best_lag !== 1 ? 's' : ''}</strong> after ad metrics change — strongest driver is {data.lagData.best_metric.toLowerCase()}.</>
+                : 'No clear time-lag pattern found yet between ad metrics and messaging conversations.'}
             </li>
           )}
           {data.regressionInsight && (

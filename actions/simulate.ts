@@ -24,14 +24,12 @@ export async function runWhatIfAction(
   if (amountSpent > 1_000_000) return { error: 'Amount spent exceeds the supported range (max ₱1,000,000)' }
 
   const reach = parse('reach') ?? 0
-  const messaging = parse('messaging') ?? 0
 
   if (reach > 10_000_000) return { error: 'Reach exceeds the supported range (max 10,000,000)' }
-  if (messaging > 500_000) return { error: 'Messaging contacts exceeds the supported range (max 500,000)' }
 
   try {
     const userId = parseInt(session.user.id, 10)
-    const result = await runSimulation(userId, reach, messaging, amountSpent)
+    const result = await runSimulation(userId, reach, amountSpent)
 
     const role = session.user.role
     if (role === 'MARKETING_MANAGER') revalidatePath('/dashboard/marketing')

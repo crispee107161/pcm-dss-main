@@ -16,19 +16,19 @@ export interface AdRecord {
   inquiries: number | null
 }
 
-function parseIntOrNull(value: string | undefined): number | null {
+export function parseIntOrNull(value: string | undefined): number | null {
   if (!value || value.trim() === '') return null
   const parsed = parseInt(value.replace(/,/g, '').trim(), 10)
   return isNaN(parsed) ? null : parsed
 }
 
-function parseFloatOrNull(value: string | undefined): number | null {
+export function parseFloatOrNull(value: string | undefined): number | null {
   if (!value || value.trim() === '') return null
   const parsed = parseFloat(value.replace(/,/g, '').trim())
   return isNaN(parsed) ? null : parsed
 }
 
-function parseDate(value: string | undefined, fieldName: string): Date {
+export function parseDate(value: string | undefined, fieldName: string): Date {
   if (!value || value.trim() === '') {
     throw new Error(`Missing required date field: ${fieldName}`)
   }
@@ -83,9 +83,12 @@ export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
       )
       const results = parseIntOrNull(row['Results'])
       const cost_per_result = parseFloatOrNull(row['Cost per result'])
-      // 'Purchases' is Facebook's literal export header — external data we don't control.
-      // We interpret this count as customer inquiries; map it to our internal field name here.
-      const inquiries = parseIntOrNull(row['Purchases'] ?? row['Purchase'])
+      // Purchases/sales data is out of scope by policy (capstone retitled to drop all
+      // sales/purchases/transaction framing — see DV-PIVOT-PLAN.md "Why this changed").
+      // 'Purchases' is still accepted as a detection discriminator in detect.ts (it's a
+      // reliable marker for this older monthly export format), but its value is no
+      // longer read into `inquiries` — left null here, same as the daily validator.
+      const inquiries = null
 
       return {
         reporting_starts,

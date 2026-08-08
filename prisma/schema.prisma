@@ -15,6 +15,7 @@ enum Role {
 
 enum UploadType {
   ADS_CSV
+  ADS_DAILY_CSV
   POSTS_CSV
   PAGE_METRIC_CSV
   FOLLOWER_HISTORY_CSV
@@ -47,7 +48,9 @@ model UploadLog {
   records_inserted  Int          @default(0)
   records_updated   Int          @default(0)
   records_unchanged Int          @default(0)
+  records_superseded Int         @default(0)
   error_message     String?
+  warning_message   String?
   uploaded_at      DateTime     @default(now())
 }
 
@@ -85,6 +88,11 @@ model Ad {
   total_messaging_contacts Int?
   results                  Int?
   cost_per_result          Float?
+  /// Permanently null on all data ingested since the messaging-conversations DV
+  /// pivot (see DV-PIVOT-PLAN.md "Why this changed") — Purchases/sales data is out
+  /// of scope by policy and no longer parsed from either CSV format. Column is kept,
+  /// not dropped, to avoid an unreviewed migration against what may be a production
+  /// database; a follow-up migration to remove it needs explicit sign-off first.
   inquiries                Int?
   category_id              Int?
   category                 Category? @relation(fields: [category_id], references: [id])
@@ -113,6 +121,10 @@ model RegressionModel {
   intercept           Float
   coefficient         Float
   coef_reach          Float?
+  /// No longer written by new training runs since the messaging-conversations DV
+  /// pivot — messaging is the model's outcome now, not a predictor (see
+  /// DV-PIVOT-PLAN.md). Non-null only on legacy rows trained under the old formula;
+  /// see scripts/purge-inquiry-regression-models.ts to clean those up.
   coef_messaging      Float?
   coef_amount_spent   Float?
   coef_spend_sq       Float?
@@ -123,6 +135,11 @@ model RegressionModel {
   r_squared           Float
   adj_r_squared       Float?
   n                   Int
+  /// Set when fitPlainMLR's VIF check (Reach/Spend collinearity) exceeds the
+  /// warning threshold, or when the fit was numerically singular — surfaced
+  /// in the UI (RegressionSummary) instead of only logging via console.warn.
+  /// Null on legacy rows trained before this column existed.
+  collinearity_warning String?
   trained_at          DateTime @default(now())
 }
 
@@ -131,8 +148,12 @@ model SimulationResult {
   user_id             Int
   user                User     @relation(fields: [user_id], references: [id])
   reach_input         Float?
+  /// Always null on new rows since the What-If Simulator dropped its messaging
+  /// input (see DV-PIVOT-PLAN.md Phase 3) — messaging is the model's outcome now.
   messaging_input     Float?
   amount_spent_input  Float
+  /// Holds a projected messaging-conversations count now, not inquiries — kept as
+  /// the column name to avoid an unreviewed migration (see DV-PIVOT-PLAN.md).
   projected_inquiries Float
   interval_lower      Float?
   interval_upper      Float?

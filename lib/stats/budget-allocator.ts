@@ -6,7 +6,6 @@ export interface AdSetAllocation {
   allocated_spend: number
   pct: number
   projected_reach: number
-  projected_messaging: number
   projected_inquiries: number
   interval_lower: number
   interval_upper: number
@@ -25,7 +24,7 @@ export interface AllocationResult {
 const Z_80 = 1.2816
 
 export async function computeBudgetAllocation(totalBudget: number): Promise<AllocationResult> {
-  const { model, eligible, globalReachPerPeso, globalMessagingPerPeso } = await computeAdSetMetrics()
+  const { model, eligible, globalReachPerPeso } = await computeAdSetMetrics()
 
   // Cap at top 8 ad sets by smoothed efficiency to keep the UI readable
   const top = [...eligible].sort((a, b) => b.efficiency - a.efficiency).slice(0, 8)
@@ -44,12 +43,11 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
     const allocated_spend = totalBudget * pct
 
     // Fall back to global average when an ad set has no historical data for a metric
-    const projected_reach     = Math.round(allocated_spend * (g.reach_per_peso     || globalReachPerPeso))
-    const projected_messaging = Math.round(allocated_spend * (g.messaging_per_peso || globalMessagingPerPeso))
+    const projected_reach = Math.round(allocated_spend * (g.reach_per_peso || globalReachPerPeso))
 
     const projected_inquiries = Math.max(
       0,
-      predictFromModel(m, projected_reach, projected_messaging, allocated_spend),
+      predictFromModel(m, projected_reach, allocated_spend),
     )
 
     return {
@@ -57,7 +55,6 @@ export async function computeBudgetAllocation(totalBudget: number): Promise<Allo
       allocated_spend,
       pct,
       projected_reach,
-      projected_messaging,
       projected_inquiries,
       interval_lower: Math.max(0, projected_inquiries - Z_80 * predSE),
       interval_upper: projected_inquiries + Z_80 * predSE,

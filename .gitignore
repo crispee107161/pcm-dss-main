@@ -50,6 +50,9 @@ dev.db
 # Legacy subfolder (app lives at repo root)
 /pc-merchandise-dss/
 
+# Real client CSV exports (NDA data, DV-PIVOT-PLAN.md)
+/data/
+
 .vercel
 
 # Claude Code internal files (plans, reviews, security docs)

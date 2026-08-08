@@ -10,14 +10,13 @@ vi.mock('@/lib/prisma', () => ({
 import { prisma } from '@/lib/prisma'
 import { computeCostCuttingScenario } from './cost-cutting'
 
-// A model where only spend predicts inquiries 1:1, so projected inquiries
-// for each ad set equal its spend exactly — makes the cut/keep math
-// independently verifiable by hand.
+// A model where only spend predicts messaging conversations 1:1, so
+// projected conversations for each ad set equal its spend exactly — makes
+// the cut/keep math independently verifiable by hand.
 const linearSpendModel = {
   model_type: 'plain_mlr',
   intercept: 0,
   coef_reach: 0,
-  coef_messaging: 0,
   coef_amount_spent: 1,
   coefficient: 1,
   r_squared: 0.9,
@@ -34,10 +33,10 @@ describe('computeCostCuttingScenario', () => {
   it('cuts the least-efficient ad set first until the target reduction is reached', async () => {
     vi.mocked(prisma.regressionModel.findFirst).mockResolvedValue(linearSpendModel as any)
     vi.mocked(prisma.ad.findMany).mockResolvedValue([
-      // Set A: spend=1000, inquiries=100 -> most efficient
-      { ad_set_name: 'A', amount_spent: 1000, inquiries: 100, reach: 500, total_messaging_contacts: 50 },
-      // Set B: spend=1000, inquiries=10 -> least efficient, cut candidate
-      { ad_set_name: 'B', amount_spent: 1000, inquiries: 10, reach: 500, total_messaging_contacts: 50 },
+      // Set A: spend=1000, messaging=100 -> most efficient
+      { ad_set_name: 'A', amount_spent: 1000, total_messaging_contacts: 100, reach: 500 },
+      // Set B: spend=1000, messaging=10 -> least efficient, cut candidate
+      { ad_set_name: 'B', amount_spent: 1000, total_messaging_contacts: 10, reach: 500 },
     ] as any)
 
     // total spend = 2000, target 20% reduction = 400 -> cutting B alone (spend=1000) already exceeds target
@@ -51,7 +50,7 @@ describe('computeCostCuttingScenario', () => {
     expect(result.spend_removed).toBe(1000)
     expect(result.actual_reduction_pct).toBeCloseTo(0.5, 6)
 
-    // With coef_amount_spent=1 and all other coefs 0, projected inquiries equal spend.
+    // With coef_amount_spent=1 and coef_reach=0, projected conversations equal spend.
     expect(result.baseline_projected_inquiries).toBeCloseTo(2000, 6)
     expect(result.after_cut_projected_inquiries).toBeCloseTo(1000, 6)
     expect(result.inquiry_loss_pct).toBeCloseTo(0.5, 6)
@@ -60,9 +59,9 @@ describe('computeCostCuttingScenario', () => {
   it('cuts multiple ad sets when one is not enough to hit the target', async () => {
     vi.mocked(prisma.regressionModel.findFirst).mockResolvedValue(linearSpendModel as any)
     vi.mocked(prisma.ad.findMany).mockResolvedValue([
-      { ad_set_name: 'A', amount_spent: 1000, inquiries: 100, reach: 500, total_messaging_contacts: 50 },
-      { ad_set_name: 'B', amount_spent: 500, inquiries: 20, reach: 250, total_messaging_contacts: 25 },
-      { ad_set_name: 'C', amount_spent: 500, inquiries: 5, reach: 250, total_messaging_contacts: 25 },
+      { ad_set_name: 'A', amount_spent: 1000, total_messaging_contacts: 100, reach: 500 },
+      { ad_set_name: 'B', amount_spent: 500, total_messaging_contacts: 20, reach: 250 },
+      { ad_set_name: 'C', amount_spent: 500, total_messaging_contacts: 5, reach: 250 },
     ] as any)
 
     // total spend = 2000, target 50% = 1000 -> cutting C (500, least efficient) alone isn't
@@ -85,7 +84,6 @@ describe('computeCostCuttingScenario', () => {
       model_type: 'plain_mlr',
       intercept: -100,
       coef_reach: 0,
-      coef_messaging: 0,
       coef_amount_spent: 1,
       coefficient: 1,
       r_squared: 0.9,
@@ -94,8 +92,8 @@ describe('computeCostCuttingScenario', () => {
     }
     vi.mocked(prisma.regressionModel.findFirst).mockResolvedValue(negativeInterceptModel as any)
     vi.mocked(prisma.ad.findMany).mockResolvedValue([
-      { ad_set_name: 'A', amount_spent: 1000, inquiries: 100, reach: 500, total_messaging_contacts: 50 },
-      { ad_set_name: 'B', amount_spent: 1000, inquiries: 10, reach: 500, total_messaging_contacts: 50 },
+      { ad_set_name: 'A', amount_spent: 1000, total_messaging_contacts: 100, reach: 500 },
+      { ad_set_name: 'B', amount_spent: 1000, total_messaging_contacts: 10, reach: 500 },
     ] as any)
 
     // total spend = 2000, target 20% = 400 -> cutting B (spend=1000) alone exceeds target.
@@ -109,13 +107,13 @@ describe('computeCostCuttingScenario', () => {
     expect(result.inquiry_loss_pct).toBeCloseTo(1000 / 1900, 6)
   })
 
-  it('includes zero-inquiry ad sets as cut candidates ahead of any low-efficiency ad set', async () => {
+  it('includes zero-messaging ad sets as cut candidates ahead of any low-efficiency ad set', async () => {
     vi.mocked(prisma.regressionModel.findFirst).mockResolvedValue(linearSpendModel as any)
     vi.mocked(prisma.ad.findMany).mockResolvedValue([
-      // Set A: spend=1000, inquiries=100 -> efficient, should be kept
-      { ad_set_name: 'A', amount_spent: 1000, inquiries: 100, reach: 500, total_messaging_contacts: 50 },
-      // Set Z: spend=500, inquiries=0 -> pure waste, must be visible and cut first
-      { ad_set_name: 'Z', amount_spent: 500, inquiries: 0, reach: 250, total_messaging_contacts: 25 },
+      // Set A: spend=1000, messaging=100 -> efficient, should be kept
+      { ad_set_name: 'A', amount_spent: 1000, total_messaging_contacts: 100, reach: 500 },
+      // Set Z: spend=500, messaging=0 -> pure waste, must be visible and cut first
+      { ad_set_name: 'Z', amount_spent: 500, total_messaging_contacts: 0, reach: 250 },
     ] as any)
 
     // total spend = 1500 (Z's spend must count toward the total), target 20% = 300

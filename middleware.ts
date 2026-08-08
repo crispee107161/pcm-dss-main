@@ -49,7 +49,16 @@ export default async function middleware(req: NextRequest) {
   // Protect dashboard routes
   if (pathname.startsWith('/dashboard')) {
     if (!isLoggedIn) {
-      return NextResponse.redirect(new URL('/login', req.nextUrl))
+      // A session cookie present but undecodable means the token expired or
+      // is invalid — tell the user why. No cookie at all means they were
+      // never signed in, so send them to a plain login with no notice.
+      const hadSessionCookie =
+        req.cookies.has('__Secure-authjs.session-token') || req.cookies.has('authjs.session-token')
+      const loginUrl = new URL('/login', req.nextUrl)
+      if (hadSessionCookie) {
+        loginUrl.searchParams.set('reason', 'expired')
+      }
+      return NextResponse.redirect(loginUrl)
     }
 
     if (userRole) {
