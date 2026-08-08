@@ -12,7 +12,7 @@ async function main() {
   console.log('Seeding database...')
 
   // Seed categories
-  const categories = ['Product Showcase', 'Testimonial', 'Promotional Offer']
+  const categories = ['Product Showcase', 'Testimonial', 'Promotional Offer', 'Entertainment']
   const categoryRecords: Record<string, { id: number; name: string }> = {}
 
   for (const name of categories) {
@@ -39,6 +39,10 @@ async function main() {
     'Promotional Offer': [
       'sale', 'promo', 'discount', 'off', 'deal', 'offer', 'free',
       'limited', 'bundle', 'package', 'savings', 'special', 'treat',
+    ],
+    'Entertainment': [
+      'meme', 'funny', 'giveaway', 'contest', 'raffle', 'trivia', 'quiz',
+      'fun fact', 'behind the scenes', 'vlog',
     ],
   }
 

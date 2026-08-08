@@ -92,6 +92,7 @@ function CategoryBadge({ name }: { name: string }) {
     'Product Showcase': 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
     Testimonial: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30',
     'Promotional Offer': 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30',
+    Entertainment: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30',
   }
   const cls = colors[name] ?? 'bg-gray-100 text-gray-700 border-gray-200'
   return (
