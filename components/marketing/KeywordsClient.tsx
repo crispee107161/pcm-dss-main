@@ -17,6 +17,28 @@ interface Props { categories: Category[] }
 // Groq's per-minute token quota can absorb them.
 const ANALYZE_COOLDOWN_SECONDS = 60
 
+// Persisted so the cooldown survives navigating away and back — this is a
+// separate client component per route, so plain useState resets to 0 on
+// remount even though the server-side rate limit (actions/keywords.ts) is
+// still counting down in the background.
+const COOLDOWN_STORAGE_KEY = 'pcm-analyze-content-cooldown-until'
+
+function readStoredCooldownSeconds(): number {
+  if (typeof window === 'undefined') return 0
+  const until = Number(window.localStorage.getItem(COOLDOWN_STORAGE_KEY))
+  if (!until) return 0
+  return Math.max(0, Math.ceil((until - Date.now()) / 1000))
+}
+
+function persistCooldown(seconds: number) {
+  if (typeof window === 'undefined') return
+  if (seconds <= 0) {
+    window.localStorage.removeItem(COOLDOWN_STORAGE_KEY)
+    return
+  }
+  window.localStorage.setItem(COOLDOWN_STORAGE_KEY, String(Date.now() + seconds * 1000))
+}
+
 export default function KeywordsClient({ categories }: Props) {
   const [suggestions, setSuggestions] = useState<KeywordSuggestion[]>([])
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
@@ -26,11 +48,23 @@ export default function KeywordsClient({ categories }: Props) {
   const [isAdding, startAdd] = useTransition()
   const [cooldown, setCooldown] = useState(0)
 
+  // Reconcile against localStorage after mount (not in useState's initializer)
+  // so this still matches on the server-rendered markup and avoids a
+  // hydration mismatch.
+  useEffect(() => {
+    setCooldown(readStoredCooldownSeconds())
+  }, [])
+
   useEffect(() => {
     if (cooldown <= 0) return
     const timer = setInterval(() => setCooldown(c => Math.max(0, c - 1)), 1000)
     return () => clearInterval(timer)
   }, [cooldown > 0])
+
+  function beginCooldown(seconds: number) {
+    setCooldown(seconds)
+    persistCooldown(seconds)
+  }
 
   function key(categoryId: number, word: string) { return `${categoryId}:${word}` }
 
@@ -47,7 +81,7 @@ export default function KeywordsClient({ categories }: Props) {
           setAnalyzeError('No new suggestions found — your existing keywords may already cover the content well.')
         }
         // A successful call still spent Groq tokens, so pace the next one too.
-        setCooldown(ANALYZE_COOLDOWN_SECONDS)
+        beginCooldown(ANALYZE_COOLDOWN_SECONDS)
         return
       }
 
@@ -56,7 +90,7 @@ export default function KeywordsClient({ categories }: Props) {
       // quota — pre-flight failures (auth, missing config, no data yet)
       // shouldn't lock the user out of retrying immediately.
       if (result.retryable) {
-        setCooldown(result.retryAfterSeconds ?? ANALYZE_COOLDOWN_SECONDS)
+        beginCooldown(result.retryAfterSeconds ?? ANALYZE_COOLDOWN_SECONDS)
       }
     })
   }
