@@ -1,5 +1,7 @@
 # PCM DSS — Capstone Improvement Roadmap
 
+> **Superseded 2026-08-14** by `docs/mvp.md` (rewritten 2026-08-12 for the MVP v2 respec) and `docs/PROGRESS.md`. This document reflects pre-respec scope/roles (e.g. Sales Director, cut analytics features) and is kept for historical reference only — do not treat it as current.
+
 **Date**: 2026-08-02
 **Source**: Four-voice capstone defense council (Architect, Skeptic, Pragmatist, Critic)
 **Status**: proposed

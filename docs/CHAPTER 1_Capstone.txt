@@ -1,0 +1,159 @@
+﻿A Web-Based Decision Support System for Facebook Content Performance and Advertising Efficiency at PC Merchandise 
+________________
+
+
+
+
+CHAPTER I
+INTRODUCTION
+Background of the Study
+
+
+Facebook's advertising reach in the Philippines is equivalent to 97.7 percent of the country's internet users, and Meta's advertising tools report 95.8 million Facebook users against a national population of 117 million (Kemp, 2025). These are reach figures rather than active user counts, but they indicate the scale of audience a Filipino business can address through a single platform.
+Micro, small, and medium enterprises account for 99.63 percent of the 1,241,476 registered business establishments in the Philippines, while large enterprises account for the remaining 0.37 percent (Department of Trade and Industry [DTI], 2025). Within the MSME sector, wholesale and retail trade formed the largest industry grouping in 2024 at 48.7 percent of enterprises, and 82.2 percent of MSMEs operated outside the National Capital Region (Asian Development Bank [ADB], 2025). Enterprises of this size, type, and location are numerous, and the analytical resources available to them differ from those of large firms.
+Data-driven decision-making applies quantitative information, analytical models, and evidence on customer behaviour and prior campaign performance to marketing decisions, in contrast to approaches that rely on intuition. A systematic review of 94 studies in this area associated resource allocation, attention to high-value customers, and campaign monitoring with improved profitability (Cruz & Rosário, 2025).
+Realising these benefits in smaller enterprises is constrained by capacity rather than by access. Constraints in funding, technical skill, and tool availability have historically limited the use smaller enterprises make of large-scale market data (Nugroho & Angela, 2024). Platform-native reporting has reduced the cost of obtaining marketing data without addressing these constraints. During data collection at the client business, page-level metrics, organic post insights, and advertising records were found to be retrievable only as separate exports from separate interfaces, so that comparison across content types, across periods, or across advertisements requires a consolidation the platform does not perform. The exports also differ in file structure and character encoding between interfaces, and their columns are not consistent from one period to the next, so the records cannot be combined without preparation.
+The transaction does not take place on the platform. Consumers gather product information through one channel and complete the purchase through another, a separation documented across the retail literature (Halibas et al., 2023). In the Philippine market that second channel is Messenger, whose advertising reach is equivalent to 67.1 percent of the local internet user base, and which 83.3 percent of Filipinos aged 18 and above used at the end of 2025 (Kemp, 2025). At the client business, discovery occurs on Facebook while the transaction is arranged and completed through direct contact between buyer and seller, whether the customer visits the store or receives a delivery.
+The inquiry arising from that contact is a substantive commercial event, and a measurable one. The platform records it, so it can be counted, attributed to the advertisement that produced it, and priced, since expenditure and inquiry counts are reported together. The cost of generating an inquiry can therefore be compared across advertisements, across content categories, and across periods, and it is a quantity a marketing decision directly controls.
+Content that has not been promoted produces no comparable event, so its performance is observed through engagement instead. Dolan et al. (2019) examined the effects of content type on engagement behaviour using twelve months of Facebook Insights data from twelve brand pages, establishing engagement as the measure by which organic content is assessed and by which content types can be distinguished from one another.
+PC Merchandise, a computer hardware retailer in San Jose del Monte, Bulacan, operates under these conditions. The business employs ten full-time staff and holds assets that place the enterprise within the small enterprise classification of Republic Act No. 9501 (2008), which defines small enterprises as those holding PHP 3,000,001 to PHP 15,000,000 in assets. Under the employment criteria applied by the Philippine Statistics Authority, enterprises employing 10 to 99 persons fall within the same classification (ADB, 2025). In an interview conducted on August 3, 2026, the owner reported that the business has operated for six years, has run paid Facebook campaigns continuously since 2022, and attributes approximately 80 percent of customer acquisition to Facebook. The owner further reported that approximately 30 percent of transactions are completed as walk-ins and 70 percent as delivery orders arranged through Messenger, indicating that the conversation is the channel through which the majority of orders are placed. Advertising records obtained from the business for the period August 2025 to July 2026 show total expenditure of PHP 901,196.96 across 297 advertisements, 24 ad sets, and 26 campaigns.
+Analysis of these records, together with the interview, identified six conditions that constrain evidence-based marketing decisions at the business.
+First, performance information exists in three separate places and is never brought together. Page-level metrics, organic post insights, and advertising records are held in separate exports, and no view combines them. The advertising records are organised into campaigns and ad sets under which individual advertisements sit, while organic records are held at the level of the individual post, so the two are reported at different levels of aggregation as well as in different files. The two sources also share no common identifier, so an organic post cannot be traced to the advertisement it subsequently became by any means the platform exports provide. Comparing advertising expenditure against page activity for the same period likewise requires assembling the sources by hand, although the information both comparisons need is present in the exports the business already holds.
+Second, the cost of generating a customer inquiry varies substantially across advertisements, and this variation does not appear in the reporting the business consults. The comparison applies only to advertisements run for messaging conversations, which account for PHP 740,382.55 of expenditure in the period, since the remainder were run for reach, post engagement, or video plays, for which no inquiry is recorded. Across 148 such advertisements meeting a minimum expenditure threshold within the study period, cost per inquiry ranged from PHP 8.05 to PHP 66.61, with a median of PHP 20.16 and an interquartile range of PHP 15.63 to PHP 28.23. The distribution is strongly asymmetric, with the upper extreme more than three times the median while half of all advertisements fall within a narrow band. When asked which advertisements had generated the most inquiries and which had cost the most per inquiry, the owner answered in terms of content format rather than cost figures.
+Third, content promotion is governed by a single unvalidated volume measure. The owner stated that content is not created directly as advertising but is first published organically and promoted into a paid campaign once it performs, and identified view count as the sole measure used to distinguish performing from underperforming content. When asked what level of views warrants promotion, the owner offered an illustration rather than a standard, describing a video reaching fifty thousand views within three days as an example of content ready for promotion. No threshold is recorded, and no written rule governs the decision. Three properties of this practice limit its reliability. A view count is a raw volume measure, and since views and reach are recorded as separate fields in the organic export while the practice references only the former, posts that reached very different audience sizes to accumulate the same total are treated as equivalent. The measure applies uniformly across content types, including entertainment content, which the owner described as produced specifically so that audiences watch without being sold to, so content designed to accumulate views competes for promotion on the measure it is designed to maximise. Whether the practice favours particular categories cannot be determined from the data as held, since content type is recorded in neither the organic nor the advertising records. The practice further embodies an untested assumption, since promoting content on the basis of organic performance presumes that organic performance predicts the efficiency of the resulting advertisement, a relationship the business has never examined.
+Fourth, budget decisions are made without reference to recorded expenditure. When asked about the advertising budget, the owner gave a figure of approximately PHP 100,000 per month, later clarifying that this was an estimate drawn from memory and confirming that the figures recorded in the advertising account are the accurate ones. Monthly expenditure in those records ranges from approximately PHP 45,600 to PHP 76,100 across the study period. The owner also stated that budget increases occur during the ber-months, and that allocation is not adjusted around paydays or sale dates. That the authorising decision-maker estimates expenditure from recollection rather than from record indicates that recorded spending is not routinely reported back to the point where spending is decided.
+Fifth, customer attribution is collected verbally and not retained. The owner stated that staff are instructed to ask entering customers where the business was encountered, and identified this practice as the basis for the 80 percent Facebook attribution figure. No written record of these responses is kept. The figure therefore cannot be verified, reproduced, or examined by period or by campaign, which means the business holds no auditable measure of what its advertising produces. The measures the platform does record, namely expenditure and inquiry counts attributable to individual advertisements, are retained and are the basis on which performance can be reported. The owner further stated that content is produced by a marketing team reporting to a marketing manager, customer messages are handled separately by an admin manager, and advertising decisions are made by the owner, and described no process by which outcome information returns to the team producing the content.
+Sixth, content is published without a category classification. The organic post records contain no field identifying content type. In the interview the owner described four types of content in use, namely product showcase, promotional offer, testimonial, and entertainment, the last of which the owner identified and approved during the interview itself. This structure corresponds to the classification of branded social media content into informational, entertaining, remunerative, and relational categories established by Dolan et al. (2019) and applied in subsequent work on brand posts (Drossos et al., 2024). Because these distinctions are absent from the data, performance cannot be aggregated or compared by content type at the stage where promotion decisions are made. Classification must also be applied retrospectively to twelve months of existing posts, and content type is not deducible from any structured field. It can be inferred only from the text accompanying each post, which is written in mixed English and Filipino and frequently uses stylised characters and emoji, so the method by which that inference is made is a design decision whose accuracy has to be established rather than assumed.
+These six conditions share a common characteristic. The business holds twelve months of advertising and content records containing every measure required to compare performance, yet marketing decisions rest on view counts, the owner's judgment, and verbally collected attribution that is never written down. What is missing is not the data but a means of consolidating, classifying, and interpreting what the business already keeps. The distinction is long established in the information systems literature. Gorry and Scott Morton (1971) argued that most managers are limited less by the quantity of information reaching them than by the methods available for processing what they already hold, and classified decisions of this kind, in which data and analysis apply while judgment remains necessary, as semi-structured. Systems built for semi-structured decisions supply the analysis and the access to relevant information, while the choice itself stays with the decision-maker.
+The study will develop a web-based decision support system for PC Merchandise in response to these conditions. Page-level, organic, and paid Facebook data will be consolidated into a single repository, organic content will be classified into the four categories identified by the client, and performance will be reported as efficiency rather than volume, with advertising results measured as the cost of generating a customer inquiry and organic results as engagement rate. Classifying organic content will also make the promotion practice currently in use examinable by category, which the records as presently structured do not permit.
+
+
+Objectives of the Study
+
+
+The study will develop a web-based decision support system for Facebook content performance and advertising efficiency at PC Merchandise, consolidating the page-level, organic, and advertising records the business already holds, classifying its content by category, and reporting performance as efficiency rather than volume, so that promotion and budget decisions can be made from recorded evidence rather than from recollection and unvalidated measures.
+Specifically, the study aims to: 
+1. Develop a centralised repository and ingestion module that accepts the page-level, organic post, and advertising exports in their native formats, validates and cleans the records, and computes derived measures including engagement rate, verified by the complete ingestion of all twelve months of export files with record counts reconciled against the sources.
+
+
+2. Develop a content categorization module that assigns organic posts to the four categories in use at the business, namely product showcase, promotional offer, testimonial, and entertainment:
+2.1 To generate category suggestions automatically for all organic posts in the study period, with final assignment retained by the marketing manager.
+2.2 To compare rule-based keyword matching against large language model assisted suggestion, measuring the agreement of each method with manually assigned labels on a common sample of posts using percentage agreement and Cohen's kappa, and adopting the method with the higher agreement.
+3. Compute and report efficiency measures for both channels, expressing advertising performance as the cost of generating a customer inquiry for advertisements optimised for messaging conversations and organic performance as engagement rate, producing reports aggregated by advertisement, by ad set, by campaign, by content category, and by month for the full twelve-month period.
+4. Examine the promotion practice currently in use at the business:
+4.1 To determine whether view count, the measure currently used to select content for promotion, ranks organic posts consistently with reach-adjusted engagement, by computing the rank correlation between the two measures and the overlap between the sets of posts each would select, and whether view count is distributed unequally across content categories.
+4.2 To determine the relationship between the engagement performance of an advertisement and its cost per inquiry, selecting between Pearson product-moment correlation and Spearman rank correlation on the basis of the distributional assumptions of the recorded measures, and reporting the resulting coefficient and its significance.
+5. Evaluate the system's overall quality and user acceptance through the following frameworks:
+5.1 ISO/IEC 25010 Quality Standards: To assess the system's technical performance in terms of Functional Suitability, Performance Efficiency, Compatibility, Usability, Reliability, Security, Maintainability, and Portability.
+5.2 Technology Acceptance Model (TAM): To measure user acceptance among marketing personnel and management of PC Merchandise based on Perceived Usefulness, Perceived Ease of Use, and Behavioral Intention to use the system.
+CHAPTER III
+DESIGN AND METHODOLOGY
+Functional Requirements 
+ID
+	Name
+	Description
+	FR-01
+	User authentication
+	The system shall authenticate users through a username and password before granting access to any module.
+	FR-02
+	Role-based access control
+	The system shall assign each account one of three roles, namely owner, marketing manager, and marketing team member, and restrict module access and editing rights according to the assigned role.
+	FR-03
+	Account management
+	The system shall allow the owner to create, modify, deactivate, and reset the credentials of user accounts.
+	FR-04
+	Export file upload
+	The system shall allow authorised users to upload page-level, organic post, and advertising exports as CSV files in the formats produced by Meta Business Suite and Ads Manager.
+	FR-05
+	Export type detection
+	The system shall determine whether an uploaded file is a page-level, organic post, or advertising export from its column composition, and reject files that match none of the three.
+	FR-06
+	Encoding and format handling
+	The system shall read uploaded files in the character encodings produced by both source interfaces, including UTF-8 and UTF-16 variants, and handle preamble rows preceding the column header.
+	FR-07
+	Record validation
+	The system shall validate uploaded records against the expected data type and permitted value range of each required field, and report rows that fail validation without discarding the remainder of the file.
+	FR-08
+	Data cleaning
+	The system shall handle missing values, remove duplicate records, and normalise text fields, including the conversion of stylised Unicode characters to their standard equivalents, before storing records.
+	FR-09
+	Ingestion summary
+	The system shall display, after each upload, the number of records read, stored, rejected, and identified as duplicates, so the result can be reconciled against the source file.
+	FR-10
+	Centralised repository
+	The system shall store all ingested page-level, organic, and advertising records in a single database, preserving the campaign, ad set, and advertisement hierarchy of the advertising records.
+	FR-11
+	Derived measure computation
+	The system shall compute engagement rate for organic posts and cost per inquiry for advertisements optimised for messaging conversations, and shall not compute cost per inquiry for advertisements run for other objectives.
+	FR-12
+	Automatic category suggestion
+	The system shall generate a suggested content category for each organic post from its accompanying text, assigning one of product showcase, promotional offer, testimonial, and entertainment.
+	FR-13
+	Manual category assignment
+	The system shall allow the marketing manager to accept, change, or set the content category of any organic post, and shall retain the manual assignment as the final value.
+	FR-14
+	Bulk categorisation
+	The system shall allow category suggestions to be generated for all uncategorised posts in a single operation and reviewed as a batch.
+	FR-15
+	Categorisation method evaluation
+	The system shall record the suggestions produced by each categorisation method alongside the manually assigned category, and report percentage agreement and Cohen's kappa for each method against the manual labels.
+	FR-16
+	Performance dashboard
+	The system shall present a dashboard showing advertising expenditure, inquiries generated, cost per inquiry, and organic engagement rate for a user-selected period.
+	FR-17
+	Aggregated reporting
+	The system shall report advertising and organic performance aggregated by advertisement, ad set, campaign, content category, and month.
+	FR-18
+	Period comparison
+	The system shall display recorded expenditure and its resulting efficiency measures across consecutive months so that changes between periods are visible.
+	FR-19
+	Ranking comparison
+	The system shall rank organic posts by view count and by engagement rate, report the rank correlation between the two rankings, and display the extent to which the highest ranked posts under each measure overlap.
+	FR-20
+	Category distribution analysis
+	The system shall report the distribution of view count and engagement rate across the four content categories.
+	FR-21
+	Correlation analysis
+	The system shall test the distributional assumptions of advertising engagement rate and cost per inquiry, select between Pearson product-moment and Spearman rank correlation on that basis, and report the resulting coefficient, its significance, and the method selected.
+	FR-22
+	Result interpretation
+	The system shall present each analytical result with the number of records it was computed from and a plain-language statement of what the result indicates.
+	FR-23
+	Report export
+	The system shall allow displayed reports and analytical results to be exported as PDF or CSV files.
+	FR-24
+	Audit trail
+	The system shall record the user, timestamp, and affected records for every upload and every manual category assignment.
+	
+
+REFERENCES
+Asian Development Bank. (2025). Asia small and medium-sized enterprise monitor 2025: Global uncertainty, trade, and private sector businesses in Asia and the Pacific. https://doi.org/10.22617/SGP250456-2
+
+
+Cruz, R. N., & Rosário, A. T. (2025). Data-driven decision-making in marketing: A systematic literature review of emerging themes and research gaps. Systems, 13(12), 1114. https://doi.org/10.3390/systems13121114
+
+
+Department of Trade and Industry. (2025, October 29). 2024 Philippine MSME statistics. https://www.dti.gov.ph/dti-knowledge-hub/dti-statistics/dti-msme-statistics
+
+
+Dolan, R., Conduit, J., Frethey-Bentham, C., Fahy, J., & Goodman, S. (2019). Social media engagement behavior: A framework for engaging customers through social media content. European Journal of Marketing, 53(10), 2213–2243. https://doi.org/10.1108/EJM-03-2017-0182
+
+
+Drossos, D., Coursaris, C., & Kagiouli, E. (2024). Social media marketing content strategy: A comprehensive framework and empirically supported guidelines for brand posts on Facebook pages. Journal of Consumer Behaviour, 23(3), 1175–1192. https://doi.org/10.1002/cb.2269
+
+
+Gorry, G. A., & Scott Morton, M. S. (1971). A framework for management information systems (Working Paper No. 510-71). Alfred P. Sloan School of Management, Massachusetts Institute of Technology. https://dspace.mit.edu/entities/publication/8de60684-115e-46b5-99b7-5ca3b802f1f5
+
+
+
+
+Halibas, A. S., Van Nguyen, A. T., Akbari, M., Akram, U., & Hoang, M. D. T. (2023). Developing trends in showrooming, webrooming, and omnichannel shopping behaviors: Performance analysis, conceptual mapping, and future directions. Journal of Consumer Behaviour, 22(5), 1237–1264. https://doi.org/10.1002/cb.2186
+
+
+Kemp, S. (2025, November 5). Digital 2026: The Philippines. DataReportal. https://datareportal.com/reports/digital-2026-philippines
+
+
+Nugroho, D., & Angela, P. (2024). The impact of social media analytics on SME strategic decision making. IAIC Transactions on Sustainable Digital Innovation (ITSDI), 5(2), 169–178. https://aptikom-journal.id/itsdi/article/view/664
+
+
+Republic Act No. 9501. (2008). Magna Carta for Micro, Small and Medium Enterprises. Congress of the Philippines. https://elibrary.judiciary.gov.ph/thebookshelf/showdocs/2/21416

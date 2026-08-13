@@ -1,4 +1,7 @@
 # PCM-DSS Current Codebase Analysis
+
+> **Superseded 2026-08-14** by `docs/mvp.md` (rewritten 2026-08-12 for the MVP v2 respec) and `docs/PROGRESS.md`. This document reflects pre-respec scope/roles (e.g. Sales Director, cut analytics features) and is kept for historical reference only — do not treat it as current.
+
 # PC Merchandise Decision Support System — Next.js / TypeScript / PostgreSQL / Vercel
 
 **Date:** 2026-06-05

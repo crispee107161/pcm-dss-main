@@ -1,5 +1,7 @@
 # Separate daily ads data from monthly — drop the supersede mechanism
 
+> **Superseded 2026-08-14** by `docs/mvp.md` (rewritten 2026-08-12 for the MVP v2 respec) and `docs/PROGRESS.md`. This document reflects pre-respec scope/roles (e.g. Sales Director, cut analytics features) and is kept for historical reference only — do not treat it as current.
+
 > **Status:** Planned, not started. Written 2026-08-05. Supersedes the
 > "daily supersedes monthly" approach that was partially implemented and is
 > currently sitting uncommitted in the working tree.

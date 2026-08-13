@@ -1,5 +1,7 @@
 # PCM DSS — Honest Scope Statement
 
+> **Superseded 2026-08-14** by `docs/mvp.md` (rewritten 2026-08-12 for the MVP v2 respec) and `docs/PROGRESS.md`. This document reflects pre-respec scope/roles (e.g. Sales Director, cut analytics features) and is kept for historical reference only — do not treat it as current.
+
 **Why this document exists**: a capstone panel review (2026-08-02) flagged that "Decision Support System" oversells what this project actually does — it analyzes one marketing channel (Facebook), not the business as a whole. This document exists so the thesis/defense narrative, the code, and the AI-facing copy all say the same true thing about scope, rather than three different claims of varying honesty.
 
 ## What PCM DSS actually is

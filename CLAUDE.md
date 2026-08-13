@@ -37,30 +37,26 @@ npm run test:watch           # Watch mode
 - NextAuth.js v5 (JWT sessions) · Recharts · Groq AI API
 
 ### Role System
-Three fixed roles, each locked to their own dashboard route enforced by `middleware.ts`:
-- `MARKETING_MANAGER` → `/dashboard/marketing`
-- `SALES_DIRECTOR` → `/dashboard/sales`
-- `BUSINESS_OWNER` → `/dashboard/owner`
-
-The middleware reads the JWT, checks `role`, and redirects if the user tries to access another role's path.
+Three fixed roles (`MARKETING_TEAM` was added, `SALES_DIRECTOR` was removed, in the MVP v2 rework — see `docs/PROGRESS.md` step 1). `MARKETING_MANAGER` and `MARKETING_TEAM` both land on `/dashboard/marketing` (no dedicated Team route tree — access within that tree is gated per-page, not by middleware); `BUSINESS_OWNER` gets `/dashboard/owner`. `middleware.ts` enforces the top-level route split from the JWT; per-page `auth()` checks enforce the finer Manager-vs-Team grants (see `mvp.md` §3's access matrix).
 
 ### Data Flow
 1. **Upload** — CSV files (Ads, Posts, Page metrics, Followers, Demographics) are uploaded via `actions/upload.ts` Server Action, parsed with papaparse (`lib/csv/`), validated, and upserted into Prisma tables.
-2. **Analysis** — Statistical computations run in `lib/stats/`: Spearman rank correlation (`spearman.ts`), multi-variable linear regression (`regression.ts`), Holt-Winters forecasting (`forecast.ts`), and What-If simulation (`simulation.ts`).
-3. **Display** — Server Components fetch data at request time; Client Components (`'use client'`) handle charts (Recharts) and interactive simulators.
-4. **AI features** — `actions/ai-insights.ts` and `actions/chat.ts` call Groq API for natural language insights and a chat interface.
+2. **Analysis** — Statistical computations run in `lib/stats/`, decoupled from UI. Live modules include Spearman/Pearson correlation with Shapiro-Wilk-driven method selection (`correlation-selection.ts`), Cohen's kappa method evaluation (`agreement.ts`), budget reallocation quartiles (`budget-reallocation.ts`), ad-set/lifecycle diagnostics (`ad-set-ranking.ts`, `ad-lifecycle.ts`), and post-type/watch-through performance (`post-type-performance.ts`, `watch-through.ts`). **`regression.ts`, `forecast.ts` (Holt-Winters), `simulation.ts`, and `laggedCorrelation.ts` are cut features** — code is left on disk per `mvp.md` §5 but unwired from the current build; do not treat them as live or extend them without confirming scope first.
+3. **Display** — Server Components fetch data at request time; Client Components (`'use client'`) handle charts (Recharts) and interactive views.
+4. **AI features** — `actions/ai-insights.ts`, `actions/chat.ts`, and `actions/categorize.ts` (ALG-05 LLM categorisation) call the Groq API.
 
 ### Key Directories
-- `app/dashboard/{marketing,sales,owner}/` — Role dashboards. Each has sub-routes: `upload/`, `correlation/`, `regression/`, `simulation/`, `trend-analysis/`, `page-metrics/`, `report/`, `campaign-rankings/`.
-- `actions/` — All Server Actions (mutations). No separate API routes used for mutations.
+- `app/dashboard/{marketing,owner}/` — Role dashboards. Live sub-routes include `upload/`, `content/`, `categorize/`, `keywords/`, `method-evaluation/`, `analysis/`, `post-type-performance/`, `budget-reallocation/` and `ad-set-ranking/` (owner-only), `campaign-rankings/`, `audit-log/`, `report/`. `correlation/`, `regression/`, `simulation/`, and `trend-analysis/` also exist on disk (cut-feature legacy, see above) — some are unlinked from the nav; check before assuming a route is reachable or current.
+- `actions/` — All Server Actions (mutations). No separate API routes used for mutations (except `/api/reports/[role]/{csv,pdf}` exports).
 - `lib/stats/` — Pure statistical logic decoupled from UI.
 - `lib/csv/` — CSV parsing, column detection, and validation per file type.
 - `components/` — Shared UI split by domain: `analytics/`, `charts/`, `kpi/`, `upload/`, `nav/`, `ui/`.
 - `prisma/schema.prisma` — Source of truth for all models. Prisma client output is in `app/generated/prisma/`.
 - `types/index.ts` — Shared TypeScript types and enums.
+- `docs/PROGRESS.md` — Live build tracker against `mvp.md` §7; check here for current status before assuming a feature is unbuilt or unverified.
 
-### Forecasting
-Holt-Winters Triple Exponential Smoothing (α=0.3, β=0.1, γ=0.3, weekly period=7) is used for page metric forecasts. Falls back to Holt Linear when fewer than 14 data points exist. Implemented in `lib/stats/forecast.ts`.
+### mvp.md is the requirements source of truth
+`mvp.md` and `data_catalog.md` were fully rewritten 2026-08-12 for the MVP v2 respec — always check them (and `docs/PROGRESS.md`) before assuming feature scope, rather than relying on older assumptions about the app.
 
 ### Environment Variables
 See `.env.example`. Required: `DATABASE_URL`, `AUTH_SECRET`. Optional for AI features: `GROQ_API_KEY`.

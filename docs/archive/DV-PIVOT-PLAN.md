@@ -1,5 +1,7 @@
 # Messaging-conversations DV pivot — phased plan
 
+> **Superseded 2026-08-14** by `docs/mvp.md` (rewritten 2026-08-12 for the MVP v2 respec) and `docs/PROGRESS.md`. This document reflects pre-respec scope/roles (e.g. Sales Director, cut analytics features) and is kept for historical reference only — do not treat it as current.
+
 > **Status:** All 4 phases done or substantially done as of 2026-08-08 (Sales
 > Director dashboard deferred within Phase 3 — see below). Written
 > 2026-08-05, revised 2026-08-08 (multiple times) after architect +

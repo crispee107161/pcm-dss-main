@@ -1,5 +1,7 @@
 # Algorithms Used in PCM-DSS
 
+> **Superseded 2026-08-14** by `docs/mvp.md` (rewritten 2026-08-12 for the MVP v2 respec) and `docs/PROGRESS.md`. This document reflects pre-respec scope/roles (e.g. Sales Director, cut analytics features) and is kept for historical reference only — do not treat it as current.
+
 This document catalogs every non-trivial algorithm implemented in the PC Merchandise Decision Support System, the feature each one powers, and how it works end to end — from raw uploaded data to what appears on screen.
 
 ---
