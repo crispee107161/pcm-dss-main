@@ -296,9 +296,21 @@
   --chart-2: #175CD3;
   --chart-3: #B54708;
   --chart-4: #6927DA;
-  --chart-5: #262021;
+  --chart-5: #946000;
+
+  /* Extends the 5-slot chart palette above for categorical charts with more
+     series than TERRITORY_COLORS's core 5 (e.g. the territory pie chart) —
+     same values in both themes for now (not yet visually QA'd against a
+     white background at these specific hues; flip to a light-appropriate
+     set here if that turns out to need it, matching how chart-1..5 differ
+     between :root and .dark below). */
+  --chart-6: #36BFFA;
+  --chart-7: #66C61C;
+  --chart-8: #FF9C66;
+  --chart-9: #EE46BC;
+  --chart-10: #875BF7;
   --radius: 0.5rem;
-  --status-positive: #078C52;
+  --status-positive: #067347;
   --status-warning: #B54708;
   --status-negative: #C4320A;
   --sidebar: #FFFFFF;
@@ -361,6 +373,11 @@
   --chart-3: #FD853A;
   --chart-4: #A48AFB;
   --chart-5: #FDB022;
+  --chart-6: #36BFFA;
+  --chart-7: #66C61C;
+  --chart-8: #FF9C66;
+  --chart-9: #EE46BC;
+  --chart-10: #875BF7;
   --status-positive: #32D583;
   --status-warning: #FDB022;
   --status-negative: #FD853A;
@@ -431,8 +448,13 @@
   --chart-2: #175CD3;
   --chart-3: #B54708;
   --chart-4: #6927DA;
-  --chart-5: #262021;
-  --status-positive: #078C52;
+  --chart-5: #946000;
+  --chart-6: #36BFFA;
+  --chart-7: #66C61C;
+  --chart-8: #FF9C66;
+  --chart-9: #EE46BC;
+  --chart-10: #875BF7;
+  --status-positive: #067347;
   --status-warning: #B54708;
   --status-negative: #C4320A;
 }
@@ -526,23 +548,6 @@
 .border-hairline-subtle { border-color: var(--color-alpha-black-50); }
 .dark .border-hairline-subtle { border-color: var(--color-alpha-white-200); }
 
-/*
- * Chart hover tooltip surface (Sure recipe): hairline ring composed with a
- * soft 8/24 drop shadow. Use on Recharts custom tooltip content.
- */
-.chart-tooltip {
-  background: var(--card);
-  border-radius: 10px;
-  padding: 10px 12px;
-  box-shadow:
-    0 0 0 1px var(--color-alpha-black-50),
-    0 8px 24px rgba(11, 11, 11, 0.12);
-}
-.dark .chart-tooltip {
-  box-shadow:
-    0 0 0 1px var(--color-alpha-white-50),
-    0 8px 24px rgba(11, 11, 11, 0.12);
-}
 
 /*
  * Horizontally scrollable table wrapper (Sure recipe): overflow-x: auto with
@@ -574,7 +579,7 @@
   background: var(--color-gray-50);
 }
 .dark .segmented-control {
-  background: var(--color-alpha-white-100);
+  background: var(--color-alpha-white-200);
 }
 .segmented-control__segment {
   display: inline-flex;
@@ -606,8 +611,9 @@
 }
 .dark .segmented-control__segment--active,
 .dark .segmented-control__segment--active:hover {
-  background: var(--color-gray-700);
-  color: #FFFFFF;
+  background: var(--secondary);
+  color: var(--foreground);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Tabular numerals for all KPI/stat values — stays on the sans face (Geist
@@ -658,6 +664,38 @@
 }
 .animate-scale-in {
   animation: scale-in 0.18s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* Attachment upload/processing title — sweeping opacity gradient over the
+   text itself (background-clip: text) rather than a skeleton block, since
+   the real filename should stay legible while mid-transfer. */
+@keyframes shimmer {
+  from { background-position: 150% center; }
+  to   { background-position: -50% center; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 40%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 60%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* Edge fade for horizontally scrollable rows (AttachmentGroup) — masks
+   content at the left/right edges instead of a hard clip. */
+.scroll-fade-x {
+  mask-image: linear-gradient(90deg, transparent, black 16px, black calc(100% - 16px), transparent);
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 /* Dropdown / panel expand using grid trick */

@@ -2,12 +2,45 @@
 
 import {
   LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid,
+  PieChart, Pie, Cell,
   ComposedChart, Area,
 } from 'recharts'
-import { chartTooltipStyle, chartTooltipLabelStyle } from '@/lib/chart-tooltip'
-import { CHART_GRID_STROKE, CHART_TICK_FILL, chartTick, CHART_COLORS } from '@/lib/chart-axis'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'
+import { ChartTooltipRow } from '@/lib/chart-tooltip'
+import { CHART_TICK_FILL, CHART_COLORS } from '@/lib/chart-axis'
+
+const DAILY_METRICS_CONFIG = {
+  follows: { label: 'Follows', color: 'var(--chart-2)' },
+  interactions: { label: 'Interactions', color: 'var(--chart-5)' },
+  visits: { label: 'Visits', color: 'var(--chart-1)' },
+} satisfies ChartConfig
+
+const VIEWS_CLICKS_CONFIG = {
+  views: { label: 'Page Views', color: 'var(--chart-4)' },
+  link_clicks: { label: 'Link Clicks', color: 'var(--chart-3)' },
+} satisfies ChartConfig
+
+const FOLLOWER_HISTORY_CONFIG = {
+  followers: { label: 'Total Followers', color: 'var(--chart-2)' },
+  daily_change: { label: 'Daily Change', color: 'var(--chart-1)' },
+} satisfies ChartConfig
+
+const VIEWERS_CONFIG = {
+  new_viewers: { label: 'New Viewers', color: 'var(--chart-2)' },
+  returning_viewers: { label: 'Returning Viewers', color: 'var(--chart-1)' },
+} satisfies ChartConfig
+
+const FORECAST_CONFIG = {
+  value: { label: 'Daily Views', color: 'var(--chart-2)' },
+  ma: { label: 'Model Fit', color: 'var(--chart-3)' },
+  forecast: { label: 'Projected', color: 'var(--chart-5)' },
+} satisfies ChartConfig
+
+// GenderPieChart / TerritoryChart color each Cell individually (dynamic,
+// data-driven category names) rather than through a static ChartConfig, so
+// this is enough to satisfy ChartContainer's required `config` prop.
+const NO_CHART_CONFIG = {}
 
 // ── Daily time-series ──────────────────────────────────────────────────────
 
@@ -22,35 +55,44 @@ interface DailyMetricPoint {
 
 export function DailyMetricsChart({ data }: { data: DailyMetricPoint[] }) {
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-        <XAxis dataKey="date" tick={chartTick(10)} interval="preserveStartEnd" />
-        <YAxis tick={chartTick(11)} />
-        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} />
-        <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
-        <Line dataKey="follows"      name="Follows"      stroke={CHART_COLORS.blue}   dot={false} strokeWidth={2} />
-        <Line dataKey="interactions" name="Interactions" stroke={CHART_COLORS.orange} dot={false} strokeWidth={2} />
-        <Line dataKey="visits"       name="Visits"       stroke={CHART_COLORS.green}  dot={false} strokeWidth={2} />
+    <ChartContainer config={DAILY_METRICS_CONFIG} className="aspect-auto h-[300px] w-full">
+      <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+        <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+        <ChartLegend content={<ChartLegendContent />} />
+        <Line dataKey="follows"      name="Follows"      type="monotone" stroke="var(--color-follows)"      dot={false} strokeWidth={2} />
+        <Line dataKey="interactions" name="Interactions" type="monotone" stroke="var(--color-interactions)" dot={false} strokeWidth={2} />
+        <Line dataKey="visits"       name="Visits"       type="monotone" stroke="var(--color-visits)"       dot={false} strokeWidth={2} />
       </LineChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   )
 }
 
 export function ViewsClicksChart({ data }: { data: DailyMetricPoint[] }) {
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-        <XAxis dataKey="date" tick={chartTick(10)} interval="preserveStartEnd" />
-        <YAxis yAxisId="views"  tickFormatter={v => `${(v/1000).toFixed(0)}k`} tick={chartTick(11)} />
-        <YAxis yAxisId="clicks" orientation="right" tick={chartTick(11)} />
-        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(v: unknown) => Number(v).toLocaleString()} />
-        <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
-        <Line yAxisId="views"  dataKey="views"       name="Page Views"  stroke={CHART_COLORS.violet} dot={false} strokeWidth={2} />
-        <Line yAxisId="clicks" dataKey="link_clicks" name="Link Clicks" stroke={CHART_COLORS.red}    dot={false} strokeWidth={2} />
+    <ChartContainer config={VIEWS_CLICKS_CONFIG} className="aspect-auto h-[280px] w-full">
+      <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+        <YAxis yAxisId="views"  tickFormatter={v => `${(v/1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis yAxisId="clicks" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              formatter={(value, name, item) => (
+                <ChartTooltipRow color={item.color ?? CHART_COLORS.violet} label={name} value={Number(value).toLocaleString()} />
+              )}
+            />
+          }
+        />
+        <ChartLegend content={<ChartLegendContent />} />
+        <Line yAxisId="views"  dataKey="views"       name="Page Views"  type="monotone" stroke="var(--color-views)"       dot={false} strokeWidth={2} />
+        <Line yAxisId="clicks" dataKey="link_clicks" name="Link Clicks" type="monotone" stroke="var(--color-link_clicks)" dot={false} strokeWidth={2} />
       </LineChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   )
 }
 
@@ -64,18 +106,18 @@ interface FollowerPoint {
 
 export function FollowerHistoryChart({ data }: { data: FollowerPoint[] }) {
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-        <XAxis dataKey="date" tick={chartTick(10)} interval="preserveStartEnd" />
-        <YAxis yAxisId="total"  domain={['auto', 'auto']} tick={chartTick(11)} />
-        <YAxis yAxisId="change" orientation="right" tick={chartTick(11)} />
-        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} />
-        <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
-        <Line yAxisId="total"  dataKey="followers"    name="Total Followers" stroke={CHART_COLORS.blue}  dot={false} strokeWidth={2} />
-        <Line yAxisId="change" dataKey="daily_change" name="Daily Change"    stroke={CHART_COLORS.green} dot={false} strokeWidth={1} />
+    <ChartContainer config={FOLLOWER_HISTORY_CONFIG} className="aspect-auto h-[280px] w-full">
+      <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+        <YAxis yAxisId="total"  domain={['auto', 'auto']} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis yAxisId="change" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+        <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+        <ChartLegend content={<ChartLegendContent />} />
+        <Line yAxisId="total"  dataKey="followers"    name="Total Followers" type="monotone" stroke="var(--color-followers)"    dot={false} strokeWidth={2} />
+        <Line yAxisId="change" dataKey="daily_change" name="Daily Change"    type="monotone" stroke="var(--color-daily_change)" dot={false} strokeWidth={1} />
       </LineChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   )
 }
 
@@ -90,17 +132,26 @@ interface ViewerPoint {
 
 export function ViewersChart({ data }: { data: ViewerPoint[] }) {
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-        <XAxis dataKey="date" tick={chartTick(10)} interval="preserveStartEnd" />
-        <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tick={chartTick(11)} />
-        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(v: unknown) => Number(v).toLocaleString()} />
-        <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
-        <Bar dataKey="new_viewers"       name="New Viewers"       fill={CHART_COLORS.blue}  stackId="a" />
-        <Bar dataKey="returning_viewers" name="Returning Viewers" fill={CHART_COLORS.green} stackId="a" radius={[4, 4, 0, 0]} />
+    <ChartContainer config={VIEWERS_CONFIG} className="aspect-auto h-[280px] w-full">
+      <BarChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+        <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} />
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              formatter={(value, name, item) => (
+                <ChartTooltipRow color={item.color ?? CHART_COLORS.blue} label={name} value={Number(value).toLocaleString()} />
+              )}
+            />
+          }
+        />
+        <ChartLegend content={<ChartLegendContent />} />
+        <Bar dataKey="new_viewers"       name="New Viewers"       fill="var(--color-new_viewers)"       stackId="a" radius={[0, 0, 4, 4]} />
+        <Bar dataKey="returning_viewers" name="Returning Viewers" fill="var(--color-returning_viewers)" stackId="a" radius={[4, 4, 0, 0]} />
       </BarChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   )
 }
 
@@ -114,28 +165,36 @@ const GENDER_COLORS: Record<string, string> = {
 }
 const TERRITORY_COLORS = [
   CHART_COLORS.blue, CHART_COLORS.green, CHART_COLORS.orange, CHART_COLORS.red, CHART_COLORS.violet,
-  '#36BFFA', '#66C61C', '#FF9C66', '#EE46BC', CHART_TICK_FILL, '#875BF7',
+  'var(--chart-6)', 'var(--chart-7)', 'var(--chart-8)', 'var(--chart-9)', CHART_TICK_FILL, 'var(--chart-10)',
 ]
 
+// Donut (chart-pie-donut) instead of a solid pie — reads cleaner than
+// cramming "Male 62%" text onto thin slices, especially for the smallest
+// ("Other") category. Percentage labels stay, just moved outside the ring.
 export function GenderPieChart({ data }: { data: GenderSlice[] }) {
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ChartContainer config={NO_CHART_CONFIG} className="aspect-auto h-[220px] w-full">
       <PieChart>
         <Pie
           data={data}
           dataKey="distribution"
           nameKey="gender"
           cx="50%" cy="50%"
+          innerRadius={50}
           outerRadius={80}
+          paddingAngle={2}
           label={(props) => `${props.name} ${((props.value as number) * 100).toFixed(0)}%`}
         >
           {data.map((entry) => (
             <Cell key={entry.gender} fill={GENDER_COLORS[entry.gender] ?? CHART_TICK_FILL} />
           ))}
         </Pie>
-        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(v: unknown) => `${(Number(v) * 100).toFixed(1)}%`} />
+        <ChartTooltip
+          cursor={false}
+          content={<ChartTooltipContent hideLabel nameKey="gender" formatter={(value, name, item) => <ChartTooltipRow color={(item.payload as { fill?: string })?.fill ?? item.color ?? CHART_COLORS.blue} label={name} value={`${(Number(value) * 100).toFixed(1)}%`} />} />}
+        />
       </PieChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   )
 }
 
@@ -150,27 +209,47 @@ interface ForecastChartPoint {
 
 export function MovingAverageForecastChart({ data }: { data: ForecastChartPoint[] }) {
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <ComposedChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-        <XAxis dataKey="date" tick={chartTick(10)} interval="preserveStartEnd" />
-        <YAxis tick={chartTick(11)} />
-        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(v: unknown) => Number(v).toLocaleString()} />
-        <Legend wrapperStyle={{ color: CHART_TICK_FILL }} />
+    <ChartContainer config={FORECAST_CONFIG} className="aspect-auto h-[300px] w-full">
+      <ComposedChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              formatter={(value, name, item) => (
+                <ChartTooltipRow color={item.color ?? CHART_COLORS.blue} label={name} value={Number(value).toLocaleString()} />
+              )}
+            />
+          }
+        />
+        <ChartLegend content={<ChartLegendContent />} />
+        {/* Gradient fill (chart-area-gradient) — the underlying actual-views
+            layer reads as a soft backdrop, so the two overlaid model lines
+            (fit + forecast) stay the visual focus. */}
+        <defs>
+          <linearGradient id="fillDailyViews" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0.1} />
+          </linearGradient>
+        </defs>
         <Area
           dataKey="value"
           name="Daily Views"
-          fill={CHART_COLORS.blue}
-          stroke={CHART_COLORS.blue}
+          type="natural"
+          fill="url(#fillDailyViews)"
+          fillOpacity={0.4}
+          stroke="var(--color-value)"
           strokeWidth={1.5}
           dot={false}
-          fillOpacity={0.15}
           connectNulls
         />
         <Line
           dataKey="ma"
           name="Model Fit"
-          stroke={CHART_COLORS.red}
+          type="monotone"
+          stroke="var(--color-ma)"
           strokeWidth={2}
           dot={false}
           connectNulls
@@ -178,35 +257,39 @@ export function MovingAverageForecastChart({ data }: { data: ForecastChartPoint[
         <Line
           dataKey="forecast"
           name="Projected"
-          stroke={CHART_COLORS.orange}
+          type="monotone"
+          stroke="var(--color-forecast)"
           strokeWidth={2}
           strokeDasharray="6 3"
           dot={{ fill: CHART_COLORS.orange, r: 4 }}
         />
       </ComposedChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   )
 }
 
 export function TerritoryChart({ data }: { data: TerritorySlice[] }) {
   const sorted = [...data].sort((a, b) => b.distribution - a.distribution)
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ChartContainer config={NO_CHART_CONFIG} className="aspect-auto h-[260px] w-full">
       <BarChart
+        accessibilityLayer
         data={sorted}
         layout="vertical"
-        margin={{ top: 4, right: 32, left: 8, bottom: 0 }}
+        margin={{ right: 32, left: 8 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} horizontal={false} />
-        <XAxis type="number" tickFormatter={v => `${(v*100).toFixed(0)}%`} tick={chartTick(11)} />
-        <YAxis type="category" dataKey="territory" width={40} tick={chartTick(12)} />
-        <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartTooltipLabelStyle} formatter={(v: unknown) => `${(Number(v) * 100).toFixed(1)}%`} />
+        <XAxis type="number" tickFormatter={v => `${(v*100).toFixed(0)}%`} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis type="category" dataKey="territory" width={40} tickLine={false} axisLine={false} tickMargin={8} />
+        <ChartTooltip
+          cursor={false}
+          content={<ChartTooltipContent hideLabel nameKey="territory" formatter={(value, name, item) => <ChartTooltipRow color={(item.payload as { fill?: string })?.fill ?? item.color ?? CHART_COLORS.blue} label={name} value={`${(Number(value) * 100).toFixed(1)}%`} />} />}
+        />
         <Bar dataKey="distribution" name="Distribution" radius={[0, 4, 4, 0]}>
           {sorted.map((entry, i) => (
             <Cell key={entry.territory} fill={TERRITORY_COLORS[i % TERRITORY_COLORS.length]} />
           ))}
         </Bar>
       </BarChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   )
 }

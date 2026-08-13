@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { sendChatMessage, type ChatMessage } from '@/actions/chat'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Bubble, BubbleContent } from '@/components/ui/bubble'
+import { Marker, MarkerContent } from '@/components/ui/marker'
+import { Message, MessageContent } from '@/components/ui/message'
 import { MessageCircleMoreIcon, type MessageCircleMoreIconHandle } from '@/components/icons/message-circle-more-icon'
 
 const SUGGESTIONS = [
@@ -136,25 +139,25 @@ export default function ChatBot() {
             )}
 
             {history.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-secondary text-secondary-foreground rounded-br-sm'
-                    : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                }`}>
-                  {msg.text}
-                </div>
-              </div>
+              <Message key={i} align={msg.role === 'user' ? 'end' : 'start'}>
+                <MessageContent>
+                  <Bubble variant={msg.role === 'user' ? 'secondary' : 'muted'}>
+                    <BubbleContent className="text-sm leading-relaxed">
+                      {msg.text}
+                    </BubbleContent>
+                  </Bubble>
+                </MessageContent>
+              </Message>
             ))}
 
             {loading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
+              <Marker role="status" aria-label="PCM Assistant is typing">
+                <MarkerContent className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-gray-100 px-4 py-3">
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
+                </MarkerContent>
+              </Marker>
             )}
 
             <div ref={bottomRef} />

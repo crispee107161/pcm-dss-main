@@ -2,18 +2,12 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
-
-function formatPHP(v: number) {
-  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(v)
-}
+import { CATEGORY_LABEL_DISPLAY } from '@/lib/category-label'
+import MethodologyNote from '@/components/analytics/MethodologyNote'
+import type { CategoryLabel } from '@/app/generated/prisma/client'
 
 function formatNum(v: number) {
   return new Intl.NumberFormat('en-PH').format(v)
-}
-
-function formatInquiryRate(rate: number): string {
-  if (rate <= 0) return '—'
-  return `1 per ${Math.round(1 / rate).toLocaleString()}`
 }
 
 function GradeBar({ value, max, color }: { value: number; max: number; color: string }) {
@@ -25,101 +19,68 @@ function GradeBar({ value, max, color }: { value: number; max: number; color: st
   )
 }
 
+const ASSIGNABLE_LABELS: CategoryLabel[] = ['PRODUCT_SHOWCASE', 'PROMOTIONAL_OFFER', 'TESTIMONIAL', 'ENTERTAINMENT']
+
 export default async function CategoryPerformancePage() {
   const session = await auth()
   if (!session?.user || session.user.role !== 'BUSINESS_OWNER') redirect('/login')
 
-  const [categories, allAds, allPosts] = await Promise.all([
-    prisma.category.findMany({ orderBy: { name: 'asc' } }),
-    prisma.ad.findMany({
-      select: { category_id: true, amount_spent: true, total_messaging_contacts: true, reach: true },
-    }),
-    prisma.facebookPost.findMany({
-      select: { category_id: true, engagement_rate: true, reach: true },
-    }),
-  ])
-
-  // Build per-category stats
-  const rows = categories.map(cat => {
-    const ads = allAds.filter(a => a.category_id === cat.id)
-    const posts = allPosts.filter(p => p.category_id === cat.id)
-
-    const ad_count       = ads.length
-    const total_spend    = ads.reduce((s, a) => s + a.amount_spent, 0)
-    const total_inquiries = ads.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
-    const total_reach    = ads.reduce((s, a) => s + (a.reach ?? 0), 0)
-    const cpi            = total_inquiries > 0 ? total_spend / total_inquiries : null
-    const inquiry_rate   = total_reach > 0 && total_inquiries > 0 ? total_inquiries / total_reach : null
-
-    const post_count      = posts.length
-    const total_post_reach = posts.reduce((s, p) => s + p.reach, 0)
-    const avg_engagement  = posts.length > 0
-      ? posts.reduce((s, p) => s + p.engagement_rate, 0) / posts.length
-      : null
-
-    return { cat, ad_count, total_spend, total_inquiries, total_reach, cpi, inquiry_rate, post_count, total_post_reach, avg_engagement }
+  // Ads no longer carry a category (mvp.md §5.1 — content category → ad
+  // efficiency has no join key and is permanently out of scope). This report
+  // is organic-post-only.
+  const allPosts = await prisma.facebookPost.findMany({
+    select: { category_final: true, reach: true, reactions: true, comments: true, shares: true },
   })
 
-  // Only show categories that have at least one ad or post assigned
-  const active = rows.filter(r => r.ad_count > 0 || r.post_count > 0)
-  const uncategorized_ads   = allAds.filter(a => a.category_id === null).length
-  const uncategorized_posts = allPosts.filter(p => p.category_id === null).length
+  const rows = ASSIGNABLE_LABELS.map(label => {
+    const posts = allPosts.filter(p => p.category_final === label)
+    const post_count = posts.length
+    const total_reach = posts.reduce((s, p) => s + p.reach, 0)
+    // ALG-09: sum-then-divide, never the mean of per-post rates — otherwise a
+    // handful of high-reach, low-engagement posts get equal weight against
+    // low-reach, high-engagement outliers and the category average drifts.
+    const total_engagements = posts.reduce((s, p) => s + p.reactions + p.comments + p.shares, 0)
+    const avg_engagement = total_reach > 0 ? (total_engagements / total_reach) * 100 : null
 
-  // Sort by total inquiries desc, then spend
-  const sorted = [...active].sort((a, b) =>
-    b.total_inquiries !== a.total_inquiries
-      ? b.total_inquiries - a.total_inquiries
-      : b.total_spend - a.total_spend
-  )
+    return { label, post_count, total_reach, avg_engagement }
+  })
 
-  const maxSpend     = Math.max(...sorted.map(r => r.total_spend), 1)
-  const maxInquiries = Math.max(...sorted.map(r => r.total_inquiries), 1)
+  const active = rows.filter(r => r.post_count > 0)
+  const uncategorized_posts = allPosts.filter(p => p.category_final === null).length
+
+  const sorted = [...active].sort((a, b) => (b.avg_engagement ?? 0) - (a.avg_engagement ?? 0))
   const maxEngagement = Math.max(...sorted.map(r => r.avg_engagement ?? 0), 1)
-
-  const totalSpend     = allAds.reduce((s, a) => s + a.amount_spent, 0)
-  const totalInquiries = allAds.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
 
   return (
     <div className="p-5 md:p-10 max-w-7xl mx-auto space-y-6">
       <PageHeader
         title="Category Performance"
-        description="Compare how each content category performs across paid ads and organic posts."
+        description="Compare how each organic content category performs by reach and engagement rate."
       />
 
       {/* Summary row */}
       {sorted.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
-            { label: 'Categories tracked', value: active.length, sub: `of ${categories.length} total` },
-            { label: 'Top by messaging conversations', value: sorted[0]?.cat.name ?? '—', sub: `${formatNum(sorted[0]?.total_inquiries ?? 0)} messaging conversations` },
-            { label: 'Lowest CPI', value: (() => {
-                const withCpi = sorted.filter(r => r.cpi !== null)
-                if (!withCpi.length) return '—'
-                const best = withCpi.reduce((a, b) => (a.cpi! < b.cpi! ? a : b))
-                return best.cat.name
-              })(), sub: (() => {
-                const withCpi = sorted.filter(r => r.cpi !== null)
-                if (!withCpi.length) return ''
-                const best = withCpi.reduce((a, b) => (a.cpi! < b.cpi! ? a : b))
-                return formatPHP(best.cpi!)
-              })() },
+            { label: 'Categories tracked', value: active.length, sub: `of ${ASSIGNABLE_LABELS.length} total` },
             { label: 'Best engagement', value: (() => {
                 const withEng = sorted.filter(r => r.avg_engagement !== null)
                 if (!withEng.length) return '—'
                 const best = withEng.reduce((a, b) => (a.avg_engagement! > b.avg_engagement! ? a : b))
-                return best.cat.name
+                return CATEGORY_LABEL_DISPLAY[best.label]
               })(), sub: (() => {
                 const withEng = sorted.filter(r => r.avg_engagement !== null)
                 if (!withEng.length) return ''
                 const best = withEng.reduce((a, b) => (a.avg_engagement! > b.avg_engagement! ? a : b))
                 return `${best.avg_engagement!.toFixed(2)}% avg`
               })() },
+            { label: 'Total posts categorized', value: formatNum(allPosts.length - uncategorized_posts), sub: `of ${formatNum(allPosts.length)} total` },
           ].map(({ label, value, sub }) => (
             <div key={label} className="bg-card rounded-2xl card-shadow p-5"
               style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
               <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] mb-2">{label}</p>
               <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
-              {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+              {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
             </div>
           ))}
         </div>
@@ -130,72 +91,12 @@ export default async function CategoryPerformancePage() {
         <div className="bg-card rounded-2xl card-shadow p-10 text-center"
           style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
           <p className="text-gray-500 text-sm">No categories assigned yet.</p>
-          <p className="text-gray-400 text-xs mt-1">Go to <strong>Categorize Content</strong> to assign categories to your ads and posts.</p>
+          <p className="text-muted-foreground text-xs mt-1">Go to <strong>Categorize Content</strong> to assign categories to your posts.</p>
         </div>
       ) : (
         <div className="bg-card rounded-2xl card-shadow overflow-hidden"
           style={{ boxShadow: 'var(--card-elevate-shadow)' }}>
-
-          {/* Paid ads section */}
           <div className="px-5 py-4 border-b border-gray-100">
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Paid Ad Performance by Category</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200">
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-left">Category</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Ads</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Total Spend</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right">Messaging Conversations</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">CPI</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden sm:table-cell">Conversation Rate</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] text-right hidden md:table-cell">Reach</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((r, i) => (
-                  <tr key={r.cat.id} className="border-t border-gray-100 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                        <span className="font-semibold text-gray-800">{r.cat.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-right text-gray-500 hidden sm:table-cell">{r.ad_count}</td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="font-semibold text-gray-800">{formatPHP(r.total_spend)}</div>
-                      <GradeBar value={r.total_spend} max={maxSpend} color="bg-gray-300" />
-                      {totalSpend > 0 && (
-                        <div className="text-[10px] text-gray-400 mt-0.5 hidden sm:block">{((r.total_spend / totalSpend) * 100).toFixed(1)}% of total</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="font-bold text-red-600">{formatNum(r.total_inquiries)}</div>
-                      <GradeBar value={r.total_inquiries} max={maxInquiries} color="bg-red-400" />
-                      {totalInquiries > 0 && (
-                        <div className="text-[10px] text-gray-400 mt-0.5 hidden sm:block">{((r.total_inquiries / totalInquiries) * 100).toFixed(1)}% of total</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-right hidden sm:table-cell">
-                      {r.cpi !== null
-                        ? <span className="font-semibold text-gray-700">{formatPHP(r.cpi)}</span>
-                        : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-4 py-4 text-right hidden sm:table-cell">
-                      {r.inquiry_rate !== null
-                        ? <span className="font-semibold text-gray-700">{formatInquiryRate(r.inquiry_rate)}</span>
-                        : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-4 py-4 text-right text-gray-600 hidden md:table-cell">{formatNum(r.total_reach)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Organic posts section */}
-          <div className="px-5 py-4 border-t border-gray-200 border-b border-gray-100 bg-gray-50/40">
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Organic Post Performance by Category</p>
           </div>
           <div className="overflow-x-auto">
@@ -203,48 +104,53 @@ export default async function CategoryPerformancePage() {
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-200">
                   {['Category', 'Posts', 'Total Reach', 'Avg Engagement Rate'].map(h => (
-                    <th key={h} className={`px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] ${h === 'Category' ? 'text-left' : 'text-right'}`}>{h}</th>
+                    <th key={h} className={`px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em] ${h === 'Category' ? 'text-left' : 'text-right'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {sorted
-                  .filter(r => r.post_count > 0)
-                  .sort((a, b) => (b.avg_engagement ?? 0) - (a.avg_engagement ?? 0))
-                  .map((r) => (
-                    <tr key={r.cat.id} className="border-t border-gray-100 hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-4 font-semibold text-gray-800">{r.cat.name}</td>
-                      <td className="px-4 py-4 text-right text-gray-500">{r.post_count}</td>
-                      <td className="px-4 py-4 text-right text-gray-700 font-semibold">{formatNum(r.total_post_reach)}</td>
-                      <td className="px-4 py-4 text-right">
-                        {r.avg_engagement !== null ? (
-                          <div>
-                            <span className="font-bold text-green-400">{r.avg_engagement.toFixed(2)}%</span>
-                            <GradeBar value={r.avg_engagement} max={maxEngagement} color="bg-green-400" />
-                          </div>
-                        ) : <span className="text-gray-300">—</span>}
-                      </td>
-                    </tr>
-                  ))}
-                {sorted.every(r => r.post_count === 0) && (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-gray-400 text-sm">No posts assigned to categories yet.</td>
+                {sorted.map((r, i) => (
+                  <tr key={r.label} className="border-t border-gray-100 hover:bg-gray-50/50 transition-colors">
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-status-negative/10 text-status-negative text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                        <span className="font-semibold text-gray-800">{CATEGORY_LABEL_DISPLAY[r.label]}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-right text-gray-500">{r.post_count}</td>
+                    <td className="px-4 py-4 text-right text-gray-700 font-semibold">{formatNum(r.total_reach)}</td>
+                    <td className="px-4 py-4 text-right">
+                      {r.avg_engagement !== null ? (
+                        <div>
+                          <span className="font-bold text-status-positive">{r.avg_engagement.toFixed(2)}%</span>
+                          <GradeBar value={r.avg_engagement} max={maxEngagement} color="bg-status-positive" />
+                        </div>
+                      ) : <span className="text-muted-foreground">—</span>}
+                    </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
+      <div className="mt-4">
+        <MethodologyNote>
+          Engagement rate per category is (sum of reactions + comments + shares across every post in the
+          category) ÷ (sum of reach across the same posts) — sum-then-divide, not the mean of each post&apos;s
+          own engagement rate, so a handful of high-reach posts don&apos;t get diluted to the same weight as
+          low-reach ones.
+        </MethodologyNote>
+      </div>
+
       {/* Uncategorized warning */}
-      {(uncategorized_ads > 0 || uncategorized_posts > 0) && (
-        <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 flex items-start gap-3">
-          <svg className="w-4 h-4 text-yellow-700 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {uncategorized_posts > 0 && (
+        <div className="rounded-xl border border-status-warning/30 bg-status-warning/10 px-4 py-3 flex items-start gap-3">
+          <svg className="w-4 h-4 text-status-warning flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-sm text-yellow-700 dark:text-yellow-300">
-            <strong>{uncategorized_ads} ad{uncategorized_ads !== 1 ? 's' : ''}</strong> and{' '}
+          <p className="text-sm text-status-warning">
             <strong>{uncategorized_posts} post{uncategorized_posts !== 1 ? 's' : ''}</strong> are uncategorized and excluded from this report.
             Assign them in <strong>Categorize Content</strong> for a complete picture.
           </p>

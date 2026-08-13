@@ -44,19 +44,19 @@ export default async function OwnerAdministrationPage() {
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Business Owners</p>
-          <p className="text-2xl font-bold text-yellow-400 mt-1">
+          <p className="text-2xl font-bold text-gray-900 mt-1">
             {users.filter(u => u.role === 'BUSINESS_OWNER').length}
           </p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Sales Directors</p>
-          <p className="text-2xl font-bold text-red-400 mt-1">
-            {users.filter(u => u.role === 'SALES_DIRECTOR').length}
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Marketing Team Members</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">
+            {users.filter(u => u.role === 'MARKETING_TEAM').length}
           </p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Marketing Managers</p>
-          <p className="text-2xl font-bold text-violet-400 mt-1">
+          <p className="text-2xl font-bold text-gray-900 mt-1">
             {users.filter(u => u.role === 'MARKETING_MANAGER').length}
           </p>
         </div>
@@ -94,7 +94,7 @@ export default async function OwnerAdministrationPage() {
                     <td className="px-4 py-3 text-gray-500 text-xs">{log.upload_type.replace(/_/g, ' ')}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        log.status === 'SUCCESS' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                        log.status === 'SUCCESS' ? 'bg-status-positive/10 text-status-positive' : 'bg-status-negative/10 text-status-negative'
                       }`}>
                         {log.status === 'SUCCESS' ? 'Success' : 'Failed'}
                       </span>

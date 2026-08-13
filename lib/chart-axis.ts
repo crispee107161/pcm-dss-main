@@ -6,12 +6,10 @@
  * repaint automatically when the theme toggles.
  */
 
-// Same hairline used by `.border-hairline` — barely-visible against the chart background.
-export const CHART_GRID_STROKE = 'var(--border)'
-
-// Matches --muted-foreground — legible but muted axis labels.
+// Matches --muted-foreground — used as a fallback Cell color for dynamic,
+// data-driven categorical charts (GenderPieChart's "Other", TerritoryChart's
+// overflow slots) that don't go through a static ChartConfig.
 export const CHART_TICK_FILL = 'var(--muted-foreground)'
-export const chartTick = (fontSize: number) => ({ fontSize, fill: CHART_TICK_FILL })
 
 // Matches --chart-1 through --chart-5 in globals.css.
 export const CHART_COLORS = {

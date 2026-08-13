@@ -3,76 +3,50 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import CategorizeClient from '@/components/marketing/CategorizeClient'
-import { detectCategoryFromText } from '@/lib/keywords/detect'
 
 export default async function CategorizePage() {
   const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
+  if (!session?.user || (session.user.role !== 'MARKETING_MANAGER' && session.user.role !== 'MARKETING_TEAM')) {
     redirect('/login')
   }
 
-  const [posts, ads, categories, keywords] = await Promise.all([
-    prisma.facebookPost.findMany({
-      orderBy: { publish_time: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        permalink: true,
-        post_type: true,
-        category_id: true,
-      },
-    }),
-    prisma.ad.findMany({
-      orderBy: { reporting_starts: 'desc' },
-      select: {
-        id: true,
-        ad_name: true,
-        ad_set_name: true,
-        category_id: true,
-      },
-    }),
-    prisma.category.findMany({ orderBy: { name: 'asc' } }),
-    prisma.keyword.findMany(),
-  ])
+  // S4 queue: only posts still awaiting a final category (mvp.md §3 —
+  // "queue of uncategorised/low-confidence posts"). category_keyword/
+  // category_llm are ALG-04/ALG-05's persisted suggestions (actions/
+  // categorize.ts, actions/classify-posts.ts) — read here, not recomputed.
+  const posts = await prisma.facebookPost.findMany({
+    where: { category_final: null },
+    orderBy: { publish_time: 'desc' },
+    select: {
+      id: true,
+      title: true,
+      permalink: true,
+      post_type: true,
+      category_keyword: true,
+      category_llm: true,
+      category_pending: true,
+      pending_by: { select: { email: true } },
+    },
+  })
 
-  // Derive ad type from ad_set_name heuristic (reel/video/photo detection)
-  function inferAdType(adSetName: string, adName: string): string {
-    const text = `${adSetName} ${adName}`.toLowerCase()
-    if (text.includes('reel')) return 'Reel'
-    if (text.includes('video') || text.includes('vlog')) return 'Video'
-    if (text.includes('photo') || text.includes('image')) return 'Photo'
-    return 'Ad'
-  }
-
-  const postRows = posts.map(p => ({
+  const postRows = posts.map((p) => ({
     id: p.id,
     title: p.title,
     permalink: p.permalink,
     post_type: p.post_type,
-    category_id: p.category_id,
-    suggestedCategoryId: p.category_id
-      ? null
-      : detectCategoryFromText(p.title, keywords),
-  }))
-
-  const adRows = ads.map(a => ({
-    id: a.id,
-    ad_name: a.ad_name,
-    ad_set_name: a.ad_set_name,
-    post_type: inferAdType(a.ad_set_name, a.ad_name),
-    category_id: a.category_id,
-    suggestedCategoryId: a.category_id
-      ? null
-      : detectCategoryFromText(a.ad_name, keywords),
+    keywordSuggestion: p.category_keyword,
+    llmSuggestion: p.category_llm,
+    category_pending: p.category_pending,
+    pendingByEmail: p.pending_by?.email ?? null,
   }))
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
-        title="Categorize Content"
-        description="Assign categories to organic posts and ads. Keywords from Manage Keywords are used to auto-suggest."
+        title="Categorization Review"
+        description="Review and finalize categories for uncategorized posts."
       />
-      <CategorizeClient posts={postRows} ads={adRows} categories={categories} />
+      <CategorizeClient posts={postRows} role={session.user.role} />
     </div>
   )
 }

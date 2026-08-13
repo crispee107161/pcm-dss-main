@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import {
   addKeyword, deleteKeyword, suggestKeywords, addKeywordsBulk,
   type KeywordSuggestion,
@@ -8,68 +8,39 @@ import {
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useCooldown } from '@/hooks/useCooldown'
 
 interface Keyword { id: number; word: string }
 interface Category { id: number; name: string; keywords: Keyword[] }
 interface Props { categories: Category[] }
 
-// Client-side pacing so repeated clicks can't stack requests faster than
-// Groq's per-minute token quota can absorb them.
+// Client-side pacing floor so repeated clicks can't stack requests faster
+// than Groq's per-minute token quota can absorb — always at least this long,
+// even when Groq's own 429 `retry-after` header comes back shorter (it's
+// tuned to Groq's quota window, not this app's UX pacing intent).
 const ANALYZE_COOLDOWN_SECONDS = 60
 
-// Persisted so the cooldown survives navigating away and back — this is a
-// separate client component per route, so plain useState resets to 0 on
-// remount even though the server-side rate limit (actions/keywords.ts) is
-// still counting down in the background.
 const COOLDOWN_STORAGE_KEY = 'pcm-analyze-content-cooldown-until'
-
-function readStoredCooldownSeconds(): number {
-  if (typeof window === 'undefined') return 0
-  const until = Number(window.localStorage.getItem(COOLDOWN_STORAGE_KEY))
-  if (!until) return 0
-  return Math.max(0, Math.ceil((until - Date.now()) / 1000))
-}
-
-function persistCooldown(seconds: number) {
-  if (typeof window === 'undefined') return
-  if (seconds <= 0) {
-    window.localStorage.removeItem(COOLDOWN_STORAGE_KEY)
-    return
-  }
-  window.localStorage.setItem(COOLDOWN_STORAGE_KEY, String(Date.now() + seconds * 1000))
-}
 
 export default function KeywordsClient({ categories }: Props) {
   const [suggestions, setSuggestions] = useState<KeywordSuggestion[]>([])
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [added, setAdded] = useState<Set<string>>(new Set())
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  // Only true while a cooldown started by this attempt is still running —
+  // gates whether the live countdown suffix is appended to analyzeError, so
+  // a non-retryable message (e.g. "not enough categorized content") never
+  // implies a wait that isn't actually happening.
+  const [analyzeCoolingDown, setAnalyzeCoolingDown] = useState(false)
   const [isAnalyzing, startAnalyze] = useTransition()
   const [isAdding, startAdd] = useTransition()
-  const [cooldown, setCooldown] = useState(0)
-
-  // Reconcile against localStorage after mount (not in useState's initializer)
-  // so this still matches on the server-rendered markup and avoids a
-  // hydration mismatch.
-  useEffect(() => {
-    setCooldown(readStoredCooldownSeconds())
-  }, [])
-
-  useEffect(() => {
-    if (cooldown <= 0) return
-    const timer = setInterval(() => setCooldown(c => Math.max(0, c - 1)), 1000)
-    return () => clearInterval(timer)
-  }, [cooldown > 0])
-
-  function beginCooldown(seconds: number) {
-    setCooldown(seconds)
-    persistCooldown(seconds)
-  }
+  const { secondsLeft: cooldown, begin: beginCooldown } = useCooldown(COOLDOWN_STORAGE_KEY)
 
   function key(categoryId: number, word: string) { return `${categoryId}:${word}` }
 
   function handleAnalyze() {
     setAnalyzeError(null)
+    setAnalyzeCoolingDown(false)
     setSuggestions([])
     setDismissed(new Set())
     setAdded(new Set())
@@ -81,6 +52,7 @@ export default function KeywordsClient({ categories }: Props) {
           setAnalyzeError('No new suggestions found — your existing keywords may already cover the content well.')
         }
         // A successful call still spent Groq tokens, so pace the next one too.
+        setAnalyzeCoolingDown(true)
         beginCooldown(ANALYZE_COOLDOWN_SECONDS)
         return
       }
@@ -88,9 +60,11 @@ export default function KeywordsClient({ categories }: Props) {
       setAnalyzeError(result.reason)
       // Only pace future clicks when this attempt actually consumed AI
       // quota — pre-flight failures (auth, missing config, no data yet)
-      // shouldn't lock the user out of retrying immediately.
+      // shouldn't lock the user out of retrying immediately. Always floor at
+      // the full pacing window, never Groq's shorter retry-after value.
       if (result.retryable) {
-        beginCooldown(result.retryAfterSeconds ?? ANALYZE_COOLDOWN_SECONDS)
+        setAnalyzeCoolingDown(true)
+        beginCooldown(Math.max(ANALYZE_COOLDOWN_SECONDS, result.retryAfterSeconds ?? 0))
       }
     })
   }
@@ -191,7 +165,9 @@ export default function KeywordsClient({ categories }: Props) {
             <svg className="w-4 h-4 text-yellow-700 dark:text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
-            <AlertDescription className="text-xs text-yellow-700/90 dark:text-yellow-300/80">{analyzeError}</AlertDescription>
+            <AlertDescription className="text-xs text-yellow-700/90 dark:text-yellow-300/80">
+              {analyzeError}{analyzeCoolingDown && cooldown > 0 ? ` Try again in ${cooldown}s.` : ''}
+            </AlertDescription>
           </Alert>
         )}
 

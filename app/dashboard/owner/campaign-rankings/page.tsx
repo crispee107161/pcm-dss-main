@@ -8,7 +8,6 @@ import {
   rankByCostPerInquiry,
   rankByCtr,
   rankByCostPerClick,
-  isDailyGranularity,
   MIN_IMPRESSIONS_FOR_CTR,
   MIN_CLICKS_FOR_CPC,
   MIN_INQUIRIES_FOR_CPI,
@@ -66,7 +65,7 @@ function RankingTable({ rows, valueLabel, formatValue, emptyMessage }: {
               <td className="px-4 py-3"><RankBadge rank={i + 1} /></td>
               <td className="px-4 py-3">
                 <div className="font-medium text-gray-800 text-sm max-w-xs truncate" title={row.name}>{row.name}</div>
-                <div className="text-xs text-gray-400 truncate" title={row.adSetName}>{row.adSetName}</div>
+                <div className="text-xs text-muted-foreground truncate" title={row.adSetName}>{row.adSetName}</div>
               </td>
               <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                 {formatDate(row.reportingStarts)} – {formatDate(row.reportingEnds)}
@@ -94,34 +93,29 @@ export default async function OwnerCampaignRankingsPage({
   const range = manilaDayRange(from, to)
   const adWhere = range ? { reporting_starts: range } : {}
 
-  // Volume rankings fetch a larger candidate pool than the top-10 shown, then
-  // filter out monthly-granularity survivor rows (see findSurvivingMonthlyRows
-  // in lib/db/upsert-ads.ts) before slicing to 10 — otherwise a handful of
-  // month-sized totals dominate every "top by X" table over real daily ads.
-  const VOLUME_CANDIDATE_POOL = 300
+  const TOP_N = 10
 
   const [topSpendCandidates, topInquiriesCandidates, topReachCandidates, rankingPoolAds, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
     prisma.ad.findMany({
       where: adWhere,
       orderBy: { amount_spent: 'desc' },
-      take: VOLUME_CANDIDATE_POOL,
+      take: TOP_N,
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { ...adWhere, total_messaging_contacts: { gt: 0 } },
       orderBy: { total_messaging_contacts: 'desc' },
-      take: VOLUME_CANDIDATE_POOL,
+      take: TOP_N,
       select: { ad_name: true, ad_set_name: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { ...adWhere, reach: { not: null } },
       orderBy: { reach: 'desc' },
-      take: VOLUME_CANDIDATE_POOL,
+      take: TOP_N,
       select: { ad_name: true, ad_set_name: true, reach: true, reporting_starts: true, reporting_ends: true },
     }),
     // Efficiency rankings (cost/inquiry, CTR, cost/click) are computed ratios,
-    // which Prisma cannot `orderBy` — fetch the filtered pool and rank in JS.
-    // rankBy* functions apply their own daily-granularity guard internally.
+    // which Prisma cannot `orderBy` — fetch the full filtered set and rank in JS.
     prisma.ad.findMany({
       where: adWhere,
       select: {
@@ -147,15 +141,15 @@ export default async function OwnerCampaignRankingsPage({
     reportingStarts: r.reportingStarts, reportingEnds: r.reportingEnds,
   }))
 
-  const bySpend: RankRow[] = topSpendCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
+  const bySpend: RankRow[] = topSpendCandidates.map(a => ({
     name: a.ad_name, adSetName: a.ad_set_name, value: a.amount_spent,
     reportingStarts: a.reporting_starts, reportingEnds: a.reporting_ends,
   }))
-  const byInquiries: RankRow[] = topInquiriesCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
+  const byInquiries: RankRow[] = topInquiriesCandidates.map(a => ({
     name: a.ad_name, adSetName: a.ad_set_name, value: a.total_messaging_contacts ?? 0,
     reportingStarts: a.reporting_starts, reportingEnds: a.reporting_ends,
   }))
-  const byReach: RankRow[] = topReachCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
+  const byReach: RankRow[] = topReachCandidates.map(a => ({
     name: a.ad_name, adSetName: a.ad_set_name, value: a.reach ?? 0,
     reportingStarts: a.reporting_starts, reportingEnds: a.reporting_ends,
   }))
@@ -178,12 +172,12 @@ export default async function OwnerCampaignRankingsPage({
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5 col-span-2 md:col-span-1">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Ads with Messaging Conversations</p>
-          <p className="text-2xl font-bold text-green-400 mt-1">{adsWithInquiries}</p>
+          <p className="text-2xl font-bold text-status-positive mt-1">{adsWithInquiries}</p>
         </div>
       </div>
 
       <div className="flex items-center gap-3 mb-3">
-        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.12em] whitespace-nowrap">By Volume</p>
+        <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] whitespace-nowrap">By Volume</h2>
         <div className="flex-1 h-px bg-gray-100" />
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8 items-start">
@@ -206,7 +200,7 @@ export default async function OwnerCampaignRankingsPage({
         </div>
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-            <span className="w-7 h-7 rounded-lg bg-green-500/10 text-green-400 flex items-center justify-center flex-shrink-0">
+            <span className="w-7 h-7 rounded-lg bg-status-positive/10 text-status-positive flex items-center justify-center flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
             </span>
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top by Messaging Conversations</p>
@@ -225,7 +219,7 @@ export default async function OwnerCampaignRankingsPage({
         </div>
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-            <span className="w-7 h-7 rounded-lg bg-yellow-500/10 text-yellow-400 flex items-center justify-center flex-shrink-0">
+            <span className="w-7 h-7 rounded-lg bg-status-warning/10 text-status-warning flex items-center justify-center flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </span>
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Top by Reach</p>
@@ -243,13 +237,13 @@ export default async function OwnerCampaignRankingsPage({
       </div>
 
       <div className="flex items-center gap-3 mb-3">
-        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.12em] whitespace-nowrap">By Efficiency</p>
+        <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] whitespace-nowrap">By Efficiency</h2>
         <div className="flex-1 h-px bg-gray-100" />
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-            <span className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0">
+            <span className="w-7 h-7 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 7h16a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z" /></svg>
             </span>
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Best Cost per Messaging Conversation</p>
@@ -268,7 +262,7 @@ export default async function OwnerCampaignRankingsPage({
         </div>
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-            <span className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center flex-shrink-0">
+            <span className="w-7 h-7 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             </span>
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Best Click-Through Rate</p>
@@ -293,7 +287,7 @@ export default async function OwnerCampaignRankingsPage({
         </div>
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-            <span className="w-7 h-7 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center flex-shrink-0">
+            <span className="w-7 h-7 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </span>
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Best Cost per Click</p>

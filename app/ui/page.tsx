@@ -139,7 +139,7 @@ function BadgePanel() {
         </DemoCard>
         <DemoCard title="In Context" description="How badges appear in real use cases.">
           <Badge variant="default">Marketing Manager</Badge>
-          <Badge variant="secondary">Sales Director</Badge>
+          <Badge variant="secondary">Marketing Team Member</Badge>
           <Badge variant="outline">Business Owner</Badge>
           <Badge variant="destructive">Error</Badge>
         </DemoCard>
@@ -475,7 +475,7 @@ function SelectPanel() {
                 <SelectTrigger><SelectValue placeholder="Select role..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="marketing">Marketing Manager</SelectItem>
-                  <SelectItem value="sales">Sales Director</SelectItem>
+                  <SelectItem value="team">Marketing Team Member</SelectItem>
                   <SelectItem value="owner">Business Owner</SelectItem>
                 </SelectContent>
               </Select>

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-type Role = 'BUSINESS_OWNER' | 'SALES_DIRECTOR' | 'MARKETING_MANAGER'
+type Role = 'BUSINESS_OWNER' | 'MARKETING_TEAM' | 'MARKETING_MANAGER'
 
 interface User {
   id: number
@@ -25,13 +25,13 @@ interface Props {
 
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'BUSINESS_OWNER', label: 'Business Owner' },
-  { value: 'SALES_DIRECTOR', label: 'Sales Director' },
   { value: 'MARKETING_MANAGER', label: 'Marketing Manager' },
+  { value: 'MARKETING_TEAM', label: 'Marketing Team Member' },
 ]
 
 const ROLE_BADGE_CLASS: Record<Role, string> = {
   BUSINESS_OWNER: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30',
-  SALES_DIRECTOR: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
+  MARKETING_TEAM: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
   MARKETING_MANAGER: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30',
 }
 

@@ -245,18 +245,34 @@ export interface PostTypeRow {
   _avg: { engagement_rate: number | null }
 }
 
+// A type with only 1-2 posts can post the highest average engagement purely
+// by chance (a single lucky post), the same small-sample problem
+// MIN_INQUIRIES_FOR_CPI guards against on Campaign Rankings. Below this
+// count, a type is excluded from "best engagement" contention even if its
+// raw average is highest.
+const MIN_POSTS_FOR_ENGAGEMENT_INSIGHT = 5
+
 /** Performance by Post Type table: which format performs best. */
 export function computePostTypeInsight(typeBreakdown: PostTypeRow[]): MetricInsight | null {
   if (typeBreakdown.length === 0) return null
-  const byEngagement = [...typeBreakdown].sort((a, b) => (b._avg.engagement_rate ?? 0) - (a._avg.engagement_rate ?? 0))
-  const best = byEngagement[0]
   const mostPosted = [...typeBreakdown].sort((a, b) => b._count.id - a._count.id)[0]
+
+  const eligible = typeBreakdown.filter(t => t._count.id >= MIN_POSTS_FOR_ENGAGEMENT_INSIGHT)
+  if (eligible.length === 0) {
+    return {
+      headline: `${mostPosted.post_type} is posted most often (${mostPosted._count.id} posts)`,
+      detail: `Not enough posts of any single type yet (fewer than ${MIN_POSTS_FOR_ENGAGEMENT_INSIGHT}) to reliably compare engagement by format.`,
+    }
+  }
+
+  const byEngagement = [...eligible].sort((a, b) => (b._avg.engagement_rate ?? 0) - (a._avg.engagement_rate ?? 0))
+  const best = byEngagement[0]
 
   const headline = `${best.post_type} posts get the best engagement, averaging ${(best._avg.engagement_rate ?? 0).toFixed(2)}%`
 
   const detail = mostPosted.post_type === best.post_type
     ? `${mostPosted.post_type} is also the most-used format (${mostPosted._count.id} posts) this period.`
-    : `${mostPosted.post_type} is posted most often (${mostPosted._count.id} posts), but converts less attention per post than ${best.post_type}.`
+    : `${mostPosted.post_type} is posted most often (${mostPosted._count.id} posts), but converts less attention per post than ${best.post_type} (${best._count.id} posts).`
 
   return { headline, detail }
 }

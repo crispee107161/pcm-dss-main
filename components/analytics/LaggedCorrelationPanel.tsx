@@ -17,14 +17,14 @@ const TONE_CLASSES: Record<InsightTone, {
   rowLabel: string; footnoteBox: string; footnoteText: string
 }> = {
   app: {
-    emptyLabel: 'text-gray-500',
-    theadBg: 'bg-gray-50',
-    th: 'text-gray-600',
-    borderT: 'border-gray-100',
-    nCol: 'text-gray-500',
-    rowLabel: 'text-gray-800',
-    footnoteBox: 'bg-gray-50 border-gray-200',
-    footnoteText: 'text-gray-600',
+    emptyLabel: 'text-muted-foreground',
+    theadBg: 'bg-secondary',
+    th: 'text-muted-foreground',
+    borderT: 'border-border',
+    nCol: 'text-muted-foreground',
+    rowLabel: 'text-foreground',
+    footnoteBox: 'bg-secondary border-border',
+    footnoteText: 'text-muted-foreground',
   },
   print: {
     emptyLabel: 'text-neutral-500',
@@ -45,19 +45,19 @@ function CorrCell({ r, p, tone }: { r: number | null; p: number | null; tone: In
   const abs = Math.abs(r)
   const sig = p !== null && p < 0.05
   const textColor = tone === 'print'
-    ? (r > 0 ? 'text-green-600' : 'text-red-600')
+    ? (r > 0 ? 'text-status-positive' : 'text-status-negative')
     : abs >= 0.5
-      ? (r > 0 ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold')
+      ? (r > 0 ? 'text-status-positive font-semibold' : 'text-status-negative font-semibold')
       : abs >= 0.3
-        ? (r > 0 ? 'text-green-400' : 'text-red-400')
-        : 'text-yellow-400'
+        ? (r > 0 ? 'text-status-positive' : 'text-status-negative')
+        : t.emptyLabel
 
-  const bg = tone === 'app' && abs >= 0.5 ? (r > 0 ? 'bg-green-500/10' : 'bg-red-500/10') : ''
+  const bg = tone === 'app' && abs >= 0.5 ? (r > 0 ? 'bg-status-positive/10' : 'bg-status-negative/10') : ''
 
   return (
     <td className={`px-3 py-2.5 border-t ${t.borderT} ${bg}`}>
       <span className={textColor}>{fmtR(r)}</span>
-      <span className={`ml-1.5 text-xs ${sig ? 'text-green-500 font-medium' : t.nCol}`}>
+      <span className={`ml-1.5 text-xs ${sig ? 'text-status-positive font-medium' : t.nCol}`}>
         p={fmtP(p)}{sig ? ' ✓' : ''}
       </span>
     </td>
@@ -123,11 +123,11 @@ export default function LaggedCorrelationPanel({ data, disclosure = 'collapsible
           </thead>
           <tbody>
             {data.results.map(row => (
-              <tr key={row.lag} className={tone === 'app' && row.lag === data.best_lag ? 'ring-1 ring-yellow-500/40' : ''}>
+              <tr key={row.lag} className={tone === 'app' && row.lag === data.best_lag ? 'ring-1 ring-primary/40' : ''}>
                 <td className={`px-3 py-2.5 font-semibold border-t ${t.borderT} ${t.rowLabel}`}>
                   {row.lag} day{row.lag !== 1 ? 's' : ''}
                   {row.lag === data.best_lag && (
-                    <span className="ml-1.5 text-xs bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 rounded px-1">best</span>
+                    <span className="ml-1.5 text-xs bg-primary/10 text-primary rounded px-1">best</span>
                   )}
                 </td>
                 <td className={`px-3 py-2.5 border-t ${t.borderT} hidden sm:table-cell ${t.nCol}`}>{row.n}</td>

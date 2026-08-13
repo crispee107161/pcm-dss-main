@@ -25,7 +25,7 @@ const TONE_CLASSES: Record<InsightTone, {
   app: {
     badge: 'bg-gray-100 text-gray-600',
     label: 'text-gray-500',
-    equationBox: 'bg-gray-100 border-gray-200 border-l-gray-400 text-gray-700',
+    equationBox: 'bg-gray-100 border-gray-200 text-gray-700',
     equationLabel: 'text-gray-400',
     equationText: 'text-gray-700',
     tileBox: 'bg-gray-50',
@@ -36,7 +36,7 @@ const TONE_CLASSES: Record<InsightTone, {
   print: {
     badge: 'bg-neutral-100 text-neutral-600',
     label: 'text-neutral-500',
-    equationBox: 'bg-neutral-100 border-neutral-200 border-l-neutral-400 text-neutral-700',
+    equationBox: 'bg-neutral-100 border-neutral-200 text-neutral-700',
     equationLabel: 'text-neutral-400',
     equationText: 'text-neutral-700',
     tileBox: 'bg-neutral-50',
@@ -75,7 +75,7 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
             <span className={`text-xs ${t.label}`}>Auto-selected — best adjusted R² across candidate models</span>
           </div>
 
-          <div className={`border border-l-4 rounded-xl p-5 font-mono text-sm overflow-x-auto ${t.equationBox}`}>
+          <div className={`border rounded-xl p-5 font-mono text-sm overflow-x-auto ${t.equationBox}`}>
             <p className={`text-xs mb-2 font-sans ${t.equationLabel}`}># {meta.label} — {meta.description}</p>
             {equation}
           </div>
@@ -122,7 +122,7 @@ export default function RegressionSummary({ model, insight, disclosure = 'collap
           )}
 
           {insight && insight.marginalEffects.length > 0 && (
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300">
+            <div className="bg-gray-100 border border-gray-200 rounded-xl p-4 text-sm text-gray-700">
               <p className="font-semibold mb-2">Marginal effects (from the model&rsquo;s typical operating point)</p>
               <ul className="space-y-1 text-xs">
                 {insight.marginalEffects.map(e => (

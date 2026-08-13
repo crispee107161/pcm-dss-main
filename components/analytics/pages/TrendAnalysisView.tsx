@@ -40,7 +40,7 @@ function DeltaBadge({ value }: { value: number | null }) {
   if (value === null) return <span className="text-gray-400 text-xs">—</span>
   const up = value >= 0
   return (
-    <span className={`text-xs font-medium ${up ? 'text-green-600' : 'text-red-500'}`}>
+    <span className={`text-xs font-medium ${up ? 'text-status-positive' : 'text-status-negative'}`}>
       {up ? '▲' : '▼'} {Math.abs(value).toFixed(1)}% vs prev period
     </span>
   )
@@ -138,7 +138,7 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-gray-500">Messaging Conversations</span>
-                          <span className="font-semibold text-green-400 text-sm">{t.total_inquiries}</span>
+                          <span className="font-semibold text-gray-800 text-sm">{t.total_inquiries}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-gray-500">Reach</span>

@@ -30,22 +30,22 @@ function fmt(date: Date) {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(date))
 }
 
-function StatCard({ label, value, sub, color = 'text-gray-900' }: {
+function StatCard({ label, value, sub, color = 'text-foreground' }: {
   label: string; value: string; sub?: string; color?: string
 }) {
   return (
     <div className="bg-card rounded-2xl card-shadow p-5">
-      <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
+      <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
       <p className={`text-xl font-bold mt-1 ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   )
 }
 
 function EmptyCard({ message }: { message: string }) {
   return (
-    <div className="bg-card rounded-2xl border border-dashed border-gray-300 p-8 text-center">
-      <p className="text-gray-400 text-sm">{message}</p>
+    <div className="bg-card rounded-2xl border border-dashed border-border p-8 text-center">
+      <p className="text-muted-foreground text-sm">{message}</p>
     </div>
   )
 }
@@ -172,40 +172,40 @@ export default async function OwnerPageMetricsPage({
       {/* ── SECTION 1: Organic Post Metrics ── */}
       {postCount > 0 && (
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-red-500 rounded-full inline-block" />
+          <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-border rounded-full inline-block" />
             Organic Post Performance
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
             <StatCard label="Total Posts"    value={postCount.toLocaleString()} />
-            <StatCard label="Total Reach"    value={totalPostReach.toLocaleString()} color="text-red-400" />
-            <StatCard label="Total Views"    value={(postAgg._sum.views ?? 0).toLocaleString()} color="text-violet-400" />
-            <StatCard label="Reactions"      value={(postAgg._sum.reactions ?? 0).toLocaleString()} color="text-blue-400" />
-            <StatCard label="Comments"       value={(postAgg._sum.comments ?? 0).toLocaleString()} color="text-yellow-400" />
-            <StatCard label="Avg Engagement" value={`${avgEngagement.toFixed(2)}%`} color="text-green-400" />
+            <StatCard label="Total Reach"    value={totalPostReach.toLocaleString()} />
+            <StatCard label="Total Views"    value={(postAgg._sum.views ?? 0).toLocaleString()} />
+            <StatCard label="Reactions"      value={(postAgg._sum.reactions ?? 0).toLocaleString()} />
+            <StatCard label="Comments"       value={(postAgg._sum.comments ?? 0).toLocaleString()} />
+            <StatCard label="Avg Engagement" value={`${avgEngagement.toFixed(2)}%`} />
           </div>
           {typeBreakdown.length > 0 && (
             <div className="bg-card rounded-2xl card-shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="font-medium text-gray-700 text-sm">Performance by Post Type</h3>
+              <div className="px-6 py-4 border-b border-border">
+                <h3 className="font-medium text-foreground text-sm">Performance by Post Type</h3>
                 {postTypeInsight && (
-                  <p className="text-xs text-gray-500 mt-1">{postTypeInsight.headline}. {postTypeInsight.detail}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{postTypeInsight.headline}. {postTypeInsight.detail}</p>
                 )}
               </div>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50">
-                    <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Type</th>
-                    <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Posts</th>
-                    <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Avg Engagement</th>
+                  <tr className="bg-secondary">
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</th>
+                    <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Posts</th>
+                    <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Avg Engagement</th>
                   </tr>
                 </thead>
                 <tbody>
                   {typeBreakdown.map(row => (
-                    <tr key={row.post_type} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-2.5 font-medium text-gray-700">{row.post_type}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-600">{row._count.id}</td>
-                      <td className="px-4 py-2.5 text-right text-gray-600">{(row._avg.engagement_rate ?? 0).toFixed(2)}%</td>
+                    <tr key={row.post_type} className="border-t border-border hover:bg-secondary">
+                      <td className="px-4 py-2.5 font-medium text-foreground">{row.post_type}</td>
+                      <td className="px-4 py-2.5 text-right text-muted-foreground">{row._count.id}</td>
+                      <td className="px-4 py-2.5 text-right text-muted-foreground">{(row._avg.engagement_rate ?? 0).toFixed(2)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -217,23 +217,23 @@ export default async function OwnerPageMetricsPage({
 
       {/* ── SECTION 2: Daily Page Metrics ── */}
       <section className="mb-10">
-        <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <span className="w-1.5 h-5 bg-amber-400 rounded-full inline-block" />
+        <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-border rounded-full inline-block" />
           Daily Page Activity
         </h2>
         {dailyMetrics.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-              <StatCard label="Follows"      value={totalFollows.toLocaleString()}      sub="total in period" color="text-red-400" />
-              <StatCard label="Interactions" value={totalInteractions.toLocaleString()} sub="total in period" color="text-yellow-400" />
-              <StatCard label="Link Clicks"  value={totalLinkClicks.toLocaleString()}   sub="total in period" color="text-red-400" />
-              <StatCard label="Page Views"   value={totalViews.toLocaleString()}         sub="total in period" color="text-violet-400" />
-              <StatCard label="Page Visits"  value={totalVisits.toLocaleString()}        sub="total in period" color="text-green-400" />
+              <StatCard label="Follows"      value={totalFollows.toLocaleString()}      sub="total in period" />
+              <StatCard label="Interactions" value={totalInteractions.toLocaleString()} sub="total in period" />
+              <StatCard label="Link Clicks"  value={totalLinkClicks.toLocaleString()}   sub="total in period" />
+              <StatCard label="Page Views"   value={totalViews.toLocaleString()}         sub="total in period" />
+              <StatCard label="Page Visits"  value={totalVisits.toLocaleString()}        sub="total in period" />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-card rounded-2xl card-shadow p-6">
-                <h3 className="font-medium text-gray-700 mb-1 text-sm">Follows, Interactions & Visits</h3>
-                <p className="text-xs text-gray-400 mb-4">Daily counts over the uploaded period</p>
+                <h3 className="font-medium text-foreground mb-1 text-sm">Follows, Interactions & Visits</h3>
+                <p className="text-xs text-muted-foreground mb-4">Daily counts over the uploaded period</p>
                 {dailyActivityInsight && (
                   <InsightHeader headline={dailyActivityInsight.headline} detail={dailyActivityInsight.detail} />
                 )}
@@ -242,8 +242,8 @@ export default async function OwnerPageMetricsPage({
                 </div>
               </div>
               <div className="bg-card rounded-2xl card-shadow p-6">
-                <h3 className="font-medium text-gray-700 mb-1 text-sm">Page Views & Link Clicks</h3>
-                <p className="text-xs text-gray-400 mb-4">Views (left axis) vs. link clicks (right axis)</p>
+                <h3 className="font-medium text-foreground mb-1 text-sm">Page Views & Link Clicks</h3>
+                <p className="text-xs text-muted-foreground mb-4">Views (left axis) vs. link clicks (right axis)</p>
                 {viewsClicksInsight && (
                   <InsightHeader headline={viewsClicksInsight.headline} detail={viewsClicksInsight.detail} />
                 )}
@@ -261,8 +261,8 @@ export default async function OwnerPageMetricsPage({
       {/* ── SECTION 2b: Page Views Forecast ── */}
       {dailyMetricsAll.length >= 7 && viewsForecastInsight && (
         <section className="mb-10">
-          <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-blue-500 rounded-full inline-block" />
+          <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-border rounded-full inline-block" />
             Page Views — Next 7 Days
           </h2>
           <div className="bg-card rounded-2xl card-shadow p-6">
@@ -270,14 +270,14 @@ export default async function OwnerPageMetricsPage({
               headline={viewsForecastInsight.headline}
               detail={viewsForecastInsight.detail}
             >
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Model: {viewsForecast.method === 'holt-winters' ? 'Holt-Winters triple exponential smoothing (trend + weekly seasonality)' : 'Holt linear (double exponential smoothing) — upload more data to enable the full seasonal model'}.
                 Current level: {viewsForecast.lastLevel.toLocaleString()} views/day.
                 Trained on all uploaded history, not the selected date range.
               </p>
             </InsightHeader>
             <div className="mt-5">
-              <p className="text-xs text-gray-400 mb-2">Blue = actual daily views · Red = model fit · Orange dots = projected</p>
+              <p className="text-xs text-muted-foreground mb-2">Blue = actual daily views · Red = model fit · Orange dots = projected</p>
               <MovingAverageForecastChart data={forecastChartData} />
             </div>
           </div>
@@ -286,29 +286,29 @@ export default async function OwnerPageMetricsPage({
 
       {/* ── SECTION 3: Follower Growth ── */}
       <section className="mb-10">
-        <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <span className="w-1.5 h-5 bg-red-500 rounded-full inline-block" />
+        <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-border rounded-full inline-block" />
           Follower Growth
         </h2>
         {followerHistory.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               {latestFollowers !== null && (
-                <StatCard label="Current Followers" value={latestFollowers.toLocaleString()} color="text-red-400" />
+                <StatCard label="Current Followers" value={latestFollowers.toLocaleString()} />
               )}
               {followerGrowth !== null && (
                 <StatCard
                   label="Growth in Period"
                   value={`${followerGrowth >= 0 ? '+' : ''}${followerGrowth.toLocaleString()}`}
-                  color={followerGrowth >= 0 ? 'text-green-400' : 'text-red-600'}
+                  color={followerGrowth >= 0 ? 'text-status-positive' : 'text-status-negative'}
                   sub={`${followerHistory[0] ? fmt(followerHistory[0].date) : ''} – ${followerHistory.at(-1) ? fmt(followerHistory.at(-1)!.date) : ''}`}
                 />
               )}
               <StatCard label="Data Points" value={followerHistory.length.toLocaleString()} sub="days of history" />
             </div>
             <div className="bg-card rounded-2xl card-shadow p-6">
-              <h3 className="font-medium text-gray-700 mb-1 text-sm">Follower Count & Daily Change</h3>
-              <p className="text-xs text-gray-400 mb-4">Total followers (left) and day-over-day change (right)</p>
+              <h3 className="font-medium text-foreground mb-1 text-sm">Follower Count & Daily Change</h3>
+              <p className="text-xs text-muted-foreground mb-4">Total followers (left) and day-over-day change (right)</p>
               {followerGrowthInsight && (
                 <InsightHeader headline={followerGrowthInsight.headline} detail={followerGrowthInsight.detail} />
               )}
@@ -324,15 +324,15 @@ export default async function OwnerPageMetricsPage({
 
       {/* ── SECTION 4: Viewers ── */}
       <section className="mb-10">
-        <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <span className="w-1.5 h-5 bg-violet-500 rounded-full inline-block" />
+        <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-border rounded-full inline-block" />
           Page Viewers
         </h2>
         {pageViewers.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-              <StatCard label="New Viewers"       value={totalNewViewers.toLocaleString()}       color="text-red-400" sub="total in period" />
-              <StatCard label="Returning Viewers" value={totalReturningViewers.toLocaleString()} color="text-green-400" sub="total in period" />
+              <StatCard label="New Viewers"       value={totalNewViewers.toLocaleString()}       sub="total in period" />
+              <StatCard label="Returning Viewers" value={totalReturningViewers.toLocaleString()} sub="total in period" />
               <StatCard
                 label="Return Rate"
                 value={
@@ -340,12 +340,11 @@ export default async function OwnerPageMetricsPage({
                     ? `${((totalReturningViewers / (totalNewViewers + totalReturningViewers)) * 100).toFixed(1)}%`
                     : '—'
                 }
-                color="text-violet-400"
               />
             </div>
             <div className="bg-card rounded-2xl card-shadow p-6">
-              <h3 className="font-medium text-gray-700 mb-1 text-sm">New vs. Returning Viewers</h3>
-              <p className="text-xs text-gray-400 mb-4">Stacked daily viewer counts</p>
+              <h3 className="font-medium text-foreground mb-1 text-sm">New vs. Returning Viewers</h3>
+              <p className="text-xs text-muted-foreground mb-4">Stacked daily viewer counts</p>
               {viewerMixInsight && (
                 <InsightHeader headline={viewerMixInsight.headline} detail={viewerMixInsight.detail} />
               )}
@@ -361,27 +360,27 @@ export default async function OwnerPageMetricsPage({
 
       {/* ── SECTION 5: Audience Demographics ── */}
       <section className="mb-10">
-        <h2 className="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <span className="w-1.5 h-5 bg-red-400 rounded-full inline-block" />
+        <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-border rounded-full inline-block" />
           Audience Demographics
         </h2>
-        <p className="text-xs text-gray-400 -mt-3 mb-4">Current audience snapshot — not affected by the date filter above.</p>
+        <p className="text-xs text-muted-foreground -mt-3 mb-4">Current audience snapshot — not affected by the date filter above.</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {genderData.length > 0 ? (
             <div className="bg-card rounded-2xl card-shadow p-6">
-              <h3 className="font-medium text-gray-700 mb-1 text-sm">Gender Distribution</h3>
-              <p className="text-xs text-gray-400 mb-2">Follower gender breakdown</p>
+              <h3 className="font-medium text-foreground mb-1 text-sm">Gender Distribution</h3>
+              <p className="text-xs text-muted-foreground mb-2">Follower gender breakdown</p>
               <GenderPieChart data={genderData} />
               <div className="mt-3 space-y-1">
                 {genderData.map(g => (
-                  <div key={g.gender} className="flex justify-between text-xs text-gray-600">
+                  <div key={g.gender} className="flex justify-between text-xs text-muted-foreground">
                     <span>{g.gender}</span>
                     <span className="font-medium">{(g.distribution * 100).toFixed(1)}%</span>
                   </div>
                 ))}
               </div>
               {genderInsight && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="mt-3 pt-3 border-t border-border">
                   <InsightHeader headline={genderInsight.headline} detail={genderInsight.detail} />
                 </div>
               )}
@@ -391,11 +390,11 @@ export default async function OwnerPageMetricsPage({
           )}
           {territoryData.length > 0 ? (
             <div className="bg-card rounded-2xl card-shadow p-6">
-              <h3 className="font-medium text-gray-700 mb-1 text-sm">Top Territories</h3>
-              <p className="text-xs text-gray-400 mb-2">Followers by country/region</p>
+              <h3 className="font-medium text-foreground mb-1 text-sm">Top Territories</h3>
+              <p className="text-xs text-muted-foreground mb-2">Followers by country/region</p>
               <TerritoryChart data={territoryData} />
               {territoryInsight && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="mt-3 pt-3 border-t border-border">
                   <InsightHeader headline={territoryInsight.headline} detail={territoryInsight.detail} />
                 </div>
               )}

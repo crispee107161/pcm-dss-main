@@ -21,6 +21,7 @@ interface UploadContextValue {
   removeFile: (id: string) => void
   clearAll: () => void
   runBatchUpload: () => void
+  retryFile: (id: string) => void
 }
 
 const UploadContext = createContext<UploadContextValue | null>(null)
@@ -76,8 +77,28 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setIsPending(false)
   }
 
+  async function retryFile(id: string) {
+    const entry = queue.find((f) => f.id === id)
+    if (!entry) return
+
+    setIsPending(true)
+    setQueue((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'uploading' } : f)))
+
+    const formData = new FormData()
+    formData.append('file', entry.file)
+    const result = await uploadCSV(null, formData)
+    setQueue((prev) =>
+      prev.map((f) =>
+        f.id === id ? { ...f, status: result.status === 'SUCCESS' ? 'success' : 'failed', result } : f
+      )
+    )
+
+    await revalidateDashboards()
+    setIsPending(false)
+  }
+
   return (
-    <UploadContext.Provider value={{ queue, isPending, addFiles, removeFile, clearAll, runBatchUpload }}>
+    <UploadContext.Provider value={{ queue, isPending, addFiles, removeFile, clearAll, runBatchUpload, retryFile }}>
       {children}
     </UploadContext.Provider>
   )

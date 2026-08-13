@@ -1,15 +1,32 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { useUpload } from '@/contexts/UploadContext'
+import { useUpload, type QueuedFile } from '@/contexts/UploadContext'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+} from '@/components/ui/attachment'
+import { Spinner } from '@/components/ui/spinner'
 import { Loading01Icon } from '@animateicons/react/huge'
 import { DatabaseIcon, CircleCheckIcon, type CircleCheckIconHandle } from 'lucide-animated'
+import { ClockIcon, CheckIcon, FileWarningIcon, RefreshCwIcon, XIcon } from 'lucide-react'
+
+const ATTACHMENT_STATE: Record<QueuedFile['status'], 'idle' | 'uploading' | 'done' | 'error'> = {
+  pending: 'idle',
+  uploading: 'uploading',
+  success: 'done',
+  failed: 'error',
+}
 
 const UPLOAD_TYPE_LABELS: Record<string, string> = {
   ADS_CSV: 'Ads CSV',
-  ADS_DAILY_CSV: 'Ads Daily CSV',
   POSTS_CSV: 'Posts CSV',
   PAGE_METRIC_CSV: 'Page Metric',
   FOLLOWER_HISTORY_CSV: 'Follower History',
@@ -21,7 +38,7 @@ export default function UploadForm() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const successIconRef = useRef<CircleCheckIconHandle>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const { queue, isPending, addFiles, removeFile, clearAll, runBatchUpload } = useUpload()
+  const { queue, isPending, addFiles, removeFile, clearAll, runBatchUpload, retryFile } = useUpload()
 
   function handleClearAll() {
     clearAll()
@@ -105,32 +122,24 @@ export default function UploadForm() {
             )}
           </div>
 
-          <ul role="status" aria-live="polite" className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
+          <div role="status" aria-live="polite" className="flex flex-col gap-2">
             {queue.map((entry) => (
-              <li key={entry.id} className="flex items-start gap-3 px-4 py-3 bg-card">
-                {/* Status icon */}
-                <div className="flex-shrink-0 mt-0.5">
+              <Attachment key={entry.id} state={ATTACHMENT_STATE[entry.status]} className="w-full">
+                <AttachmentMedia>
+                  {entry.status === 'pending' && <ClockIcon />}
+                  {entry.status === 'uploading' && <Spinner />}
+                  {entry.status === 'success' && <CheckIcon />}
+                  {entry.status === 'failed' && <FileWarningIcon />}
+                </AttachmentMedia>
+
+                <AttachmentContent>
+                  <AttachmentTitle>{entry.file.name}</AttachmentTitle>
                   {entry.status === 'pending' && (
-                    <span className="h-4 w-4 rounded-full border-2 border-gray-300 inline-block" />
+                    <AttachmentDescription>Ready to upload</AttachmentDescription>
                   )}
                   {entry.status === 'uploading' && (
-                    <Loading01Icon size={16} color="var(--muted-foreground)" />
+                    <AttachmentDescription>Uploading…</AttachmentDescription>
                   )}
-                  {entry.status === 'success' && (
-                    <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                  {entry.status === 'failed' && (
-                    <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  )}
-                </div>
-
-                {/* File info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-700 truncate font-medium">{entry.file.name}</p>
                   {entry.result?.status === 'SUCCESS' && (
                     <div className="flex flex-wrap gap-1.5 mt-1 items-center">
                       {entry.result.records_inserted === 0 && entry.result.records_updated === 0 ? (
@@ -156,53 +165,43 @@ export default function UploadForm() {
                       )}
                     </div>
                   )}
-                  {entry.result?.status === 'SUCCESS' && entry.result.filter_summary && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      {entry.result.filter_summary.keptRows} of {entry.result.filter_summary.totalRows} rows kept
-                      (messaging-objective ads only)
-                      {entry.result.filter_summary.rescuedBlankRows > 0 &&
-                        ` · ${entry.result.filter_summary.rescuedBlankRows} blank-result rows retained as zero-result days`}
-                      {entry.result.filter_summary.supersededMonthlyRows > 0 &&
-                        ` · ${entry.result.filter_summary.supersededMonthlyRows} monthly-summary rows replaced with daily detail`}
-                      {Object.keys(entry.result.filter_summary.droppedByResultType).length > 0 && (
-                        <>
-                          {' · dropped: '}
-                          {Object.entries(entry.result.filter_summary.droppedByResultType)
-                            .map(([type, count]) => `${type} (${count})`)
-                            .join(', ')}
-                        </>
-                      )}
-                    </p>
-                  )}
-                  {entry.result?.status === 'SUCCESS' &&
-                    entry.result.filter_summary &&
-                    entry.result.filter_summary.unmatchedMonthlyRows > 0 && (
-                      <p role="alert" className="text-xs text-amber-600 mt-0.5">
-                        {entry.result.filter_summary.unmatchedMonthlyRows} monthly-summary row(s) couldn&apos;t be
-                        matched by ad name and were left in place — likely renamed between exports. Safe to leave,
-                        but worth a review.
-                      </p>
-                    )}
                   {entry.result?.status === 'FAILED' && (
-                    <p role="alert" className="text-xs text-red-600 mt-0.5">{entry.result.error_message}</p>
+                    <AttachmentDescription role="alert">{entry.result.error_message}</AttachmentDescription>
                   )}
-                </div>
+                </AttachmentContent>
 
-                {/* Remove — only for pending files not currently uploading */}
                 {entry.status === 'pending' && !isPending && (
-                  <button
-                    onClick={() => removeFile(entry.id)}
-                    className="flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
-                    aria-label={`Remove ${entry.file.name}`}
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                  <AttachmentActions>
+                    <AttachmentAction
+                      aria-label={`Remove ${entry.file.name}`}
+                      onClick={() => removeFile(entry.id)}
+                    >
+                      <XIcon />
+                    </AttachmentAction>
+                  </AttachmentActions>
                 )}
-              </li>
+
+                {entry.status === 'failed' && (
+                  <AttachmentActions>
+                    <AttachmentAction
+                      aria-label={`Retry uploading ${entry.file.name}`}
+                      onClick={() => retryFile(entry.id)}
+                      disabled={isPending}
+                    >
+                      <RefreshCwIcon />
+                    </AttachmentAction>
+                    <AttachmentAction
+                      aria-label={`Remove ${entry.file.name}`}
+                      onClick={() => removeFile(entry.id)}
+                      disabled={isPending}
+                    >
+                      <XIcon />
+                    </AttachmentAction>
+                  </AttachmentActions>
+                )}
+              </Attachment>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 

@@ -86,21 +86,21 @@ export default async function RegressionView() {
                     </thead>
                     <tbody>
                       {allModels.map((m) => (
-                        <tr key={m.id} className={m.id === latestModel.id ? 'bg-red-500/10' : 'hover:bg-gray-50'}>
+                        <tr key={m.id} className={m.id === latestModel.id ? 'bg-primary/10' : 'hover:bg-gray-50'}>
                           <td className="px-4 py-3 text-gray-600 border-t border-gray-100">
-                            #{m.id} {m.id === latestModel.id && <span className="text-red-400 text-xs font-medium">(current)</span>}
+                            #{m.id} {m.id === latestModel.id && <span className="text-primary text-xs font-medium">(current)</span>}
                           </td>
                           <td className="px-4 py-3 text-gray-600 border-t border-gray-100 text-xs">
                             {modelTypeLabel(m.model_type, m.coef_reach != null)}
                           </td>
                           <td className="px-4 py-3 border-t border-gray-100">
-                            <span className={`font-semibold ${m.r_squared >= 0.5 ? 'text-green-400' : 'text-yellow-400'}`}>
+                            <span className={`font-semibold ${m.r_squared >= 0.5 ? 'text-status-positive' : 'text-status-warning'}`}>
                               {(m.r_squared * 100).toFixed(1)}%
                             </span>
                           </td>
                           <td className="px-4 py-3 border-t border-gray-100">
                             {m.adj_r_squared != null
-                              ? <span className={`font-semibold ${m.adj_r_squared >= 0.5 ? 'text-green-400' : 'text-yellow-400'}`}>{(m.adj_r_squared * 100).toFixed(1)}%</span>
+                              ? <span className={`font-semibold ${m.adj_r_squared >= 0.5 ? 'text-status-positive' : 'text-status-warning'}`}>{(m.adj_r_squared * 100).toFixed(1)}%</span>
                               : <span className="text-gray-400">—</span>}
                           </td>
                           <td className="px-4 py-3 text-gray-700 border-t border-gray-100">{m.n}</td>

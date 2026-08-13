@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import DateRangeFilter from '@/components/ui/DateRangeFilter'
-import { isDailyGranularity } from '@/lib/stats/campaign-rankings'
 
 function formatPHP(value: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(value)
@@ -99,17 +98,13 @@ export default async function CampaignRankingsPage({
   const hasDateFilter = Boolean(from || to)
   const adWhere = hasDateFilter ? { reporting_starts: dateFilter } : {}
 
-  // Fetch a larger candidate pool than the top-10 shown, then filter out
-  // monthly-granularity survivor rows (see findSurvivingMonthlyRows in
-  // lib/db/upsert-ads.ts) before slicing to 10 — otherwise a handful of
-  // month-sized totals dominate every "top by X" table over real daily ads.
-  const VOLUME_CANDIDATE_POOL = 300
+  const TOP_N = 10
 
   const [topSpendCandidates, topInquiriesCandidates, topReachCandidates, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
     prisma.ad.findMany({
       where: adWhere,
       orderBy: { amount_spent: 'desc' },
-      take: VOLUME_CANDIDATE_POOL,
+      take: TOP_N,
       select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
     }),
     // total_messaging_contacts, not the deprecated `inquiries` field — this
@@ -118,13 +113,13 @@ export default async function CampaignRankingsPage({
     prisma.ad.findMany({
       where: { ...adWhere, total_messaging_contacts: { gt: 0 } },
       orderBy: { total_messaging_contacts: 'desc' },
-      take: VOLUME_CANDIDATE_POOL,
+      take: TOP_N,
       select: { ad_name: true, ad_set_name: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.findMany({
       where: { ...adWhere, reach: { not: null } },
       orderBy: { reach: 'desc' },
-      take: VOLUME_CANDIDATE_POOL,
+      take: TOP_N,
       select: { ad_name: true, ad_set_name: true, reach: true, reporting_starts: true, reporting_ends: true },
     }),
     prisma.ad.count({ where: adWhere }),
@@ -132,7 +127,7 @@ export default async function CampaignRankingsPage({
     prisma.ad.count({ where: { ...adWhere, total_messaging_contacts: { gt: 0 } } }),
   ])
 
-  const bySpend: RankRow[] = topSpendCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
+  const bySpend: RankRow[] = topSpendCandidates.map(a => ({
     name: a.ad_name,
     adSetName: a.ad_set_name,
     value: a.amount_spent,
@@ -140,7 +135,7 @@ export default async function CampaignRankingsPage({
     reportingEnds: a.reporting_ends,
   }))
 
-  const byInquiries: RankRow[] = topInquiriesCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
+  const byInquiries: RankRow[] = topInquiriesCandidates.map(a => ({
     name: a.ad_name,
     adSetName: a.ad_set_name,
     value: a.total_messaging_contacts ?? 0,
@@ -148,7 +143,7 @@ export default async function CampaignRankingsPage({
     reportingEnds: a.reporting_ends,
   }))
 
-  const byReach: RankRow[] = topReachCandidates.filter(isDailyGranularity).slice(0, 10).map(a => ({
+  const byReach: RankRow[] = topReachCandidates.map(a => ({
     name: a.ad_name,
     adSetName: a.ad_set_name,
     value: a.reach ?? 0,

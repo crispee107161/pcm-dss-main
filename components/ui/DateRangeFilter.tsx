@@ -8,18 +8,22 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
+import { toISODate, diffDaysInclusive, lastCompleteMonth } from '@/lib/date-range'
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
 
 interface DateRangeFilterProps {
   from?: string
   to?: string
   className?: string
-}
-
-function toISODate(d: Date): string {
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  // ISO date (YYYY-MM-DD) to anchor presets to, instead of the system clock.
+  // The uploaded dataset is a fixed historical window (see mvp.md §4.7) —
+  // today-relative presets like "Last 3 months" resolve to an empty range
+  // once "today" has drifted past the data. Pass the latest date present in
+  // the data (same anchor the owner dashboard already uses for its delta
+  // window, owner/page.tsx) so every preset returns real rows. Omitted by
+  // every other caller, which keeps their today-relative behavior unchanged.
+  anchor?: string
 }
 
 function addDays(d: Date, days: number): Date {
@@ -34,45 +38,57 @@ function addMonths(d: Date, months: number): Date {
   return copy
 }
 
-function diffDaysInclusive(fromISO: string, toISO: string): number {
-  const from = new Date(fromISO)
-  const to = new Date(toISO)
-  return Math.round((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1
-}
-
 interface Preset {
   key: string
   label: string
   range: () => { from: string; to: string }
 }
 
-function buildPresets(): Preset[] {
-  const today = new Date()
-  const todayISO = toISODate(today)
+function buildPresets(ref: Date): Preset[] {
+  const refISO = toISODate(ref)
 
   return [
-    { key: 'last7d',  label: 'Last 7 days',    range: () => ({ from: toISODate(addDays(today, -6)), to: todayISO }) },
-    { key: 'last30d', label: 'Last 30 days',   range: () => ({ from: toISODate(addDays(today, -29)), to: todayISO }) },
-    { key: 'last90d', label: 'Last 90 days',   range: () => ({ from: toISODate(addDays(today, -89)), to: todayISO }) },
-    { key: 'thisMonth', label: 'This month',   range: () => ({ from: toISODate(new Date(today.getFullYear(), today.getMonth(), 1)), to: todayISO }) },
-    { key: 'thisYear', label: 'This year',     range: () => ({ from: toISODate(new Date(today.getFullYear(), 0, 1)), to: todayISO }) },
-    { key: 'last6mo', label: 'Last 6 months',  range: () => ({ from: toISODate(addMonths(today, -6)), to: todayISO }) },
-    { key: 'last12mo', label: 'Last 12 months', range: () => ({ from: toISODate(addMonths(today, -12)), to: todayISO }) },
+    { key: 'lastCompleteMonth', label: 'Last complete month', range: () => lastCompleteMonth(ref) },
+    { key: 'last7d',  label: 'Last 7 days',    range: () => ({ from: toISODate(addDays(ref, -6)), to: refISO }) },
+    { key: 'last30d', label: 'Last 30 days',   range: () => ({ from: toISODate(addDays(ref, -29)), to: refISO }) },
+    { key: 'last90d', label: 'Last 90 days',   range: () => ({ from: toISODate(addDays(ref, -89)), to: refISO }) },
+    { key: 'thisMonth', label: 'This month',   range: () => ({ from: toISODate(new Date(ref.getFullYear(), ref.getMonth(), 1)), to: refISO }) },
+    { key: 'thisYear', label: 'This year',     range: () => ({ from: toISODate(new Date(ref.getFullYear(), 0, 1)), to: refISO }) },
+    { key: 'last3mo', label: 'Last 3 months',  range: () => ({ from: toISODate(addMonths(ref, -3)), to: refISO }) },
+    { key: 'last6mo', label: 'Last 6 months',  range: () => ({ from: toISODate(addMonths(ref, -6)), to: refISO }) },
+    { key: 'last12mo', label: 'Last 12 months', range: () => ({ from: toISODate(addMonths(ref, -12)), to: refISO }) },
   ]
 }
 
-export default function DateRangeFilter({ from, to, className = '' }: DateRangeFilterProps) {
+export default function DateRangeFilter({ from, to, className = '', anchor }: DateRangeFilterProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [customOpen, setCustomOpen] = useState(false)
 
-  const presets = buildPresets()
+  const refDate = anchor && ISO_DAY.test(anchor) ? new Date(`${anchor}T00:00:00`) : new Date()
+  const presets = buildPresets(refDate)
 
   const setRange = useCallback((next: { from?: string; to?: string }) => {
     const params = new URLSearchParams(searchParams.toString())
     if (next.from) params.set('from', next.from); else params.delete('from')
     if (next.to) params.set('to', next.to); else params.delete('to')
+    // 'all' only means anything to a caller with a data-anchored default
+    // (see setAllTime below) — always clear it here so picking any other
+    // range supersedes a previously-chosen "All time".
+    params.delete('all')
+    router.push(`${pathname}?${params.toString()}`)
+  }, [router, pathname, searchParams])
+
+  // When `anchor` is set, absent from/to means "use the default period"
+  // (last complete month), not "all time" — so "All time" needs its own
+  // explicit marker rather than just clearing the params, or it would be
+  // indistinguishable from never having picked anything.
+  const setAllTime = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('from')
+    params.delete('to')
+    params.set('all', '1')
     router.push(`${pathname}?${params.toString()}`)
   }, [router, pathname, searchParams])
 
@@ -84,9 +100,16 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
     }) ?? null
   }, [from, to, presets])
 
-  const activeLabel = !from && !to
+  // Read straight from the URL rather than a prop — the same 'all' sentinel
+  // setAllTime() writes above, so the label agrees with whichever branch the
+  // page actually queried without the two having to be threaded separately.
+  const isExplicitAllTime = searchParams.get('all') === '1'
+
+  const activeLabel = isExplicitAllTime
     ? 'All time'
-    : activePreset?.label ?? 'Custom range'
+    : (!from && !to)
+      ? (anchor ? 'Last complete month' : 'All time')
+      : activePreset?.label ?? 'Custom range'
 
   const windowDays = from && to ? diffDaysInclusive(from, to) : null
 
@@ -115,7 +138,7 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
           type="button"
           onClick={goPrev}
           disabled={windowDays === null}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           aria-label="Previous period"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
@@ -124,7 +147,7 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
           type="button"
           onClick={goNext}
           disabled={nextDisabled}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           aria-label="Next period"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -132,9 +155,9 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
       </div>
 
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-2 text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-700 bg-card hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <DropdownMenuTrigger className="flex items-center gap-2 text-sm border border-border rounded-lg px-3 py-1.5 text-foreground bg-card hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {activeLabel}
-          <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           {presets.map(p => (
@@ -142,7 +165,7 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
               {p.label}
             </DropdownMenuItem>
           ))}
-          <DropdownMenuItem onClick={() => { setCustomOpen(false); setRange({}) }}>
+          <DropdownMenuItem onClick={() => { setCustomOpen(false); anchor ? setAllTime() : setRange({}) }}>
             All time
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setCustomOpen(true)}>
@@ -157,15 +180,15 @@ export default function DateRangeFilter({ from, to, className = '' }: DateRangeF
             type="date"
             defaultValue={from ?? ''}
             onChange={e => setRange({ from: e.target.value, to })}
-            className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary bg-card"
+            className="text-sm border border-border rounded-lg px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary bg-card"
             aria-label="From date"
           />
-          <span className="text-gray-400 text-xs">to</span>
+          <span className="text-muted-foreground text-xs">to</span>
           <input
             type="date"
             defaultValue={to ?? ''}
             onChange={e => setRange({ from, to: e.target.value })}
-            className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary bg-card"
+            className="text-sm border border-border rounded-lg px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary bg-card"
             aria-label="To date"
           />
         </div>

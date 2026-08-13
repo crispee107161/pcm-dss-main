@@ -25,7 +25,6 @@ function StatusBadge({ status }: { status: UploadStatus }) {
 
 const TYPE_LABELS: Record<UploadType, { label: string; cls: string }> = {
   ADS_CSV:              { label: 'Ads CSV',         cls: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30' },
-  ADS_DAILY_CSV:        { label: 'Ads Daily CSV',   cls: 'bg-cyan-500/10   text-cyan-700 dark:text-cyan-300   border-cyan-500/30'   },
   POSTS_CSV:            { label: 'Posts CSV',       cls: 'bg-blue-500/10   text-blue-700 dark:text-blue-300   border-blue-500/30'   },
   PAGE_METRIC_CSV:      { label: 'Page Metric',     cls: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30' },
   FOLLOWER_HISTORY_CSV: { label: 'Follower History',cls: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30' },
