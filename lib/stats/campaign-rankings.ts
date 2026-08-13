@@ -30,12 +30,11 @@ export const MIN_INQUIRIES_FOR_CPI = 5
 const DEFAULT_LIMIT = 10
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
-// Monthly-granularity Ad rows (legacy aggregate rows left in place because
-// their ad name couldn't be matched to the daily export - see
-// findSurvivingMonthlyRows in lib/db/upsert-ads.ts) must never be ranked
-// alongside daily rows: a full month's totals/ratios aren't comparable to a
-// single day's, in either direction, and would otherwise dominate or
-// distort every ranking here.
+// Dead since the schema rework to the 93-column monthly export (mvp.md §6):
+// every `Ad` row is now one ad's one calendar month, so this always returns
+// false and used to zero out every ranking table below. No longer used to
+// filter here — kept only because lib/stats/laggedCorrelation.ts (unused,
+// cut-regression-era code left in place per mvp.md §5) still imports it.
 export function isDailyGranularity(ad: Pick<AdForRanking, 'reporting_starts' | 'reporting_ends'>): boolean {
   return ad.reporting_ends.getTime() - ad.reporting_starts.getTime() < ONE_DAY_MS
 }
@@ -53,7 +52,7 @@ function toRankedAd(ad: AdForRanking, value: number): RankedAd {
 // Lower cost per messaging conversation is better — rank ascending.
 export function rankByCostPerInquiry(ads: AdForRanking[], limit = DEFAULT_LIMIT): RankedAd[] {
   return ads
-    .filter(a => isDailyGranularity(a) && a.amount_spent > 0 && (a.total_messaging_contacts ?? 0) >= MIN_INQUIRIES_FOR_CPI)
+    .filter(a => a.amount_spent > 0 && (a.total_messaging_contacts ?? 0) >= MIN_INQUIRIES_FOR_CPI)
     .map(a => toRankedAd(a, a.amount_spent / (a.total_messaging_contacts as number)))
     .sort((a, b) => a.value - b.value)
     .slice(0, limit)
@@ -62,7 +61,7 @@ export function rankByCostPerInquiry(ads: AdForRanking[], limit = DEFAULT_LIMIT)
 // Higher click-through rate is better — rank descending.
 export function rankByCtr(ads: AdForRanking[], limit = DEFAULT_LIMIT): RankedAd[] {
   return ads
-    .filter(a => isDailyGranularity(a) && a.impressions >= MIN_IMPRESSIONS_FOR_CTR && (a.link_clicks ?? 0) > 0)
+    .filter(a => a.impressions >= MIN_IMPRESSIONS_FOR_CTR && (a.link_clicks ?? 0) > 0)
     .map(a => toRankedAd(a, (a.link_clicks as number) / a.impressions))
     .sort((a, b) => b.value - a.value)
     .slice(0, limit)
@@ -71,7 +70,7 @@ export function rankByCtr(ads: AdForRanking[], limit = DEFAULT_LIMIT): RankedAd[
 // Lower cost per click is better — rank ascending.
 export function rankByCostPerClick(ads: AdForRanking[], limit = DEFAULT_LIMIT): RankedAd[] {
   return ads
-    .filter(a => isDailyGranularity(a) && a.amount_spent > 0 && (a.link_clicks ?? 0) >= MIN_CLICKS_FOR_CPC)
+    .filter(a => a.amount_spent > 0 && (a.link_clicks ?? 0) >= MIN_CLICKS_FOR_CPC)
     .map(a => toRankedAd(a, a.amount_spent / (a.link_clicks as number)))
     .sort((a, b) => a.value - b.value)
     .slice(0, limit)

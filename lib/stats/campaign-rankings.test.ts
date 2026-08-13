@@ -59,18 +59,18 @@ describe('rankByCostPerInquiry', () => {
     expect(rankByCostPerInquiry([])).toEqual([])
   })
 
-  it('excludes monthly-granularity rows even when they would otherwise rank best', () => {
+  it('ranks month-spanning rows normally — every Ad row is one month of the monthly export', () => {
+    // Post-schema-rework, there is no daily grain left to distinguish from —
+    // a row spanning a full calendar month is the norm, not a stale outlier.
     const ads = [
-      // A month's totals blended into one ratio isn't comparable to a daily one -
-      // must never outrank real daily performance, in either direction.
       ad({
-        ad_name: 'stale-monthly-survivor', amount_spent: 100, total_messaging_contacts: 100,
+        ad_name: 'best-month', amount_spent: 100, total_messaging_contacts: 100,
         reporting_starts: new Date('2025-09-01'), reporting_ends: new Date('2025-09-30'),
       }),
-      ad({ ad_name: 'real-daily', amount_spent: 500, total_messaging_contacts: 50 }),
+      ad({ ad_name: 'worse-month', amount_spent: 500, total_messaging_contacts: 50 }),
     ]
     const ranked = rankByCostPerInquiry(ads)
-    expect(ranked.map(r => r.name)).toEqual(['real-daily'])
+    expect(ranked.map(r => r.name)).toEqual(['best-month', 'worse-month'])
   })
 })
 

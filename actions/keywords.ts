@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
+import { CATEGORY_NAME_TO_LABEL } from '@/lib/category-label'
 
 const SUGGEST_KEYWORDS_LIMIT = 10
 const SUGGEST_KEYWORDS_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
@@ -79,7 +80,7 @@ export async function suggestKeywords(): Promise<SuggestKeywordsResult> {
   if (!allowed) {
     return {
       ok: false,
-      reason: `Too many requests. Try again in ${retryAfterSeconds}s.`,
+      reason: 'Too many requests.',
       retryable: true,
       retryAfterSeconds,
     }
@@ -88,40 +89,38 @@ export async function suggestKeywords(): Promise<SuggestKeywordsResult> {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return { ok: false, reason: 'AI suggestions are not configured for this deployment.', retryable: false }
 
-  const [categories, categorizedPosts, categorizedAds] = await Promise.all([
+  const [categories, categorizedPosts] = await Promise.all([
     prisma.category.findMany({ include: { keywords: true }, orderBy: { name: 'asc' } }),
     prisma.facebookPost.findMany({
-      where: { category_id: { not: null } },
-      select: { title: true, category_id: true },
-    }),
-    prisma.ad.findMany({
-      where: { category_id: { not: null } },
-      select: { ad_name: true, category_id: true },
+      where: { category_final: { not: null } },
+      select: { title: true, category_final: true },
     }),
   ])
 
-  if (categorizedPosts.length + categorizedAds.length < 3) {
+  if (categorizedPosts.length < 3) {
     return {
       ok: false,
-      reason: 'Not enough categorized content yet. Categorize at least a few posts or ads first.',
+      reason: 'Not enough categorized content yet. Categorize at least a few posts first.',
       retryable: false,
     }
   }
 
-  // Group up to MAX_TITLES_PER_CATEGORY truncated titles per category
+  // Group up to MAX_TITLES_PER_CATEGORY truncated titles per category. Posts
+  // carry a CategoryLabel enum (category_final); the lexicon's Category rows
+  // are keyed by id/name, so bridge through the label→name map.
+  const labelToCategoryId = Object.fromEntries(
+    categories
+      .map((c) => [CATEGORY_NAME_TO_LABEL[c.name], c.id] as const)
+      .filter(([label]) => label !== undefined)
+  )
   const byCategory: Record<number, string[]> = {}
   for (const p of categorizedPosts) {
-    if (!p.category_id || !p.title) continue
-    byCategory[p.category_id] ??= []
-    if (byCategory[p.category_id].length < MAX_TITLES_PER_CATEGORY) {
-      byCategory[p.category_id].push(truncateTitle(p.title))
-    }
-  }
-  for (const a of categorizedAds) {
-    if (!a.category_id) continue
-    byCategory[a.category_id] ??= []
-    if (byCategory[a.category_id].length < MAX_TITLES_PER_CATEGORY) {
-      byCategory[a.category_id].push(truncateTitle(a.ad_name))
+    if (!p.category_final || !p.title) continue
+    const categoryId = labelToCategoryId[p.category_final]
+    if (!categoryId) continue
+    byCategory[categoryId] ??= []
+    if (byCategory[categoryId].length < MAX_TITLES_PER_CATEGORY) {
+      byCategory[categoryId].push(truncateTitle(p.title))
     }
   }
 
@@ -178,7 +177,7 @@ Return ONLY valid JSON, no explanation:
     const retryAfterSeconds = Number.isFinite(headerRetry) && headerRetry > 0 ? headerRetry : 60
     return {
       ok: false,
-      reason: `AI suggestions are cooling down after recent use — please try again in ${retryAfterSeconds}s.`,
+      reason: 'AI suggestions are cooling down after recent use.',
       retryable: true,
       retryAfterSeconds,
     }
