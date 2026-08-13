@@ -400,6 +400,72 @@
 }
 
 /*
+ * Explicit light override for a subtree nested under an ancestor `.dark`
+ * (e.g. the login page's local theme toggle, which must stay independent of
+ * the app-wide next-themes class on <html>). Redeclaring these custom
+ * properties here wins over the `.dark` ancestor because CSS variables
+ * resolve from the nearest declaring element, not the nearest class match.
+ * Note this does NOT undo literal `.dark <selector>` rules or Tailwind's
+ * `dark:` variant (`&:is(.dark *)`) — those are structural selectors that
+ * still match as long as `.dark` exists anywhere up the tree, regardless of
+ * a `.theme-light` div in between. In practice this only affects a couple of
+ * cosmetic details (e.g. shadow-border-*'s ring alpha, Input's dark:bg-input
+ * tint) rather than anything color-invisibility-breaking — those two classes
+ * of rules are rare in this codebase and mostly used for fine shading, not
+ * text/background color, which is what --foreground/--background etc. above
+ * (fully fixed by this override) actually govern.
+ */
+.theme-light {
+  color-scheme: light;
+  --g-25: #FCFBFA;
+  --g-50: #F9F8F7;
+  --g-100: #F2F2EE;
+  --g-200: #E5E5E1;
+  --g-300: #D8D7D4;
+  --g-400: #A8A5A3;
+  --g-500: #7A7473;
+  --g-600: #5A5355;
+  --g-700: #3A3335;
+  --g-800: #241F20;
+  --g-900: #0F090B;
+
+  --background: #F9F8F7;
+  --foreground: #0F090B;
+  --card: #FFFFFF;
+  --card-foreground: #0F090B;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F090B;
+  --primary: #BB061E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F2F2EE;
+  --secondary-foreground: #0F090B;
+  --muted: #ECEBE7;
+  --muted-foreground: #5A5355;
+  --accent: #ECEBE7;
+  --accent-foreground: #0F090B;
+  --destructive: #9A0518;
+  --border: #D8D7D4;
+  --input: #E5E5E1;
+  --ring: #BB061E;
+  --chart-1: #078C52;
+  --chart-2: #175CD3;
+  --chart-3: #B54708;
+  --chart-4: #6927DA;
+  --chart-5: #946000;
+  --chart-6: #36BFFA;
+  --chart-7: #66C61C;
+  --chart-8: #FF9C66;
+  --chart-9: #EE46BC;
+  --chart-10: #875BF7;
+  --status-positive: #067347;
+  --status-warning: #B54708;
+  --status-negative: #C4320A;
+  --red-400: #C94A0C;
+  --card-elevate-shadow: 0 1px 3px rgba(11,11,11,0.06), 0 4px 16px rgba(11,11,11,0.04);
+  --card-elevate-shadow-ring: 0 0 0 1px rgba(11,11,11,0.04), 0 1px 3px rgba(11,11,11,0.08), 0 4px 16px rgba(11,11,11,0.06);
+}
+
+/*
  * Print/PDF reports must always render on a fixed white page, independent of
  * the viewer's theme. The headless Chromium instance that captures the PDF
  * (lib/pdf/browser.ts) has no localStorage, so next-themes falls back to

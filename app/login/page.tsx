@@ -12,6 +12,8 @@ export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
   const [showPassword, setShowPassword] = useState(false)
   const [capsLock, setCapsLock] = useState(false)
+  const [darkMode, setDarkMode] = useState(true)
+  const [portalNode, setPortalNode] = useState<HTMLDivElement | null>(null)
   const emailRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -25,37 +27,60 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+    // Scoped to this page only: default dark regardless of the app-wide
+    // next-themes preference (see components/nav/ThemeToggle.tsx for that).
+    // `text-foreground` is load-bearing, not redundant with `bg-background`:
+    // body sets `color: var(--foreground)` globally (globals.css), which
+    // resolves once at <body> using the *ancestor* theme and is then
+    // inherited as an already-resolved color into anything here that doesn't
+    // set its own color (e.g. FieldLabel). Re-declaring it here forces a
+    // fresh resolution under this div's own `.dark`/`.theme-light` class —
+    // remove it and labels/typed input text go invisible again.
+    // `.theme-light` (not an empty class) is required for the toggle's light
+    // state to actually win over a possible ancestor `.dark` on <html> — see
+    // the `.theme-light` rule in globals.css for why a plain removal isn't
+    // enough.
+    <div className={`${darkMode ? 'dark' : 'theme-light'} relative flex min-h-dvh flex-col items-center justify-center gap-6 bg-background text-foreground p-6 md:p-10`}>
+      {/* Portal target for SessionNotice — must live inside this themed
+          subtree; portaling to document.body would render it against the
+          app's ancestor theme instead of this page's local one. */}
+      <div ref={setPortalNode} />
+
       <div className="flex w-full max-w-sm flex-col gap-6">
         <a href="/login" className="flex items-center gap-2 self-center font-medium text-foreground">
           <img src="/pcm-logo.png" alt="" className="size-6 object-contain" />
           PCM <span className="text-muted-foreground font-normal">Decision Support</span>
         </a>
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border bg-card p-6 shadow-border-lg">
           <div className="flex flex-col items-center gap-1 text-center">
             <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
             <p className="text-sm text-balance text-muted-foreground">
-              Enter your credentials to access your dashboard
+              Sign In to Continue
             </p>
           </div>
 
           {!state?.error && (
             <Suspense fallback={null}>
-              <SessionNotice />
+              <SessionNotice container={portalNode} />
             </Suspense>
           )}
 
           {state?.error && (
             <div
               role="alert"
-              className="mt-6 flex items-start gap-2.5 rounded-md px-4 py-3"
-              style={{ background: 'color-mix(in srgb, var(--color-red-900) 60%, transparent)', border: '1px solid color-mix(in srgb, var(--color-red-700) 70%, transparent)' }}
+              className="mt-6 flex flex-col gap-1.5 rounded-md px-4 py-3"
+              style={{ background: 'color-mix(in srgb, var(--destructive) 8%, var(--card))', border: '1px solid color-mix(in srgb, var(--destructive) 25%, transparent)' }}
             >
-              <svg aria-hidden="true" className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-red-400 text-sm">{state.error}</p>
+              <div className="flex items-start gap-2.5">
+                <svg aria-hidden="true" className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--destructive)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm" style={{ color: 'var(--destructive)' }}>{state.error}</p>
+              </div>
+              <p className="ml-[26px] text-xs text-muted-foreground">
+                Locked out? <span className="font-medium underline underline-offset-4" style={{ color: 'var(--destructive)' }}>Contact your administrator</span>.
+              </p>
             </div>
           )}
 
@@ -126,9 +151,27 @@ export default function LoginPage() {
         </div>
 
         <p className="text-muted-foreground text-xs text-center">
-          Access restricted to authorized personnel only.
+          Access restricted to authorized personnel only. Need an account? Contact your administrator.
         </p>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setDarkMode(v => !v)}
+        aria-label={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+        title={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+        className="absolute right-4 top-4 md:right-6 md:top-6 w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--background)]"
+      >
+        {darkMode ? (
+          <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+          </svg>
+        ) : (
+          <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+          </svg>
+        )}
+      </button>
     </div>
   )
 }

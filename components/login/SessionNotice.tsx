@@ -15,7 +15,12 @@ const REASON_INFO: Record<string, { message: string; tone: Tone }> = {
 const AUTO_DISMISS_MS = 3000
 const EXIT_ANIMATION_MS = 180
 
-export function SessionNotice() {
+interface SessionNoticeProps {
+  /** Portal target. Must be a themed element (carries the relevant `.dark`/light scope) rather than `document.body`, which sits outside any page-local theme override. */
+  container: HTMLElement | null
+}
+
+export function SessionNotice({ container }: SessionNoticeProps) {
   const searchParams = useSearchParams()
   const reason = searchParams.get('reason')
   const info = reason ? REASON_INFO[reason] : undefined
@@ -40,7 +45,7 @@ export function SessionNotice() {
     return () => clearTimeout(unmountTimer)
   }, [isLeaving])
 
-  if (!info || !isVisible || typeof document === 'undefined') return null
+  if (!info || !isVisible || !container) return null
 
   const isSuccess = info.tone === 'success'
 
@@ -83,6 +88,6 @@ export function SessionNotice() {
         </svg>
       </button>
     </div>,
-    document.body
+    container
   )
 }
