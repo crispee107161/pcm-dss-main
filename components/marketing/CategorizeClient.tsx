@@ -72,8 +72,8 @@ function PaginationBar({
 }: { page: number; pageCount: number; onPageChange: (page: number) => void }) {
   if (pageCount <= 1) return null
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-gray-100">
-      <p className="text-xs text-gray-400">Page {page} of {pageCount}</p>
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border">
+      <p className="text-xs text-muted-foreground">Page {page} of {pageCount}</p>
       <div className="flex items-center gap-2">
         <Button type="button" size="sm" variant="outline" disabled={page <= 1}
           onClick={() => onPageChange(page - 1)} className="h-7 px-3 text-xs">
@@ -95,7 +95,7 @@ function TypeBadge({ type }: { type: string }) {
     Photo: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
     Link: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30',
   }
-  const cls = colors[type] ?? 'bg-gray-100 text-gray-700 border-gray-200'
+  const cls = colors[type] ?? 'bg-secondary text-muted-foreground border-border'
   return <Badge className={`rounded-full h-auto py-0.5 px-2 text-xs font-medium ${cls}`}>{type}</Badge>
 }
 
@@ -105,9 +105,9 @@ function CategoryBadge({ label }: { label: CategoryLabel }) {
     TESTIMONIAL: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30',
     PROMOTIONAL_OFFER: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30',
     ENTERTAINMENT: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30',
-    UNCLASSIFIED: 'bg-gray-100 text-gray-700 border-gray-200',
+    UNCLASSIFIED: 'bg-secondary text-muted-foreground border-border',
     // Ground-truth-only; never shown here in practice (S4 never assigns it), kept for exhaustiveness.
-    UNCLEAR: 'bg-gray-100 text-gray-700 border-gray-200',
+    UNCLEAR: 'bg-secondary text-muted-foreground border-border',
   }
   return (
     <Badge className={`rounded-full h-auto py-0.5 px-2 text-xs font-medium ${colors[label]}`}>
@@ -121,27 +121,27 @@ function PendingCell({ post }: { post: ReviewPostRow }) {
     return (
       <span className="flex items-center gap-1.5">
         <CategoryBadge label={post.category_pending} />
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-muted-foreground">
           proposed{post.pendingByEmail ? ` by ${post.pendingByEmail}` : ''}
         </span>
       </span>
     )
   }
   if (!post.keywordSuggestion && !post.llmSuggestion) {
-    return <span className="text-gray-400 text-xs">Uncategorized</span>
+    return <span className="text-muted-foreground text-xs">Uncategorized</span>
   }
   return (
     <div className="flex flex-col gap-1">
       {post.keywordSuggestion && (
         <span className="flex items-center gap-1.5">
           <CategoryBadge label={post.keywordSuggestion} />
-          <span className="text-xs text-gray-400">keyword</span>
+          <span className="text-xs text-muted-foreground">keyword</span>
         </span>
       )}
       {post.llmSuggestion && (
         <span className="flex items-center gap-1.5">
           <CategoryBadge label={post.llmSuggestion} />
-          <span className="text-xs text-gray-400">LLM</span>
+          <span className="text-xs text-muted-foreground">LLM</span>
         </span>
       )}
     </div>
@@ -152,7 +152,7 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
   const [isPending, startTransition] = useTransition()
 
   if (role === 'BUSINESS_OWNER') {
-    return <span className="text-gray-400 text-xs">View only</span>
+    return <span className="text-muted-foreground text-xs">View only</span>
   }
 
   if (role === 'MARKETING_TEAM') {
@@ -160,7 +160,7 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
     return (
       <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select name="categoryLabel" defaultValue={defaultSelection(post)}>
-          <SelectTrigger className="text-xs border-gray-300 focus-visible:ring-ring min-w-[140px] h-7" size="sm">
+          <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
@@ -205,7 +205,7 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
       )}
       <form action={boundOverride} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select name="categoryLabel" defaultValue={defaultSelection(post)}>
-          <SelectTrigger className="text-xs border-gray-300 focus-visible:ring-ring min-w-[140px] h-7" size="sm">
+          <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
             <SelectValue placeholder="— None —" />
           </SelectTrigger>
           <SelectContent>
@@ -226,7 +226,7 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
 function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
   if (posts.length === 0) {
     return (
-      <div className="p-12 text-center text-gray-500 text-sm">
+      <div className="p-12 text-center text-muted-foreground text-sm">
         No organic posts uploaded yet. Upload a Facebook Insights CSV first.
       </div>
     )
@@ -235,24 +235,24 @@ function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-gray-50">
-          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Post Details</TableHead>
-          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Type</TableHead>
-          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Suggested / Pending</TableHead>
-          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Action</TableHead>
+        <TableRow className="bg-secondary">
+          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Post Details</TableHead>
+          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</TableHead>
+          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Suggested / Pending</TableHead>
+          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Action</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {posts.map((post) => (
-          <TableRow key={post.id} className="hover:bg-gray-50 border-t border-gray-100">
+          <TableRow key={post.id} className="hover:bg-secondary border-t border-border">
             <TableCell className="px-4 py-3 max-w-xs">
               {post.title ? (
-                <div className="font-medium text-gray-800 text-sm truncate" title={post.title}>{post.title}</div>
+                <div className="font-medium text-foreground text-sm truncate" title={post.title}>{post.title}</div>
               ) : (
-                <span className="text-gray-400 text-xs italic">No title</span>
+                <span className="text-muted-foreground text-xs italic">No title</span>
               )}
               <a href={post.permalink} target="_blank" rel="noopener noreferrer"
-                className="text-primary hover:text-green-700 hover:underline text-xs mt-0.5 inline-block">
+                className="text-primary hover:text-primary/80 hover:underline text-xs mt-0.5 inline-block">
                 View post ↗
               </a>
             </TableCell>
@@ -340,20 +340,20 @@ export default function CategorizeClient({ posts, role }: Props) {
     <div>
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h2 className="font-semibold text-gray-800">Uncategorized Posts</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <h2 className="font-semibold text-foreground">Uncategorized Posts</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
             {posts.length} in queue{pendingCount > 0 ? ` · ${pendingCount} pending review` : ''}
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           {autoResult && (
-            <p className="animate-fade-slide-up text-xs text-green-400 font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
+            <p className="animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
               {autoResult.posts === 0 ? 'Nothing new to categorize' : `Applied to ${autoResult.posts} post${autoResult.posts !== 1 ? 's' : ''}`}
             </p>
           )}
           {bulkResult && (
-            <p className="animate-fade-slide-up text-xs text-green-400 font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
+            <p className="animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
               Accepted {bulkResult.accepted} proposal{bulkResult.accepted !== 1 ? 's' : ''}
             </p>
           )}
@@ -361,7 +361,7 @@ export default function CategorizeClient({ posts, role }: Props) {
             <p className={`animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
               llmIsError
                 ? 'text-yellow-700 dark:text-yellow-300 bg-yellow-500/10 border-yellow-500/30'
-                : 'text-green-400 bg-green-500/10 border-green-500/30'
+                : 'text-status-positive bg-green-500/10 border-green-500/30'
             }`}>
               {llmResult}{llmCoolingDown && llmCooldown > 0 ? ` Try again in ${llmCooldown}s.` : ''}
             </p>
@@ -383,7 +383,7 @@ export default function CategorizeClient({ posts, role }: Props) {
             <button
               onClick={handleAutoCategorize}
               disabled={isPending || posts.length === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
               {isPending ? 'Categorizing…' : 'Auto-Categorize (keyword baseline)'}
             </button>
@@ -393,7 +393,7 @@ export default function CategorizeClient({ posts, role }: Props) {
             <button
               onClick={handleLlmClassify}
               disabled={llmPending || posts.length === 0 || llmCooldown > 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 active:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
               {llmPending ? 'Classifying…' : llmCooldown > 0 ? `Wait ${llmCooldown}s` : 'Classify with AI (LLM)'}
             </button>
@@ -404,12 +404,12 @@ export default function CategorizeClient({ posts, role }: Props) {
       {allCaughtUp ? (
         <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-card rounded-2xl card-shadow">
           <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-            <svg className="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6 text-status-positive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-sm font-semibold text-gray-700 mb-1">All caught up</p>
-          <p className="text-xs text-gray-400 max-w-[240px]">Every post has a final category. Reassign from the Content Library if needed.</p>
+          <p className="text-sm font-semibold text-foreground mb-1">All caught up</p>
+          <p className="text-xs text-muted-foreground max-w-[240px]">Every post has a final category. Reassign from the Content Library if needed.</p>
         </div>
       ) : (
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
@@ -419,12 +419,12 @@ export default function CategorizeClient({ posts, role }: Props) {
       )}
 
       {role === 'MARKETING_TEAM' && (
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           Proposals stay pending until a Marketing Manager accepts them.
         </p>
       )}
       {role === 'MARKETING_MANAGER' && (
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           Keywords configured in{' '}
           <a href="/dashboard/marketing/keywords" className="text-primary hover:underline">Manage Keywords</a>.
         </p>
