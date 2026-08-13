@@ -10,6 +10,6 @@ export default async function MarketingPrintReportPage() {
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') redirect('/login')
 
-  const data = await buildReportData({ includeOrganicPosts: true })
+  const data = await buildReportData({ role: 'marketing' })
   return <ReportView variant="print" role="marketing" data={data} />
 }

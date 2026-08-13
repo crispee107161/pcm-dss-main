@@ -9,6 +9,6 @@ export default async function OwnerReportPage() {
     redirect('/login')
   }
 
-  const data = await buildReportData({ includeOrganicPosts: true })
+  const data = await buildReportData({ role: 'owner' })
   return <ReportView variant="screen" role="owner" data={data} />
 }

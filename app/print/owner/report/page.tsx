@@ -10,6 +10,6 @@ export default async function OwnerPrintReportPage() {
   const session = await auth()
   if (!session?.user || session.user.role !== 'BUSINESS_OWNER') redirect('/login')
 
-  const data = await buildReportData({ includeOrganicPosts: true })
+  const data = await buildReportData({ role: 'owner' })
   return <ReportView variant="print" role="owner" data={data} />
 }

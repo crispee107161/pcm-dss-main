@@ -10,10 +10,12 @@ export const maxDuration = 60
 const PDF_EXPORT_LIMIT = 5
 const PDF_EXPORT_WINDOW_MS = 60_000
 
+// MARKETING_TEAM is blocked above before this map is consulted (View-only,
+// no export per mvp.md §3 S9); kept here only so the Record type stays total.
 const ROLE_TO_PATH: Record<Role, string> = {
   BUSINESS_OWNER: 'owner',
   MARKETING_MANAGER: 'marketing',
-  SALES_DIRECTOR: 'sales',
+  MARKETING_TEAM: 'marketing',
 }
 
 function resolveAppOrigin(request: NextRequest): string {
@@ -27,7 +29,6 @@ function resolveAppOrigin(request: NextRequest): string {
 const ROLE_REPORT_TITLE: Record<string, string> = {
   owner: 'Business Performance Report',
   marketing: 'Marketing Performance Report',
-  sales: 'Advertising Efficiency Report',
 }
 
 function buildFilename(role: string): string {
@@ -40,6 +41,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const session = await auth()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // mvp.md §3 S9 access matrix: MARKETING_TEAM is View-only on Reports, so
+  // PDF/CSV export is Owner + Marketing Manager only.
+  if (session.user.role === 'MARKETING_TEAM') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { role } = await params
