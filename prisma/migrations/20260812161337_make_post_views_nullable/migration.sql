@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "FacebookPost" ALTER COLUMN "views" DROP NOT NULL,
+ALTER COLUMN "views" DROP DEFAULT;

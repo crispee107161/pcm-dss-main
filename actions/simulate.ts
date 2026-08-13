@@ -32,8 +32,7 @@ export async function runWhatIfAction(
     const result = await runSimulation(userId, reach, amountSpent)
 
     const role = session.user.role
-    if (role === 'MARKETING_MANAGER') revalidatePath('/dashboard/marketing')
-    else if (role === 'SALES_DIRECTOR') revalidatePath('/dashboard/sales')
+    if (role === 'MARKETING_MANAGER' || role === 'MARKETING_TEAM') revalidatePath('/dashboard/marketing')
     else if (role === 'BUSINESS_OWNER') revalidatePath('/dashboard/owner')
 
     return result

@@ -11,15 +11,36 @@ export interface PostRecord {
   reactions: number
   comments: number
   shares: number
-  views: number
+  // Nullable, unlike the other counters — FR-19/ALG-07 requires excluding
+  // the handful of posts with a genuinely blank "Views" cell from the
+  // ranking comparison, rather than silently treating them as 0 views
+  // (which would corrupt both the correlation and the top-k overlap).
+  views: number | null
   /** Percentage, 0-100 (e.g. 4.2 means 4.2%). Already scaled — do not multiply by 100 again. */
   engagement_rate: number
+  // FR-28 watch-through rate inputs — populated for videos/reels only.
+  // duration_sec is guarded to > 0 here (mvp.md ALG edge case) so a stray 0
+  // or blank never becomes a division-by-zero downstream.
+  duration_sec: number | null
+  avg_seconds_viewed: number | null
 }
 
 function parseIntOrZero(value: string | undefined): number {
   if (!value || value.trim() === '') return 0
   const parsed = parseInt(value.replace(/,/g, '').trim(), 10)
   return isNaN(parsed) ? 0 : parsed
+}
+
+function parseIntOrNull(value: string | undefined): number | null {
+  if (!value || value.trim() === '') return null
+  const parsed = parseInt(value.replace(/,/g, '').trim(), 10)
+  return isNaN(parsed) ? null : parsed
+}
+
+function parseFloatOrNull(value: string | undefined): number | null {
+  if (!value || value.trim() === '') return null
+  const parsed = parseFloat(value.replace(/,/g, '').trim())
+  return isNaN(parsed) ? null : parsed
 }
 
 /** "Publish time" is exported as "MM/DD/YYYY HH:MM" with no timezone marker. */
@@ -57,10 +78,14 @@ export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] 
       const reactions = parseIntOrZero(row['Reactions'] ?? row['Post reactions'])
       const comments = parseIntOrZero(row['Comments'] ?? row['Post comments'])
       const shares = parseIntOrZero(row['Shares'] ?? row['Post shares'])
-      const views = parseIntOrZero(row['Views'] ?? row['Video views'] ?? row['3-second video plays'])
+      const views = parseIntOrNull(row['Views'] ?? row['Video views'] ?? row['3-second video plays'])
 
       const engagement_rate =
         reach === 0 ? 0 : ((reactions + comments + shares) / reach) * 100
+
+      const rawDuration = parseFloatOrNull(row['Duration (sec)'])
+      const duration_sec = rawDuration !== null && rawDuration > 0 ? rawDuration : null
+      const avg_seconds_viewed = parseFloatOrNull(row['Average Seconds viewed'])
 
       return {
         post_id,
@@ -75,6 +100,8 @@ export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] 
         shares,
         views,
         engagement_rate,
+        duration_sec,
+        avg_seconds_viewed,
       }
     } catch (err) {
       throw new Error(`Row ${index + 1}: ${(err as Error).message}`)

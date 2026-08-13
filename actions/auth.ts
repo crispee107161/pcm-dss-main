@@ -6,9 +6,11 @@ import { headers } from 'next/headers'
 import { rateLimit } from '@/lib/rate-limit'
 import type { Role } from '@/types/index'
 
+// MARKETING_TEAM has no dedicated route tree yet (mvp.md §3 S3/S6 are its
+// screens) — lands on the marketing dashboard, view-only, until that ships.
 const roleRoutes: Record<Role, string> = {
   MARKETING_MANAGER: '/dashboard/marketing',
-  SALES_DIRECTOR: '/dashboard/sales',
+  MARKETING_TEAM: '/dashboard/marketing',
   BUSINESS_OWNER: '/dashboard/owner',
 }
 

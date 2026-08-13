@@ -9,13 +9,12 @@ datasource db {
 
 enum Role {
   MARKETING_MANAGER
-  SALES_DIRECTOR
+  MARKETING_TEAM
   BUSINESS_OWNER
 }
 
 enum UploadType {
   ADS_CSV
-  ADS_DAILY_CSV
   POSTS_CSV
   PAGE_METRIC_CSV
   FOLLOWER_HISTORY_CSV
@@ -28,63 +27,166 @@ enum UploadStatus {
   FAILED
 }
 
+enum CategoryLabel {
+  PRODUCT_SHOWCASE
+  PROMOTIONAL_OFFER
+  TESTIMONIAL
+  ENTERTAINMENT
+  UNCLASSIFIED
+  /// A legitimate 5th label from the external ground-truth codebook
+  /// (CODEBOOK_content_categories.md §5) — a human coder's genuine "cannot
+  /// decide" verdict. Never produced by ALG-04/ALG-05 (those return
+  /// UNCLASSIFIED instead); only ever arrives via the ground-truth CSV import.
+  UNCLEAR
+}
+
+/// Developer_Note_Ground_Truth_Labelling.md §4 — distinguishes *how*
+/// category_final was set, so a contamination check can prove the external
+/// ground-truth sample was never touched by an accepted suggestion.
+enum CategoryFinalSource {
+  MANUAL_GROUND_TRUTH
+  ACCEPTED_SUGGESTION
+  MANUAL_OVERRIDE
+}
+
+// FR-24 audit trail — the "manual category assignment" half. UploadLog
+// (above) already covers uploads; this covers every human decision made on
+// S4 Categorisation Review. Deliberately excludes ALG-04's autoCategorizeAll
+// (an automated suggestion pass, not a manual assignment).
+enum CategoryAuditAction {
+  PROPOSE
+  ACCEPT
+  REJECT
+  OVERRIDE
+  BULK_ACCEPT
+}
+
 model User {
-  id                 Int                @id @default(autoincrement())
-  email              String             @unique
-  password_hash      String
-  role               Role
-  created_at         DateTime           @default(now())
-  upload_logs        UploadLog[]
-  simulation_results SimulationResult[]
+  id                         Int                @id @default(autoincrement())
+  email                      String             @unique
+  password_hash              String
+  role                       Role
+  created_at                 DateTime           @default(now())
+  upload_logs                UploadLog[]
+  simulation_results         SimulationResult[]
+  category_proposals         FacebookPost[]
+  category_audit_logs        CategoryAuditLog[]
+  category_final_assignments FacebookPost[]     @relation("CategoryFinalAssignedBy")
 }
 
 model UploadLog {
-  id               Int          @id @default(autoincrement())
-  user_id          Int
-  user             User         @relation(fields: [user_id], references: [id])
-  upload_type      UploadType
-  filename         String
-  status           UploadStatus
-  records_inserted  Int          @default(0)
-  records_updated   Int          @default(0)
-  records_unchanged Int          @default(0)
-  records_superseded Int         @default(0)
-  error_message     String?
-  warning_message   String?
-  uploaded_at      DateTime     @default(now())
+  id                 Int          @id @default(autoincrement())
+  user_id            Int
+  user               User         @relation(fields: [user_id], references: [id])
+  upload_type        UploadType
+  filename           String
+  status             UploadStatus
+  records_inserted   Int          @default(0)
+  records_updated    Int          @default(0)
+  records_unchanged  Int          @default(0)
+  records_superseded Int          @default(0)
+  error_message      String?
+  warning_message    String?
+  uploaded_at        DateTime     @default(now())
+}
+
+model CategoryAuditLog {
+  id                Int                 @id @default(autoincrement())
+  user_id           Int
+  user              User                @relation(fields: [user_id], references: [id])
+  action            CategoryAuditAction
+  // References FacebookPost.id (the Int PK), not its `post_id` string field.
+  // No FK/relation: the log must survive independently of the post row.
+  facebook_post_id  Int
+  previous_category CategoryLabel?
+  new_category      CategoryLabel?
+  created_at        DateTime            @default(now())
+
+  @@index([created_at])
+}
+
+/// Developer_Note_Ground_Truth_Labelling.md §6 — the one-time Cohen's kappa
+/// between the two external coders (computed by compute_kappa.py, before any
+/// discussion between them), stored so S8 can display it as the human
+/// "ceiling" alongside the system's own method kappas. Not live-computed —
+/// the raw per-coder sheets never enter this app (§2 rule 2's blindness
+/// requirement applies to the coders, not to this system).
+model InterCoderReliability {
+  id                Int      @id @default(autoincrement())
+  n                 Int
+  percent_agreement Float
+  kappa             Float
+  computed_at       DateTime @default(now())
+  notes             String?
 }
 
 model FacebookPost {
-  id              Int       @id @default(autoincrement())
-  post_id         String    @unique
-  publish_time    DateTime
-  post_type       String
-  title           String?
-  description     String?
-  permalink       String
-  reach           Int
-  reactions       Int       @default(0)
-  comments        Int       @default(0)
-  shares          Int       @default(0)
-  views           Int       @default(0)
+  id                            Int                  @id @default(autoincrement())
+  post_id                       String               @unique
+  publish_time                  DateTime
+  post_type                     String
+  title                         String?
+  description                   String?
+  permalink                     String
+  reach                         Int
+  reactions                     Int                  @default(0)
+  comments                      Int                  @default(0)
+  shares                        Int                  @default(0)
+  /// Nullable, unlike the other counters — FR-19/ALG-07 must exclude posts
+  /// with a genuinely blank "Views" export cell from the ranking comparison,
+  /// not silently coerce them to 0 (which would corrupt both the
+  /// correlation and the top-k overlap).
+  views                         Int?
   /// Percentage, 0-100 (e.g. 4.2 means 4.2%). Already scaled — do not multiply by 100 again.
-  engagement_rate Float
-  category_id     Int?
-  category        Category? @relation(fields: [category_id], references: [id])
-  created_at      DateTime  @default(now())
+  engagement_rate               Float
+  /// FR-28 watch-through rate inputs — populated for videos/reels only (397/730 posts).
+  duration_sec                  Float?
+  avg_seconds_viewed            Float?
+  /// FR-15: three permanent columns, not a throwaway comparison. `category_final`
+  /// is the single source of truth read by the rest of the app; keyword/llm are
+  /// kept for the FR-15 agreement study (Cohen's kappa, confusion matrix).
+  category_keyword              CategoryLabel?
+  category_llm                  CategoryLabel?
+  category_final                CategoryLabel?
+  /// Developer_Note_Ground_Truth_Labelling.md §4 — how category_final was set.
+  /// MANUAL_GROUND_TRUTH only ever arrives via the external codebook CSV
+  /// import (scripts/import-ground-truth.ts); the S4 review actions
+  /// (accept/override) stamp the other two values. This is what lets FR-15
+  /// restrict its authoritative kappa to a genuinely blind reference standard
+  /// instead of the S4 finalisation queue's own output.
+  category_final_source         CategoryFinalSource?
+  category_final_assigned_by_id Int?
+  category_final_assigned_by    User?                @relation("CategoryFinalAssignedBy", fields: [category_final_assigned_by_id], references: [id])
+  category_final_assigned_at    DateTime?
+  /// FR-13: a MARKETING_TEAM proposal. Never read by anything outside the S4
+  /// review queue — MARKETING_MANAGER accepting it is what copies the value
+  /// into category_final; overriding directly clears it without copying.
+  category_pending              CategoryLabel?
+  category_pending_by           Int?
+  pending_by                    User?                @relation(fields: [category_pending_by], references: [id])
+  created_at                    DateTime             @default(now())
 }
 
 model Ad {
-  id                       Int       @id @default(autoincrement())
+  id                       Int      @id @default(autoincrement())
   reporting_starts         DateTime
   reporting_ends           DateTime
+  ad_id                    String
   ad_name                  String
+  ad_set_id                String
   ad_set_name              String
+  campaign_id              String
+  campaign_name            String
   attribution_setting      String
   reach                    Int?
   impressions              Int
   link_clicks              Int?
   amount_spent             Float
+  result_type              String?
+  frequency                Float?
+  post_engagements         Int?
+  views                    Int?
+  viewers                  Int?
   total_messaging_contacts Int?
   results                  Int?
   cost_per_result          Float?
@@ -94,18 +196,17 @@ model Ad {
   /// not dropped, to avoid an unreviewed migration against what may be a production
   /// database; a follow-up migration to remove it needs explicit sign-off first.
   inquiries                Int?
-  category_id              Int?
-  category                 Category? @relation(fields: [category_id], references: [id])
-  created_at               DateTime  @default(now())
+  created_at               DateTime @default(now())
 
-  @@unique([ad_name, ad_set_name, reporting_starts])
+  @@unique([ad_id, reporting_starts])
+  @@index([ad_set_id])
+  @@index([campaign_id])
+  @@index([reporting_starts])
 }
 
 model Category {
-  id       Int            @id @default(autoincrement())
-  name     String         @unique
-  posts    FacebookPost[]
-  ads      Ad[]
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
   keywords Keyword[]
 }
 
@@ -116,31 +217,68 @@ model Keyword {
   category    Category @relation(fields: [category_id], references: [id])
 }
 
+/// ALG-05: one row per LLM classification batch. Kept permanently — a
+/// panelist may ask how a label was produced, so the raw response, model
+/// name, and run date must be reproducible per FR-15, not just the parsed
+/// category_llm value on FacebookPost.
+model LlmClassificationRun {
+  id           Int      @id @default(autoincrement())
+  model_name   String
+  run_at       DateTime @default(now())
+  post_ids     Int[]
+  raw_response String
+  succeeded    Boolean
+}
+
+enum CorrelationMethod {
+  PEARSON
+  SPEARMAN
+}
+
+/// ALG-08 (FR-21): one row per correlation-selection run. mvp.md's algorithm
+/// spec explicitly requires persisting the Shapiro-Wilk assumption-test
+/// result alongside the chosen method and coefficient — "a panelist may ask
+/// how the method was chosen," not just what the final coefficient was.
+/// Written once per S7 Analysis page load (cheap at n~187, and an audit
+/// trail of every run is more defensible than a single overwritten row).
+model CorrelationAssumptionRun {
+  id          Int               @id @default(autoincrement())
+  run_at      DateTime          @default(now())
+  n           Int
+  method      CorrelationMethod
+  coefficient Float
+  p_value     Float
+  shapiro_x_w Float
+  shapiro_x_p Float
+  shapiro_y_w Float
+  shapiro_y_p Float
+}
+
 model RegressionModel {
-  id                  Int      @id @default(autoincrement())
-  intercept           Float
-  coefficient         Float
-  coef_reach          Float?
+  id                   Int      @id @default(autoincrement())
+  intercept            Float
+  coefficient          Float
+  coef_reach           Float?
   /// No longer written by new training runs since the messaging-conversations DV
   /// pivot — messaging is the model's outcome now, not a predictor (see
   /// DV-PIVOT-PLAN.md). Non-null only on legacy rows trained under the old formula;
   /// see scripts/purge-inquiry-regression-models.ts to clean those up.
-  coef_messaging      Float?
-  coef_amount_spent   Float?
-  coef_spend_sq       Float?
-  coef_link_clicks    Float?
-  model_type          String?
-  residual_std_error  Float?
-  best_lag            Int?
-  r_squared           Float
-  adj_r_squared       Float?
-  n                   Int
+  coef_messaging       Float?
+  coef_amount_spent    Float?
+  coef_spend_sq        Float?
+  coef_link_clicks     Float?
+  model_type           String?
+  residual_std_error   Float?
+  best_lag             Int?
+  r_squared            Float
+  adj_r_squared        Float?
+  n                    Int
   /// Set when fitPlainMLR's VIF check (Reach/Spend collinearity) exceeds the
   /// warning threshold, or when the fit was numerically singular — surfaced
   /// in the UI (RegressionSummary) instead of only logging via console.warn.
   /// Null on legacy rows trained before this column existed.
   collinearity_warning String?
-  trained_at          DateTime @default(now())
+  trained_at           DateTime @default(now())
 }
 
 model SimulationResult {

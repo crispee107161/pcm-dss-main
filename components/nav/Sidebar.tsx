@@ -155,8 +155,9 @@ export default function Sidebar({ navItems, email, roleLabel, children }: Sideba
         key={item.href}
         href={item.href}
         title={!showText ? item.label : undefined}
-        className={`group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors px-3 py-1.5 overflow-hidden ${
-          active ? 'text-sidebar-foreground bg-sidebar-accent' : 'text-gray-500 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+        aria-label={!showText ? item.label : undefined}
+        className={`group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors px-3 py-1.5 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar ${
+          active ? 'text-sidebar-foreground bg-sidebar-accent' : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
         } ${!showText ? 'justify-center' : ''}`}
       >
         <span
@@ -202,7 +203,7 @@ export default function Sidebar({ navItems, email, roleLabel, children }: Sideba
           <img src="/pcm-logo.png" alt="PC Merchandise" className="w-8 h-8 object-contain flex-shrink-0" />
           <FadeText show={showText} as="div" className="min-w-0 flex-1">
             <span className="font-bold text-sidebar-foreground text-sm leading-none whitespace-nowrap">PC Merchandise</span>
-            <span className="text-gray-600 dark:text-gray-300 text-xs ml-1">DSS</span>
+            <span className="text-muted-foreground text-xs ml-1">DSS</span>
           </FadeText>
         </div>
 
@@ -218,7 +219,7 @@ export default function Sidebar({ navItems, email, roleLabel, children }: Sideba
                 <FadeText
                   as="p"
                   show={showText}
-                  className="px-3 pt-4 pb-1 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-widest whitespace-nowrap"
+                  className="px-3 pt-4 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap"
                 >
                   {group.section}
                 </FadeText>

@@ -3,10 +3,14 @@ import { validateAdsRows } from './validate-ads'
 
 function baseRow(overrides: Record<string, string> = {}): Record<string, string> {
   return {
+    'Ad ID': '123456789',
     'Ad name': 'Test Ad',
     'Reporting starts': '2025-09-01',
     'Reporting ends': '2025-09-30',
+    'Ad set ID': '987654321',
     'Ad set name': 'Set A',
+    'Campaign ID': '111222333',
+    'Campaign name': 'Campaign A',
     'Attribution setting': '7-day click',
     Impressions: '1000',
     'Amount spent (PHP)': '500',

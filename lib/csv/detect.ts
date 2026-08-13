@@ -1,20 +1,15 @@
 export type CsvType =
   | 'ADS_CSV'
-  | 'ADS_DAILY_CSV'
   | 'POSTS_CSV'
   | 'PAGE_METRIC_CSV'
   | 'FOLLOWER_HISTORY_CSV'
   | 'PAGE_VIEWERS_CSV'
   | 'DEMOGRAPHICS_CSV'
 
-// 'Purchases' is Facebook's literal export header — external data we don't control.
-// It's used only as a detection discriminator for this older monthly export format;
-// its value is no longer read into `inquiries` (see validate-ads.ts — sales/purchases
-// data is out of scope by policy, DV-PIVOT-PLAN.md "Why this changed").
-const ADS_REQUIRED_HEADERS    = ['Ad name', 'Reporting starts', 'Amount spent (PHP)', 'Purchases']
-// Newer per-day export: no 'Purchases' column, but adds 'Day' + 'Result type' —
-// the latter is what validate-ads-daily.ts filters on before anything is stored.
-const ADS_DAILY_REQUIRED_HEADERS = ['Ad name', 'Ad set name', 'Day', 'Result type', 'Amount spent (PHP)']
+// 93-column monthly export (data/New_FB_Ads_Data/) — the system's sole ads input
+// (mvp.md §4.7). Keyed on `Ad ID` + `Amount spent (PHP)` per data_catalog.md §5.1 —
+// never on `Ad name` (297 names across 309 IDs, same doc §1).
+const ADS_REQUIRED_HEADERS    = ['Ad ID', 'Amount spent (PHP)']
 // Older Facebook exports (pre-2025) omit Reach/Views — Post ID + Publish time + Post type is unique enough
 const POSTS_REQUIRED_HEADERS  = ['Post ID', 'Publish time', 'Post type']
 const FOLLOWER_HIST_HEADERS   = ['Date', 'Followers', 'Difference in followers from previous day']
@@ -31,11 +26,6 @@ export function detectCsvType(headers: string[]): CsvType {
   const hasAll = (required: string[]) =>
     required.every((h) => headers.includes(h))
 
-  // Daily export checked first: it's the more specific discriminator ('Day' + 'Result
-  // type' only ever appear together in this export). If Facebook ever adds 'Purchases'
-  // to the daily export too, checking ADS_CSV first would route it through the
-  // unfiltered monthly validator and silently mix non-messaging Result types back in.
-  if (hasAll(ADS_DAILY_REQUIRED_HEADERS)) return 'ADS_DAILY_CSV'
   if (hasAll(ADS_REQUIRED_HEADERS))       return 'ADS_CSV'
   if (hasAll(POSTS_REQUIRED_HEADERS))     return 'POSTS_CSV'
 

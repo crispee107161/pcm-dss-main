@@ -1,0 +1,194 @@
+dbms	table_catalog	table_schema	table_name	column_name	ordinal_position	data_type	character_maximum_length	constraint_type	table_schema	table_name	column_name
+postgresql	neondb	public	User	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	UploadLog	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	FacebookPost	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	Ad	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	Category	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	Keyword	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	RegressionModel	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	SimulationResult	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	PageMetricDaily	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	FollowerHistory	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	PageViewers	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	FollowerGender	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	FollowerTerritory	id	1	integer		PRIMARY KEY			
+postgresql	neondb	public	UploadLog	user_id	2	integer		FOREIGN KEY	public	User	id
+postgresql	neondb	public	FacebookPost	category_id	14	integer		FOREIGN KEY	public	Category	id
+postgresql	neondb	public	Ad	category_id	15	integer		FOREIGN KEY	public	Category	id
+postgresql	neondb	public	Keyword	category_id	3	integer		FOREIGN KEY	public	Category	id
+postgresql	neondb	public	SimulationResult	user_id	2	integer		FOREIGN KEY	public	User	id
+postgresql	neondb	neon_auth	user	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	user	email	3	text		UNIQUE			
+postgresql	neondb	neon_auth	session	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	session	token	3	text		UNIQUE			
+postgresql	neondb	neon_auth	session	userId	8	uuid		FOREIGN KEY	neon_auth	user	id
+postgresql	neondb	neon_auth	account	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	account	userId	4	uuid		FOREIGN KEY	neon_auth	user	id
+postgresql	neondb	neon_auth	verification	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	jwks	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	organization	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	organization	slug	3	text		UNIQUE			
+postgresql	neondb	neon_auth	member	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	member	organizationId	2	uuid		FOREIGN KEY	neon_auth	organization	id
+postgresql	neondb	neon_auth	member	userId	3	uuid		FOREIGN KEY	neon_auth	user	id
+postgresql	neondb	neon_auth	invitation	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	invitation	organizationId	2	uuid		FOREIGN KEY	neon_auth	organization	id
+postgresql	neondb	neon_auth	invitation	inviterId	8	uuid		FOREIGN KEY	neon_auth	user	id
+postgresql	neondb	neon_auth	project_config	id	1	uuid		PRIMARY KEY			
+postgresql	neondb	neon_auth	project_config	endpoint_id	3	text		UNIQUE			
+postgresql	neondb	public	spatial_ref_sys	srid	1	integer		PRIMARY KEY			
+postgresql	neondb	public	_prisma_migrations	id	1	character varying	36	PRIMARY KEY			
+postgresql	neondb	public	SimulationResult	reach_input	10	double precision					
+postgresql	neondb	neon_auth	member	role	4	text					
+postgresql	neondb	neon_auth	user	image	5	text					
+postgresql	neondb	public	FacebookPost	created_at	15	timestamp without time zone					
+postgresql	neondb	public	FollowerHistory	followers	3	integer					
+postgresql	neondb	public	FacebookPost	reach	8	integer					
+postgresql	neondb	public	PageMetricDaily	link_clicks	5	integer					
+postgresql	neondb	public	RegressionModel	coef_amount_spent	8	double precision					
+postgresql	neondb	neon_auth	verification	updatedAt	6	timestamp with time zone					
+postgresql	neondb	public	RegressionModel	r_squared	4	double precision					
+postgresql	neondb	public	Keyword	word	2	text					
+postgresql	neondb	neon_auth	account	refreshToken	6	text					
+postgresql	neondb	public	User	created_at	5	timestamp without time zone					
+postgresql	neondb	public	FacebookPost	title	5	text					
+postgresql	neondb	public	FacebookPost	post_id	2	text					
+postgresql	neondb	public	UploadLog	uploaded_at	9	timestamp without time zone					
+postgresql	neondb	neon_auth	organization	logo	4	text					
+postgresql	neondb	public	Ad	reach	7	integer					
+postgresql	neondb	neon_auth	session	createdAt	4	timestamp with time zone					
+postgresql	neondb	public	FacebookPost	views	12	integer					
+postgresql	neondb	public	Ad	created_at	16	timestamp without time zone					
+postgresql	neondb	public	FollowerHistory	created_at	5	timestamp without time zone					
+postgresql	neondb	public	_prisma_migrations	started_at	7	timestamp with time zone					
+postgresql	neondb	public	RegressionModel	coef_reach	10	double precision					
+postgresql	neondb	public	FollowerTerritory	territory	2	text					
+postgresql	neondb	neon_auth	session	activeOrganizationId	10	text					
+postgresql	neondb	public	_prisma_migrations	finished_at	3	timestamp with time zone					
+postgresql	neondb	public	Ad	reporting_ends	3	timestamp without time zone					
+postgresql	neondb	neon_auth	project_config	trusted_origins	6	jsonb					
+postgresql	neondb	public	Ad	impressions	8	integer					
+postgresql	neondb	public	SimulationResult	interval_upper	8	double precision					
+postgresql	neondb	neon_auth	member	createdAt	5	timestamp with time zone					
+postgresql	neondb	neon_auth	verification	expiresAt	4	timestamp with time zone					
+postgresql	neondb	neon_auth	session	ipAddress	6	text					
+postgresql	neondb	public	UploadLog	records_unchanged	10	integer					
+postgresql	neondb	neon_auth	invitation	status	5	text					
+postgresql	neondb	neon_auth	project_config	created_at	4	timestamp with time zone					
+postgresql	neondb	neon_auth	project_config	allow_localhost	10	boolean					
+postgresql	neondb	public	RegressionModel	trained_at	6	timestamp without time zone					
+postgresql	neondb	public	User	role	4	USER-DEFINED					
+postgresql	neondb	neon_auth	account	accessToken	5	text					
+postgresql	neondb	neon_auth	user	banReason	10	text					
+postgresql	neondb	neon_auth	jwks	expiresAt	5	timestamp with time zone					
+postgresql	neondb	neon_auth	organization	createdAt	5	timestamp with time zone					
+postgresql	neondb	neon_auth	invitation	role	4	text					
+postgresql	neondb	public	Ad	ad_set_name	5	text					
+postgresql	neondb	public	spatial_ref_sys	auth_name	2	character varying	256				
+postgresql	neondb	neon_auth	user	emailVerified	4	boolean					
+postgresql	neondb	neon_auth	user	role	8	text					
+postgresql	neondb	public	UploadLog	filename	4	text					
+postgresql	neondb	public	PageViewers	new_viewers	4	integer					
+postgresql	neondb	public	SimulationResult	amount_spent_input	3	double precision					
+postgresql	neondb	public	SimulationResult	messaging_input	9	double precision					
+postgresql	neondb	neon_auth	project_config	webhook_config	12	jsonb					
+postgresql	neondb	public	_prisma_migrations	checksum	2	character varying	64				
+postgresql	neondb	neon_auth	account	updatedAt	13	timestamp with time zone					
+postgresql	neondb	public	Category	name	2	text					
+postgresql	neondb	public	FacebookPost	permalink	7	text					
+postgresql	neondb	neon_auth	account	accountId	2	text					
+postgresql	neondb	neon_auth	verification	value	3	text					
+postgresql	neondb	neon_auth	user	banned	9	boolean					
+postgresql	neondb	public	PageMetricDaily	date	2	timestamp without time zone					
+postgresql	neondb	neon_auth	account	password	11	text					
+postgresql	neondb	public	PageViewers	created_at	6	timestamp without time zone					
+postgresql	neondb	public	SimulationResult	interval_lower	7	double precision					
+postgresql	neondb	public	Ad	inquiries	14	integer					
+postgresql	neondb	public	SimulationResult	model_id	5	integer					
+postgresql	neondb	neon_auth	project_config	plugin_configs	11	jsonb					
+postgresql	neondb	public	FollowerHistory	daily_change	4	integer					
+postgresql	neondb	public	UploadLog	records_superseded	11	integer					
+postgresql	neondb	neon_auth	verification	identifier	2	text					
+postgresql	neondb	public	Ad	cost_per_result	13	double precision					
+postgresql	neondb	public	UploadLog	records_updated	7	integer					
+postgresql	neondb	public	User	password_hash	3	text					
+postgresql	neondb	public	FacebookPost	comments	10	integer					
+postgresql	neondb	public	PageViewers	total_viewers	3	integer					
+postgresql	neondb	public	PageMetricDaily	follows	3	integer					
+postgresql	neondb	public	Ad	total_messaging_contacts	11	integer					
+postgresql	neondb	neon_auth	invitation	createdAt	7	timestamp with time zone					
+postgresql	neondb	neon_auth	project_config	updated_at	5	timestamp with time zone					
+postgresql	neondb	neon_auth	user	createdAt	6	timestamp with time zone					
+postgresql	neondb	public	FacebookPost	reactions	9	integer					
+postgresql	neondb	neon_auth	session	expiresAt	2	timestamp with time zone					
+postgresql	neondb	public	Ad	link_clicks	9	integer					
+postgresql	neondb	public	User	email	2	text					
+postgresql	neondb	public	PageMetricDaily	interactions	4	integer					
+postgresql	neondb	neon_auth	organization	name	2	text					
+postgresql	neondb	neon_auth	project_config	social_providers	7	jsonb					
+postgresql	neondb	public	PageMetricDaily	views	6	integer					
+postgresql	neondb	public	FacebookPost	post_type	4	text					
+postgresql	neondb	public	FacebookPost	description	6	text					
+postgresql	neondb	neon_auth	verification	createdAt	5	timestamp with time zone					
+postgresql	neondb	neon_auth	account	scope	10	text					
+postgresql	neondb	public	Ad	attribution_setting	6	text					
+postgresql	neondb	public	UploadLog	status	5	USER-DEFINED					
+postgresql	neondb	public	RegressionModel	best_lag	7	integer					
+postgresql	neondb	public	UploadLog	records_inserted	6	integer					
+postgresql	neondb	neon_auth	account	providerId	3	text					
+postgresql	neondb	public	RegressionModel	coef_link_clicks	15	double precision					
+postgresql	neondb	neon_auth	session	updatedAt	5	timestamp with time zone					
+postgresql	neondb	public	PageViewers	date	2	timestamp without time zone					
+postgresql	neondb	public	_prisma_migrations	logs	5	text					
+postgresql	neondb	public	PageMetricDaily	created_at	8	timestamp without time zone					
+postgresql	neondb	public	RegressionModel	coef_spend_sq	12	double precision					
+postgresql	neondb	public	spatial_ref_sys	srtext	4	character varying	2048				
+postgresql	neondb	neon_auth	user	name	2	text					
+postgresql	neondb	neon_auth	session	impersonatedBy	9	text					
+postgresql	neondb	public	RegressionModel	model_type	13	text					
+postgresql	neondb	public	SimulationResult	projected_inquiries	4	double precision					
+postgresql	neondb	public	Ad	reporting_starts	2	timestamp without time zone					
+postgresql	neondb	public	FacebookPost	engagement_rate	13	double precision					
+postgresql	neondb	public	PageViewers	returning_viewers	5	integer					
+postgresql	neondb	neon_auth	jwks	privateKey	3	text					
+postgresql	neondb	public	RegressionModel	intercept	2	double precision					
+postgresql	neondb	neon_auth	account	idToken	7	text					
+postgresql	neondb	public	spatial_ref_sys	auth_srid	3	integer					
+postgresql	neondb	neon_auth	account	accessTokenExpiresAt	8	timestamp with time zone					
+postgresql	neondb	public	Ad	ad_name	4	text					
+postgresql	neondb	public	spatial_ref_sys	proj4text	5	character varying	2048				
+postgresql	neondb	public	FacebookPost	shares	11	integer					
+postgresql	neondb	public	FollowerGender	gender	2	text					
+postgresql	neondb	neon_auth	account	refreshTokenExpiresAt	9	timestamp with time zone					
+postgresql	neondb	public	RegressionModel	residual_std_error	11	double precision					
+postgresql	neondb	public	_prisma_migrations	migration_name	4	character varying	255				
+postgresql	neondb	neon_auth	jwks	publicKey	2	text					
+postgresql	neondb	neon_auth	organization	metadata	6	text					
+postgresql	neondb	public	FollowerTerritory	distribution	3	double precision					
+postgresql	neondb	neon_auth	invitation	expiresAt	6	timestamp with time zone					
+postgresql	neondb	public	FollowerHistory	date	2	timestamp without time zone					
+postgresql	neondb	public	_prisma_migrations	rolled_back_at	6	timestamp with time zone					
+postgresql	neondb	neon_auth	project_config	email_and_password	9	jsonb					
+postgresql	neondb	neon_auth	account	createdAt	12	timestamp with time zone					
+postgresql	neondb	public	RegressionModel	coefficient	3	double precision					
+postgresql	neondb	public	PageMetricDaily	visits	7	integer					
+postgresql	neondb	public	_prisma_migrations	applied_steps_count	8	integer					
+postgresql	neondb	neon_auth	jwks	createdAt	4	timestamp with time zone					
+postgresql	neondb	neon_auth	project_config	name	2	text					
+postgresql	neondb	public	Ad	amount_spent	10	double precision					
+postgresql	neondb	public	UploadLog	error_message	8	text					
+postgresql	neondb	public	RegressionModel	collinearity_warning	16	text					
+postgresql	neondb	public	UploadLog	warning_message	12	text					
+postgresql	neondb	neon_auth	session	userAgent	7	text					
+postgresql	neondb	public	Ad	results	12	integer					
+postgresql	neondb	public	FollowerGender	distribution	3	double precision					
+postgresql	neondb	neon_auth	user	updatedAt	7	timestamp with time zone					
+postgresql	neondb	public	UploadLog	upload_type	3	USER-DEFINED					
+postgresql	neondb	public	RegressionModel	coef_messaging	9	double precision					
+postgresql	neondb	public	SimulationResult	simulated_at	6	timestamp without time zone					
+postgresql	neondb	public	FacebookPost	publish_time	3	timestamp without time zone					
+postgresql	neondb	public	RegressionModel	adj_r_squared	14	double precision					
+postgresql	neondb	neon_auth	invitation	email	3	text					
+postgresql	neondb	neon_auth	project_config	email_provider	8	jsonb					
+postgresql	neondb	neon_auth	user	banExpires	11	timestamp with time zone					
+postgresql	neondb	public	RegressionModel	n	5	integer					

@@ -61,22 +61,37 @@ async function main() {
 
   // Seed users — passwords must be provided via env vars
   const marketingPw = process.env.SEED_MARKETING_PASSWORD
-  const salesPw     = process.env.SEED_SALES_PASSWORD
+  const teamPw      = process.env.SEED_MARKETING_TEAM_PASSWORD
   const ownerPw     = process.env.SEED_OWNER_PASSWORD
 
-  if (!marketingPw || !salesPw || !ownerPw) {
+  if (!marketingPw || !teamPw || !ownerPw) {
     throw new Error(
-      'Seed requires SEED_MARKETING_PASSWORD, SEED_SALES_PASSWORD, and SEED_OWNER_PASSWORD env vars. ' +
+      'Seed requires SEED_MARKETING_PASSWORD, SEED_MARKETING_TEAM_PASSWORD, and SEED_OWNER_PASSWORD env vars. ' +
       'Set them in .env before running the seed.'
     )
   }
-  for (const [label, pw] of [['SEED_MARKETING_PASSWORD', marketingPw], ['SEED_SALES_PASSWORD', salesPw], ['SEED_OWNER_PASSWORD', ownerPw]]) {
+  for (const [label, pw] of [['SEED_MARKETING_PASSWORD', marketingPw], ['SEED_MARKETING_TEAM_PASSWORD', teamPw], ['SEED_OWNER_PASSWORD', ownerPw]]) {
     if (pw.length < 8) throw new Error(`${label} must be at least 8 characters.`)
+  }
+
+  // The MVP v2 role migration renamed SALES_DIRECTOR -> MARKETING_TEAM on the
+  // *role* column of any pre-existing user, but never touched that user's
+  // email. On a DB seeded before this rework, that leaves a legacy
+  // sales@pcmerchandise.com row already holding MARKETING_TEAM — without this
+  // rename, the loop below would create a second, unrelated
+  // team@pcmerchandise.com and leave two MARKETING_TEAM accounts behind.
+  const legacySalesUser = await prisma.user.findUnique({ where: { email: 'sales@pcmerchandise.com' } })
+  if (legacySalesUser && legacySalesUser.role === 'MARKETING_TEAM') {
+    await prisma.user.update({
+      where: { id: legacySalesUser.id },
+      data: { email: 'team@pcmerchandise.com' },
+    })
+    console.log('Migrated legacy sales@pcmerchandise.com -> team@pcmerchandise.com (id preserved)')
   }
 
   const users = [
     { email: 'marketing@pcmerchandise.com', password: marketingPw, role: 'MARKETING_MANAGER' as const },
-    { email: 'sales@pcmerchandise.com',     password: salesPw,     role: 'SALES_DIRECTOR' as const },
+    { email: 'team@pcmerchandise.com',      password: teamPw,      role: 'MARKETING_TEAM' as const },
     { email: 'owner@pcmerchandise.com',     password: ownerPw,     role: 'BUSINESS_OWNER' as const },
   ]
 

@@ -32,4 +32,14 @@ describe('validatePostsRows', () => {
     const [record] = validatePostsRows([baseRow()])
     expect(record.engagement_rate).toBeCloseTo(8, 5)
   })
+
+  it('parses a numeric Views value', () => {
+    const [record] = validatePostsRows([baseRow({ Views: '50' })])
+    expect(record.views).toBe(50)
+  })
+
+  it('parses a blank Views cell as null, not 0 — FR-19/ALG-07 must exclude it explicitly', () => {
+    const [record] = validatePostsRows([baseRow({ Views: '' })])
+    expect(record.views).toBeNull()
+  })
 })

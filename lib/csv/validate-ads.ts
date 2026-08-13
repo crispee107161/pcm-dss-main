@@ -3,13 +3,22 @@ import { parseIsoLocalAsManila } from './timezone'
 export interface AdRecord {
   reporting_starts: Date
   reporting_ends: Date
+  ad_id: string
   ad_name: string
+  ad_set_id: string
   ad_set_name: string
+  campaign_id: string
+  campaign_name: string
   attribution_setting: string
   reach: number | null
   impressions: number
   link_clicks: number | null
   amount_spent: number
+  result_type: string | null
+  frequency: number | null
+  post_engagements: number | null
+  views: number | null
+  viewers: number | null
   total_messaging_contacts: number | null
   results: number | null
   cost_per_result: number | null
@@ -44,17 +53,28 @@ export function parseDate(value: string | undefined, fieldName: string): Date {
   return date
 }
 
+const MESSAGING_RESULT_TYPE = 'Messaging conversations started'
+
 export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
   return rows.map((row, index) => {
     try {
       const reporting_starts = parseDate(row['Reporting starts'], 'Reporting starts')
       const reporting_ends = parseDate(row['Reporting ends'], 'Reporting ends')
 
+      const ad_id = (row['Ad ID'] ?? '').trim()
+      if (ad_id === '') {
+        throw new Error('Missing required field: Ad ID')
+      }
+      const ad_set_id = (row['Ad set ID'] ?? '').trim()
+      const campaign_id = (row['Campaign ID'] ?? '').trim()
+
       // Capped to keep a single malicious/garbage field from ballooning the
       // LLM prompts these values later get interpolated into (chat.ts, keywords.ts).
       const ad_name = (row['Ad name'] ?? '').trim().slice(0, 200)
       const ad_set_name = (row['Ad set name'] ?? '').trim().slice(0, 200)
+      const campaign_name = (row['Campaign name'] ?? '').trim().slice(0, 200)
       const attribution_setting = (row['Attribution setting'] ?? row['Attribution Setting'] ?? '').trim()
+      const result_type = (row['Result type'] ?? '').trim() || null
 
       const reach = parseIntOrNull(row['Reach'])
 
@@ -68,6 +88,10 @@ export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
       }
 
       const link_clicks = parseIntOrNull(row['Link clicks'] ?? row['Clicks (all)'])
+      const frequency = parseFloatOrNull(row['Frequency'])
+      const post_engagements = parseIntOrNull(row['Post engagements'])
+      const views = parseIntOrNull(row['Views'])
+      const viewers = parseIntOrNull(row['Viewers'])
 
       const amountRaw = row['Amount spent (PHP)'] ?? row['Amount spent']
       if (!amountRaw || amountRaw.trim() === '') {
@@ -78,28 +102,34 @@ export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
         throw new Error(`Invalid Amount spent value: ${amountRaw}`)
       }
 
-      const total_messaging_contacts = parseIntOrNull(
-        row['Total messaging contacts'] ?? row['Messaging conversations started']
-      )
       const results = parseIntOrNull(row['Results'])
       const cost_per_result = parseFloatOrNull(row['Cost per result'])
+      // Cost per inquiry is computed only for messaging-optimised ads (data_catalog.md
+      // §1) — Results only means "messaging conversations" when Result type says so.
+      const total_messaging_contacts = result_type === MESSAGING_RESULT_TYPE ? results : null
       // Purchases/sales data is out of scope by policy (capstone retitled to drop all
       // sales/purchases/transaction framing — see DV-PIVOT-PLAN.md "Why this changed").
-      // 'Purchases' is still accepted as a detection discriminator in detect.ts (it's a
-      // reliable marker for this older monthly export format), but its value is no
-      // longer read into `inquiries` — left null here, same as the daily validator.
       const inquiries = null
 
       return {
         reporting_starts,
         reporting_ends,
+        ad_id,
         ad_name,
+        ad_set_id,
         ad_set_name,
+        campaign_id,
+        campaign_name,
         attribution_setting,
         reach,
         impressions,
         link_clicks,
         amount_spent,
+        result_type,
+        frequency,
+        post_engagements,
+        views,
+        viewers,
         total_messaging_contacts,
         results,
         cost_per_result,

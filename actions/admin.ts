@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import bcryptjs from 'bcryptjs'
 import type { Role } from '@/types/index'
 
-const VALID_ROLES: Role[] = ['MARKETING_MANAGER', 'SALES_DIRECTOR', 'BUSINESS_OWNER']
+const VALID_ROLES: Role[] = ['MARKETING_MANAGER', 'MARKETING_TEAM', 'BUSINESS_OWNER']
 
 async function requireOwner() {
   const session = await auth()

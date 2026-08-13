@@ -22,6 +22,8 @@ export async function upsertPosts(records: PostRecord[]): Promise<UpsertCounts> 
       shares: record.shares,
       views: record.views,
       engagement_rate: record.engagement_rate,
+      duration_sec: record.duration_sec,
+      avg_seconds_viewed: record.avg_seconds_viewed,
     }
 
     if (!existing) {
