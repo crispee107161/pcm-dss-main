@@ -1,6 +1,6 @@
 # Security Assessment — PC Merchandise Decision Support System
 
-**Assessment date:** 2026-07-27
+**Assessment date:** 2026-07-27 (findings and fixes below); **reviewed for currency:** 2026-08-15 — see note at end of §3.5, updated role list in §1, new §3.7 (idle-timeout limitation), and updated §6 (credential rotation status)
 **System:** PCM-DSS (Next.js 16 / React 19 / TypeScript / Prisma / Neon PostgreSQL)
 **Scope:** Full application — authentication, authorization, data handling, file upload, AI integration, dependencies, configuration
 **Methodology:** Manual source review against the OWASP Top 10 (2021), cross-referenced with automated dependency scanning (`npm audit`) and the project's own prior fix history (`.claude/SECURITY_FIXES.md`)
@@ -11,7 +11,7 @@ This document is written to be handed in as part of a security audit assignment.
 
 ## 1. System Overview
 
-PCM-DSS is a role-gated internal dashboard used to analyze Facebook ad and page performance data for a PC merchandise business. Three fixed roles — `BUSINESS_OWNER`, `MARKETING_MANAGER`, `SALES_DIRECTOR` — each see only their own dashboard. Users upload CSV exports, the system runs statistical analysis (correlation, regression, forecasting) server-side, and an AI assistant (Groq API) answers natural-language questions about the data.
+PCM-DSS is a role-gated internal dashboard used to analyze Facebook ad and page performance data for a PC merchandise business. Three fixed roles — `BUSINESS_OWNER`, `MARKETING_MANAGER`, `MARKETING_TEAM` — each see only their own dashboard. (Note: the role model changed in the 2026-08-12 MVP v2 respec — `SALES_DIRECTOR` was removed and `MARKETING_TEAM` was added; `MARKETING_MANAGER` and `MARKETING_TEAM` share the `/dashboard/marketing` route tree, gated per-page rather than by middleware. The access-control analysis in §5/A01 below still holds — role checks are still enforced at all three layers — only the role names changed.) Users upload CSV exports, the system runs statistical analysis (correlation, regression, forecasting) server-side, and an AI assistant (Groq API) answers natural-language questions about the data.
 
 Because the system holds internal business data (ad spend, sales figures, follower counts) and login credentials for a small, fixed set of staff, the realistic threat model is: **an unauthenticated outsider trying to get in**, and **a legitimate lower-privilege user trying to see data outside their role**. There is no public user registration and no payment processing, so several OWASP categories (e.g., broken object-level authorization across thousands of tenants) don't meaningfully apply — the review focuses on what's actually exposed.
 
@@ -88,16 +88,16 @@ This directly affects the authentication path this application relies on for eve
 
 ### 3.5 Vulnerable and Outdated Components — Remaining `npm audit` findings (Low, accepted) — **Triaged, not fixed**
 
-After the `next-auth` upgrade, `npm audit` reports 8 remaining findings (1 low, 4 moderate, 3 high):
+As of the 2026-08-15 currency review, `npm audit` reports 9 findings (2 moderate, 7 high) — the specific packages have churned since the original 2026-07-27 pass (dependency versions move on every `npm install`), but the shape of the finding is unchanged: every one of them traces to development tooling, none to code that runs in the deployed app.
 
 | Package | Advisory | Why it's low real-world risk here |
 |---|---|---|
-| `find-my-way` (via `@prisma/dev` → `prisma`) | HTTP/2 DDoS | Only used by Prisma's local dev CLI, never runs in the deployed app |
-| `@hono/node-server` (via `@modelcontextprotocol/sdk` → `shadcn`) | Path traversal on Windows | Only used by the `shadcn` CLI tool during development, not shipped or served |
-| `esbuild` | Arbitrary file read via dev server | Only active when running a local dev server, not in production builds |
-| `valibot` | `flatten()` throws on inherited property names | Transitive dev dependency, not exercised by application code |
+| `hono` / `@hono/node-server` (via `@modelcontextprotocol/sdk` → `shadcn`) | ReDoS in CORS middleware, SSR-output cross-user leak, header-stripping bypass, algorithmic-complexity DoS | Only used by the `shadcn` CLI tool during development, not shipped or served |
+| `js-yaml` (via `cosmiconfig` → `shadcn`) | Quadratic CPU consumption in `!!omap` resolution | Same `shadcn` CLI dev-tooling chain, not exercised by the running app |
+| `nanoid` (via `postcss` → `@tailwindcss/postcss`) | Custom generators can loop indefinitely when size is zero | Build-time CSS tooling only, no runtime code path uses it |
+| `valibot` (via `@prisma/dev` → `prisma`) | `record()` issue paths can make `flatten()` throw for inherited property names | Only used by Prisma's local dev CLI, never runs in the deployed app |
 
-All four sit in **developer tooling**, not code that runs when the deployed app serves a request. Fixing the `shadcn`/`@hono` chain requires `npm audit fix --force`, which downgrades `shadcn` to a breaking major version for no production security benefit. Recommendation: leave as-is, re-check after the next routine `npm install`, and mention in a write-up that dev-only vulnerable dependencies were identified and consciously deprioritized rather than overlooked.
+All four chains sit in **developer tooling** (`shadcn` CLI, PostCSS build pipeline, Prisma dev CLI), not code that runs when the deployed app serves a request — the same conclusion as the original 2026-07-27 pass, just against a refreshed dependency snapshot. Fixing them requires `npm audit fix --force`, which pulls in breaking major-version bumps (e.g. `shadcn`) for no production security benefit. Recommendation: leave as-is, re-check after the next routine `npm install`, and re-verify the "dev-only" classification each time rather than assuming it's stable — these package names will keep changing as transitive deps update.
 
 ---
 
@@ -117,6 +117,18 @@ All four sit in **developer tooling**, not code that runs when the deployed app 
 - Added `export const runtime = 'nodejs'` and `export const maxDuration = 60`, plus an explicit 30s timeout on `page.goto`, so a hung print page fails fast instead of silently consuming the whole function budget.
 
 Note: Section 5's "no `child_process` usage anywhere in application code" no longer holds — Puppeteer spawns a Chromium child process by design for this feature. That line has been corrected below rather than left inaccurate.
+
+---
+
+### 3.7 Identification and Authentication Failures — Idle-timeout is a client-side-only control (Low) — **Documented, not fixed**
+
+**Location:** `contexts/IdleTimeoutContext.tsx`, `lib/auth.ts`, `middleware.ts`, `actions/auth.ts`, `app/dashboard/layout.tsx`
+
+**What exists:** `IdleTimeoutContext.tsx` implements a 15-minute inactivity auto-logout (`IDLE_TIMEOUT_MS = 15 * 60 * 1000`) with a 60-second warning dialog (`WARNING_BEFORE_MS`) before it fires. Idle is detected via `window` listeners for `mousemove`, `mousedown`, `keydown`, `touchstart`, `touchmove`, `wheel`, and a capture-phase `scroll` listener (added specifically because scroll from inner overflow containers doesn't bubble to `window`). A `BroadcastChannel` (`pcm-dss-idle-timeout`) synchronizes activity resets and propagates logout across open tabs. It wraps every route under `/dashboard/*` via `app/dashboard/layout.tsx`; the login page and the `/api/reports/[role]/{csv,pdf}` export routes are outside it. When the timer fires, it calls the `idleLogoutAction` Server Action (`actions/auth.ts`), which runs `signOut({ redirect: false })` — this genuinely clears the session cookie server-side, not just a client-side redirect.
+
+**The limitation:** *detection* is entirely client-side. The timer only exists inside a mounted React component — nothing server-side records when a user was last active. `lib/auth.ts` uses a JWT session strategy with a flat `maxAge: 60 * 60 * 8` (8 hours) and no `updateAge`/`lastActivity` claim. Consequently, an attacker who has exfiltrated a session cookie, or a user who disables JavaScript or closes the tab before the 15-minute timer fires, is unaffected by this control — **the session cookie remains valid for the full 8 hours regardless of inactivity.** The user-facing copy in `components/login/SessionNotice.tsx` ("You were signed out after 15 minutes of inactivity") is accurate for the normal in-browser path but should not be read as a guarantee against cookie theft.
+
+**Why this is being accepted rather than fixed right now:** the control's actual purpose is mitigating an unattended-workstation scenario — a shared or unlocked office machine left logged into a dashboard showing ad-spend data — and it works as intended for that threat. It was never intended as a session-hijacking defense; cookie theft is separately mitigated by TLS/HSTS and the already-reduced 8-hour `maxAge`. A real fix would add a `lastActivity` claim written in the `jwt` callback in `lib/auth.ts`, a staleness check in `middleware.ts` (which currently reads the JWT via `getToken` but cannot re-sign it — refreshing the timestamp would need either a `Set-Cookie` re-encode in middleware or a client-driven session `update()` heartbeat), and a matching update to `types/next-auth.d.ts`. This touches the live auth path of a system still under active development, so it's deferred rather than rushed in; documenting the real behavior here is the safer near-term action.
 
 ---
 
@@ -160,13 +172,14 @@ The previously logged `OPEN-001` ("no rate limiting on any endpoint") is now sta
 
 | # | Item | Severity | Status | Notes |
 |---|---|---|---|---|
-| 1 | Live Neon DB password, `AUTH_SECRET`, and seed passwords sit in plaintext in the developer's local `.env` | Medium | **Open — action needed by project owner, not a code fix** | Not committed to git, but has been read/handled outside the app process. Recommend rotating the Neon password, `AUTH_SECRET`, and `GROQ_API_KEY`, then updating the values in the hosting provider's environment variable settings. |
-| 2 | Seed accounts may still hold the placeholder `password123` if the seed script was ever run against production before `SEED_*_PASSWORD` env vars existed | Medium | **Open — action needed by project owner** | Log into `/dashboard/owner/administration` and reset each seeded account's password if there's any doubt. |
+| 1 | Live Neon DB password, `AUTH_SECRET`, and seed passwords sit in plaintext in the developer's local `.env` | Medium | **Deferred — scheduled before deployment** | Not committed to git, but has been read/handled outside the app process (see `CREDENTIAL-ROTATION-CHECKLIST.md`, which notes the seed passwords were printed in a chat session on 2026-08-02). Rotation is deliberately deferred, not skipped: the system is still under active development, and rotating `AUTH_SECRET` invalidates every session while rotating `DATABASE_URL` breaks the running dev environment — both are disruptive mid-build for no security benefit until the system is closer to deployment. Tracked step-by-step in `CREDENTIAL-ROTATION-CHECKLIST.md`; every step is currently unchecked. Must be completed, in order, before go-live. |
+| 2 | Seed accounts may still hold the placeholder `password123` if the seed script was ever run against production before `SEED_*_PASSWORD` env vars existed | Medium | **Deferred — resolved as a side effect of item 1** | `CREDENTIAL-ROTATION-CHECKLIST.md` step 5 notes this is moot once step 1 (fresh `resetPassword` for all three accounts) is completed — no separate action needed. |
 | 3 | In-memory rate limiter (`lib/rate-limit.ts`) does not share state across multiple server instances | Low | **Accepted for current scale** | Fine for a single-instance deployment; if this app scales to multiple concurrent instances, migrate to a shared store (Redis/Upstash) as already noted in the code's own comments. |
 | 4 | `next-auth` remains on a pre-1.0 beta release line | Low | **Accepted, monitored** | Now on the patched beta and pinned exactly. Auth.js v5 has not reached stable; worth revisiting when it does. |
 | 5 | Dev-tooling-only `npm audit` findings (Section 3.5) | Low | **Accepted** | Do not affect the deployed application. |
+| 6 | Idle-timeout auto-logout is a client-side-only control with no server-side idle enforcement | Low | **Documented, accepted** | See §3.7. A stolen/replayed session cookie is unaffected by the 15-minute UI timer and remains valid for the full 8-hour `maxAge`. Accepted given the control's actual threat model (unattended workstation, not cookie theft); a server-side follow-up is scoped but deferred. |
 
-Items 1 and 2 are one-time manual actions for the project owner (credential rotation), not code changes, and were intentionally left out of this review's code fixes per instruction — they should still be completed before this system is considered production-ready.
+Items 1 and 2 are one-time manual actions for the project owner (credential rotation) rather than code changes. They are being deliberately deferred while the system is under active development — not overlooked — and are tracked with concrete steps in `CREDENTIAL-ROTATION-CHECKLIST.md`. They must be completed before this system is considered production-ready; rotation should happen as one of the last steps before deployment, not on an open-ended timeline.
 
 ---
 
@@ -176,4 +189,4 @@ For a system of this scope — an internal, role-gated analytics dashboard with 
 
 The issues found during this assessment were concrete and fixable, and all of the code-level ones have been fixed as part of this review: an accidental password-hash leak via a missing Prisma `select`, a stray unauthenticated executable in the public folder, a rate-limiter bypass path, and — found only because dependency scanning was run rather than skipped — a live critical vulnerability in the authentication library itself. That last one is worth highlighting: manual code review alone would not have caught it, which is exactly why `npm audit` (or an equivalent SCA tool) belongs in any real security review process, not just a manual read-through.
 
-What remains open is credential rotation — a manual, one-time operational step rather than a code defect — and a small set of dev-tooling-only dependency advisories that don't reach the production runtime. With credential rotation completed, this system would reasonably be called production-ready for its actual scale and threat model.
+What remains open is credential rotation — a manual, one-time operational step, deliberately deferred until closer to deployment rather than a code defect — the client-side-only idle-timeout limitation documented in §3.7, and a small set of dev-tooling-only dependency advisories that don't reach the production runtime. With credential rotation completed before go-live, this system would reasonably be called production-ready for its actual scale and threat model; the idle-timeout gap is accepted at that point too, given the modest threat it's meant to address.
