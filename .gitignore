@@ -53,6 +53,9 @@ dev.db
 # Real client CSV exports (NDA data, DV-PIVOT-PLAN.md)
 /data/
 
+# Generated script output (e.g. scripts/fr15-deliverables-dump.ts)
+/scripts/output/
+
 .vercel
 
 # Claude Code internal files (plans, reviews, security docs)
