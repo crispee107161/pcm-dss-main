@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, Suspense } from 'react'
 import type { KeyboardEvent } from 'react'
+import { useTheme } from 'next-themes'
 import { loginAction } from '@/actions/auth'
 import { SessionNotice } from '@/components/login/SessionNotice'
 import { Button } from '@/components/ui/button'
@@ -12,9 +13,37 @@ export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
   const [showPassword, setShowPassword] = useState(false)
   const [capsLock, setCapsLock] = useState(false)
-  const [darkMode, setDarkMode] = useState(true)
+  // Local toggle, scoped to this page (see the div className below) — but its
+  // *default* should still follow the app-wide next-themes preference rather
+  // than being hardcoded, so a user who set the app to light doesn't land on
+  // a dark login screen. next-themes applies the resolved theme's class to
+  // <html> before paint (via its blocking inline script), so reading that
+  // class synchronously in the useState initializer avoids a light-flash for
+  // a dark-mode user. That read is necessarily server/client-divergent
+  // (SSR has no `document`), so the wrapper div below carries
+  // suppressHydrationWarning deliberately — same escape hatch next-themes'
+  // own docs recommend for this exact "themed root node" problem. Everything
+  // else that depends on darkMode (the toggle button's label/icon) instead
+  // gates on `mounted`, which is a plain useState(false) with no SSR/client
+  // divergence, so those stay hydration-safe without needing the same
+  // suppression, following the pattern already used in ThemeToggle.tsx.
+  const { resolvedTheme } = useTheme()
+  const [darkMode, setDarkMode] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  )
+  const [mounted, setMounted] = useState(false)
   const [portalNode, setPortalNode] = useState<HTMLDivElement | null>(null)
   const emailRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (resolvedTheme) {
+      setDarkMode(resolvedTheme === 'dark')
+    }
+  }, [resolvedTheme])
 
   useEffect(() => {
     if (state?.error) {
@@ -27,8 +56,12 @@ export default function LoginPage() {
   }
 
   return (
-    // Scoped to this page only: default dark regardless of the app-wide
-    // next-themes preference (see components/nav/ThemeToggle.tsx for that).
+    // Scoped to this page only, defaulting to the app-wide next-themes
+    // preference (see the darkMode initializer above; components/nav/
+    // ThemeToggle.tsx is the app-wide toggle this mirrors on first paint).
+    // suppressHydrationWarning: darkMode's initializer reads <html>'s class
+    // synchronously to avoid a theme flash, which is intentionally
+    // server/client-divergent — see the comment above.
     // `text-foreground` is load-bearing, not redundant with `bg-background`:
     // body sets `color: var(--foreground)` globally (globals.css), which
     // resolves once at <body> using the *ancestor* theme and is then
@@ -40,7 +73,10 @@ export default function LoginPage() {
     // state to actually win over a possible ancestor `.dark` on <html> — see
     // the `.theme-light` rule in globals.css for why a plain removal isn't
     // enough.
-    <div className={`${darkMode ? 'dark' : 'theme-light'} relative flex min-h-dvh flex-col items-center justify-center gap-6 bg-background text-foreground p-6 md:p-10`}>
+    <div
+      suppressHydrationWarning
+      className={`${darkMode ? 'dark' : 'theme-light'} relative flex min-h-dvh flex-col items-center justify-center gap-6 bg-background text-foreground p-6 md:p-10`}
+    >
       {/* Portal target for SessionNotice — must live inside this themed
           subtree; portaling to document.body would render it against the
           app's ancestor theme instead of this page's local one. */}
@@ -158,11 +194,13 @@ export default function LoginPage() {
       <button
         type="button"
         onClick={() => setDarkMode(v => !v)}
-        aria-label={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}
-        title={darkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+        aria-label={mounted ? (darkMode ? 'Switch to light theme' : 'Switch to dark theme') : 'Toggle theme'}
+        title={mounted ? (darkMode ? 'Switch to light theme' : 'Switch to dark theme') : undefined}
         className="absolute right-4 top-4 md:right-6 md:top-6 w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--background)]"
       >
-        {darkMode ? (
+        {!mounted ? (
+          <span className="w-4 h-4" />
+        ) : darkMode ? (
           <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
           </svg>
