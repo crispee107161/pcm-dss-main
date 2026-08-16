@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 export function PrintButton({ role }: { role: string }) {
   const [loading, setLoading] = useState(false)
@@ -30,12 +31,7 @@ export function PrintButton({ role }: { role: string }) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className="bg-neutral-800 hover:bg-neutral-900 disabled:bg-neutral-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors inline-flex items-center gap-2"
-    >
+    <Button type="button" size="lg" className="px-4" onClick={handleClick} disabled={loading}>
       {loading && (
         <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -43,6 +39,6 @@ export function PrintButton({ role }: { role: string }) {
         </svg>
       )}
       {loading ? 'Generating PDF…' : 'Export PDF'}
-    </button>
+    </Button>
   )
 }

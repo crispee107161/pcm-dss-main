@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 export function CsvExportButton({ role }: { role: string }) {
   const [loading, setLoading] = useState(false)
@@ -30,13 +31,8 @@ export function CsvExportButton({ role }: { role: string }) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className="border border-neutral-300 hover:bg-neutral-100 disabled:opacity-60 text-neutral-800 rounded-lg px-4 py-2 text-sm font-medium transition-colors inline-flex items-center gap-2"
-    >
+    <Button type="button" variant="secondary" size="lg" className="px-4" onClick={handleClick} disabled={loading}>
       {loading ? 'Generating CSV…' : 'Export CSV'}
-    </button>
+    </Button>
   )
 }
