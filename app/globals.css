@@ -215,6 +215,11 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-chart-10: var(--chart-10);
+  --color-chart-9: var(--chart-9);
+  --color-chart-8: var(--chart-8);
+  --color-chart-7: var(--chart-7);
+  --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -223,6 +228,10 @@
   --color-status-positive: var(--status-positive);
   --color-status-warning: var(--status-warning);
   --color-status-negative: var(--status-negative);
+  --color-rank-gold: var(--rank-gold);
+  --color-rank-gold-foreground: var(--rank-gold-foreground);
+  --color-rank-bronze: var(--rank-bronze);
+  --color-rank-bronze-foreground: var(--rank-bronze-foreground);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -313,6 +322,20 @@
   --status-positive: #067347;
   --status-warning: #B54708;
   --status-negative: #C4320A;
+
+  /* RankBadge medal colors (1st/3rd place — 2nd place reuses gray-300/800,
+     already token-driven). Defined once here (not per .dark/.theme-light
+     block) since :root's custom properties inherit down through .dark on
+     <html> for any property .dark doesn't itself redeclare (unlike
+     --chart-6..10, which ARE redeclared per theme block — see :root, .dark,
+     .theme-light, .print-report-light below). Gold is deliberately
+     yellow-hued (not amber/orange) so it reads distinctly from bronze
+     rather than as another shade of brown; both pass 4.5:1+ contrast
+     against white foreground text (gold ~5.1:1, bronze ~7.3:1). */
+  --rank-gold: #8A6900;
+  --rank-gold-foreground: #FFFFFF;
+  --rank-bronze: #9A3412;
+  --rank-bronze-foreground: #FFFFFF;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #0F090B;
   --sidebar-primary: #BB061E;

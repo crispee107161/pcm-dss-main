@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useState } from 'react'
 import type { BudgetReallocationResult } from '@/lib/stats/budget-reallocation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 function formatPHP(v: number) {
@@ -69,19 +70,22 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
           Reallocation comparison
         </p>
-        <span className="text-xs text-muted-foreground">{pct}% of Q4 spend</span>
+        <span className="text-sm font-bold text-foreground">{pct}% of Q4 spend</span>
       </div>
 
-      <input
-        type="range"
-        min={0}
-        max={100}
-        step={5}
-        value={pct}
-        onChange={e => setPct(Number(e.target.value))}
-        className="w-full accent-primary cursor-pointer"
-        aria-label="Percentage of Q4 spend to compare at Q1's rate"
-      />
+      <div className="space-y-1.5">
+        <p className="text-xs text-muted-foreground">Drag to compare a different share of Q4&apos;s spend</p>
+        <Slider
+          min={0}
+          max={100}
+          step={5}
+          stops={[0, 25, 50, 75, 100]}
+          value={pct}
+          onValueChange={next => setPct(next)}
+          formatValue={v => `${v}%`}
+          aria-label="Percentage of Q4 spend to compare at Q1's rate"
+        />
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
         <div>

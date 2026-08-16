@@ -39,23 +39,111 @@ function useChart() {
   return context
 }
 
+// Placeholder shown instead of the chart when `state` is set on
+// `ChartContainer`. Kept private — pages opt in via the `state` prop rather
+// than reaching for this directly, so every chart gets a consistent
+// empty/loading/error treatment without reinventing one per page.
+function ChartStatePlaceholder({ state }: { state: "loading" | "error" | "empty" }) {
+  if (state === "loading") {
+    return (
+      <div className="flex h-full w-full flex-col justify-end gap-2 p-4" role="status" aria-label="Loading chart data">
+        <div className="flex flex-1 items-end gap-2">
+          {[40, 70, 55, 85, 60, 95, 45].map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 animate-pulse rounded-t-sm bg-muted"
+              style={{ height: `${h}%` }}
+            />
+          ))}
+        </div>
+        <div className="h-2 w-24 animate-pulse rounded-full bg-muted" />
+      </div>
+    )
+  }
+
+  if (state === "error") {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center" role="alert">
+        <svg
+          className="h-6 w-6 text-status-negative"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+          />
+        </svg>
+        <p className="text-xs text-muted-foreground">Couldn&apos;t load chart data. Please try again.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center">
+      <svg
+        className="h-6 w-6 text-muted-foreground"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M3 3v18h18M7 15l4-4 3 3 5-6"
+        />
+      </svg>
+      <p className="text-xs text-muted-foreground">No data yet.</p>
+    </div>
+  )
+}
+
+type ChartRechartsChildren = React.ComponentProps<
+  typeof RechartsPrimitive.ResponsiveContainer
+>["children"]
+
+// Not discriminated on `state`: a strict `children: never` on the state
+// branch reads well but rejects the realistic call site
+// `state={isLoading ? "loading" : undefined}` (TS won't distribute a
+// non-literal union across the two branches), forcing callers into a cast
+// or duplicated JSX. `children` is just optional instead — when `state` is
+// set, ChartContainer ignores it and renders the placeholder.
+type ChartContainerProps = React.ComponentProps<"div"> & {
+  config: ChartConfig
+  initialDimension?: {
+    width: number
+    height: number
+  }
+  /**
+   * Plain-language description of the chart's key takeaway. Rendered as the
+   * chart root's accessible name (`role="img"` + `aria-label`) so screen
+   * reader users get a text equivalent of the chart's insight. Callers own
+   * the copy — this component does not attempt to auto-summarize chart data.
+   */
+  srSummary?: string
+  /**
+   * When set, renders a placeholder (skeleton for loading, message + icon
+   * for error/empty) in place of the chart. Optional — omit for existing
+   * call sites, which render the chart unconditionally.
+   */
+  state?: "loading" | "error" | "empty"
+  children?: ChartRechartsChildren
+}
+
 function ChartContainer({
   id,
   className,
   children,
   config,
   initialDimension = INITIAL_DIMENSION,
+  state,
+  srSummary,
   ...props
-}: React.ComponentProps<"div"> & {
-  config: ChartConfig
-  children: React.ComponentProps<
-    typeof RechartsPrimitive.ResponsiveContainer
-  >["children"]
-  initialDimension?: {
-    width: number
-    height: number
-  }
-}) {
+}: ChartContainerProps) {
   const uniqueId = React.useId()
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`
 
@@ -64,6 +152,8 @@ function ChartContainer({
       <div
         data-slot="chart"
         data-chart={chartId}
+        role={srSummary && !state ? "img" : undefined}
+        aria-label={srSummary}
         className={cn(
           "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className
@@ -71,11 +161,15 @@ function ChartContainer({
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer
-          initialDimension={initialDimension}
-        >
-          {children}
-        </RechartsPrimitive.ResponsiveContainer>
+        {state ? (
+          <ChartStatePlaceholder state={state} />
+        ) : (
+          <RechartsPrimitive.ResponsiveContainer
+            initialDimension={initialDimension}
+          >
+            {children}
+          </RechartsPrimitive.ResponsiveContainer>
+        )}
       </div>
     </ChartContext.Provider>
   )
