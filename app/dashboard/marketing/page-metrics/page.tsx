@@ -26,6 +26,7 @@ import {
 } from '@/lib/insights/page-metrics-insight'
 import InsightHeader from '@/components/analytics/InsightHeader'
 import { manilaDayRange } from '@/lib/date-range'
+import { IconChart } from '@/components/nav/icons'
 
 function fmt(date: Date) {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(date))
@@ -193,7 +194,9 @@ export default async function PageMetricsPage({
       {/* Upload guide */}
       {range === null && !hasAnyData && postCount === 0 && (
         <div className="bg-card rounded-2xl card-shadow p-12 text-center mb-8">
-          <div className="text-4xl mb-4">📊</div>
+          <div className="mb-4 flex justify-center text-muted-foreground" aria-hidden="true">
+            <IconChart className="w-10 h-10" />
+          </div>
           <h2 className="text-foreground font-semibold mb-2">No page data uploaded yet</h2>
           <p className="text-muted-foreground text-sm max-w-lg mx-auto mb-6">
             Upload the following files from your Facebook export to unlock all metrics:

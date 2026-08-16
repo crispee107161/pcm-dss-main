@@ -62,9 +62,12 @@ const SPARK_WIDTH = 52
 const SPARK_HEIGHT = 34
 const SPARK_PADDING = 3
 
-// A shape-only trend indicator, not a labeled chart — the KPI value and
-// delta badge already carry the actual numbers, so this is aria-hidden.
-function Sparkline({ points, color }: { points: number[]; color: string }) {
+// A shape-only trend indicator, not a labeled chart — the SVG itself is
+// aria-hidden. When this card also renders a DeltaBadge, that badge already
+// gives screen reader users a direction + magnitude announcement, so adding
+// a second "rising/declining" summary here would just repeat it; the
+// sr-only summary is only emitted when there's no delta to fall back on.
+function Sparkline({ points, color, announce }: { points: number[]; color: string; announce: boolean }) {
   if (points.length < 2) return null
   const min = Math.min(...points)
   const max = Math.max(...points)
@@ -77,10 +80,17 @@ function Sparkline({ points, color }: { points: number[]; color: string }) {
     return `${x.toFixed(1)},${y.toFixed(1)}`
   }).join(' ')
 
+  const first = points[0]
+  const last = points[points.length - 1]
+  const trendLabel = last > first ? 'rising' : last < first ? 'declining' : 'flat'
+
   return (
-    <svg width={SPARK_WIDTH} height={SPARK_HEIGHT} viewBox={`0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}`} className="flex-shrink-0" aria-hidden="true">
-      <polyline points={coords} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <>
+      <svg width={SPARK_WIDTH} height={SPARK_HEIGHT} viewBox={`0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}`} className="flex-shrink-0" aria-hidden="true">
+        <polyline points={coords} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {announce && <span className="sr-only">{points.length}-point trend: {trendLabel}</span>}
+    </>
   )
 }
 
@@ -118,7 +128,7 @@ export function KpiCard({ label, value, sub, delta, deltaLabel, invertSentiment,
           )}
         </div>
         {sparkline && sparkline.length >= 2 && (
-          <Sparkline points={sparkline} color={sparklineColor} />
+          <Sparkline points={sparkline} color={sparklineColor} announce={delta === undefined || delta === null} />
         )}
       </div>
     </Card>

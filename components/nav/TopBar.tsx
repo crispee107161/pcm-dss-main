@@ -123,7 +123,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
           title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
           aria-expanded={expanded}
           aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
-          className="hidden md:flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
+          className="hidden md:flex w-8 h-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
         >
           {expanded ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
         </button>
@@ -132,7 +132,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
         <button
           onClick={onMobileMenuOpen}
           aria-label="Open menu"
-          className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
+          className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
         >
           <Menu01Icon size={16} />
         </button>
@@ -141,7 +141,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
         <nav className="flex items-center gap-1.5 text-sm min-w-0">
           <Link
             href={homeItem?.href ?? '#'}
-            className="text-gray-400 hover:text-primary transition-colors flex-shrink-0"
+            className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
             aria-label="Dashboard home"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -151,7 +151,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
 
           <Link
             href={homeItem?.href ?? '#'}
-            className="text-gray-400 hover:text-gray-600 font-medium transition-[color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="text-muted-foreground hover:text-foreground font-medium transition-[color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
           >
             Home
           </Link>
@@ -159,9 +159,9 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
           <Chevron />
 
           {!isHome ? (
-            <span className="text-gray-800 font-bold truncate">{currentLabel}</span>
+            <span className="text-foreground font-bold truncate">{currentLabel}</span>
           ) : (
-            <span className="text-gray-800 font-bold">Dashboard</span>
+            <span className="text-foreground font-bold">Dashboard</span>
           )}
         </nav>
       </div>
@@ -174,7 +174,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
           aria-pressed={blurred}
           aria-label={blurred ? 'Show sensitive data' : 'Blur sensitive data'}
           title={blurred ? 'Show sensitive data' : 'Blur sensitive data'}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
         >
           {blurred ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,7 +194,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
             aria-haspopup="menu"
             aria-label="Account menu"
             aria-expanded={dropdownOpen}
-            className="flex items-center rounded-full p-0.5 hover:bg-gray-100 transition-[background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="flex items-center rounded-full p-0.5 hover:bg-muted transition-[background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           >
             <Avatar className="w-8 h-8 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
               <AvatarFallback className="bg-crimson-500 text-white text-xs font-bold">{initial}</AvatarFallback>
@@ -209,8 +209,8 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
                   <AvatarFallback className="bg-crimson-500 text-white text-sm font-bold">{initial}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{roleLabel}</p>
-                  <p className="text-xs text-gray-400 truncate">{email}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{roleLabel}</p>
+                  <p className="text-xs text-muted-foreground truncate">{email}</p>
                 </div>
               </div>
 
@@ -218,14 +218,14 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
                 {/* Change password toggle */}
                 <button
                   onClick={() => setChangePwOpen(v => !v)}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left"
                 >
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
                   Change Password
                   <svg
-                    className={`w-3.5 h-3.5 text-gray-400 ml-auto transition-transform ${changePwOpen ? 'rotate-180' : ''}`}
+                    className={`w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform ${changePwOpen ? 'rotate-180' : ''}`}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -237,10 +237,10 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
                   <div>
                     <form action={pwAction} className="px-3 pb-2 pt-1 space-y-2">
                       {pwState?.error && (
-                        <p className="text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-lg px-2 py-1.5">{pwState.error}</p>
+                        <p className="text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-900 rounded-lg px-2 py-1.5">{pwState.error}</p>
                       )}
                       {pwState?.success && (
-                        <p className="text-green-600 dark:text-green-400 text-xs bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-900 rounded-lg px-2 py-1.5">{pwState.success}</p>
+                        <p className="text-green-600 dark:text-green-400 text-xs bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-900 rounded-lg px-2 py-1.5">{pwState.success}</p>
                       )}
                       <Input
                         name="current_password"
@@ -299,7 +299,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
 
 function Chevron() {
   return (
-    <svg className="w-3 h-3 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3 h-3 text-muted-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
   )

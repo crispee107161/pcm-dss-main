@@ -246,17 +246,17 @@ export default function UploadForm() {
         <div
           className={`p-4 rounded-xl border ${
             successCount === 0
-              ? 'bg-red-500/10 border-red-500/30'
-              : 'bg-green-500/10 border-green-500/30'
+              ? 'bg-status-negative/10 border-status-negative/30'
+              : 'bg-status-positive/10 border-status-positive/30'
           }`}
         >
           <div className="flex items-start gap-3">
             {successCount === 0 ? (
-              <svg className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 text-status-negative flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             ) : (
-              <CircleCheckIcon ref={successIconRef} size={20} className="text-green-400 flex-shrink-0 mt-0.5" />
+              <CircleCheckIcon ref={successIconRef} size={20} className="text-status-positive flex-shrink-0 mt-0.5" />
             )}
             <div>
               <p className="font-medium text-sm text-gray-800">

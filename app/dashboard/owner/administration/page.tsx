@@ -39,24 +39,24 @@ export default async function OwnerAdministrationPage() {
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-card rounded-2xl card-shadow p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Total Users</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{users.length}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Users</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{users.length}</p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Business Owners</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Business Owners</p>
+          <p className="text-2xl font-bold text-foreground mt-1">
             {users.filter(u => u.role === 'BUSINESS_OWNER').length}
           </p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Marketing Team Members</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Marketing Team Members</p>
+          <p className="text-2xl font-bold text-foreground mt-1">
             {users.filter(u => u.role === 'MARKETING_TEAM').length}
           </p>
         </div>
         <div className="bg-card rounded-2xl card-shadow p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">Marketing Managers</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Marketing Managers</p>
+          <p className="text-2xl font-bold text-foreground mt-1">
             {users.filter(u => u.role === 'MARKETING_MANAGER').length}
           </p>
         </div>
@@ -67,31 +67,31 @@ export default async function OwnerAdministrationPage() {
 
       {/* Recent upload activity */}
       <div className="bg-card rounded-2xl card-shadow overflow-hidden mt-8">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800">Recent Upload Activity</h2>
-          <span className="text-xs text-gray-500">{totalUploads} total uploads</span>
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <h2 className="font-semibold text-foreground">Recent Upload Activity</h2>
+          <span className="text-xs text-muted-foreground">{totalUploads} total uploads</span>
         </div>
         {recentUploads.length === 0 ? (
-          <p className="text-gray-500 text-sm p-6">No uploads yet.</p>
+          <p className="text-muted-foreground text-sm p-6">No uploads yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Date</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">User</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">File</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Type</th>
-                  <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Status</th>
+                <tr className="bg-secondary">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Date</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">User</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">File</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {recentUploads.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50 border-t border-gray-100">
-                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(log.uploaded_at)}</td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{log.user.email}</td>
-                    <td className="px-4 py-3 text-gray-700 max-w-xs truncate text-xs" title={log.filename}>{log.filename}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{log.upload_type.replace(/_/g, ' ')}</td>
+                  <tr key={log.id} className="hover:bg-secondary/50 border-t border-border">
+                    <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{formatDate(log.uploaded_at)}</td>
+                    <td className="px-4 py-3 text-foreground text-xs">{log.user.email}</td>
+                    <td className="px-4 py-3 text-foreground max-w-xs truncate text-xs" title={log.filename}>{log.filename}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{log.upload_type.replace(/_/g, ' ')}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         log.status === 'SUCCESS' ? 'bg-status-positive/10 text-status-positive' : 'bg-status-negative/10 text-status-negative'

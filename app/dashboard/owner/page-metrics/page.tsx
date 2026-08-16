@@ -42,10 +42,13 @@ function StatCard({ label, value, sub, color = 'text-foreground' }: {
   )
 }
 
+// Owner can't upload (role-gated to Marketing Manager/Team), so the empty
+// state explains who to ask instead of offering a CTA the owner can't act on.
 function EmptyCard({ message }: { message: string }) {
   return (
     <div className="bg-card rounded-2xl border border-dashed border-border p-8 text-center">
-      <p className="text-muted-foreground text-sm">{message}</p>
+      <p className="text-foreground font-semibold mb-1 text-sm">No data yet</p>
+      <p className="text-muted-foreground text-sm max-w-md mx-auto">{message}</p>
     </div>
   )
 }
@@ -254,7 +257,7 @@ export default async function OwnerPageMetricsPage({
             </div>
           </>
         ) : (
-          <EmptyCard message={noDataMessage ?? 'No daily page metric data uploaded yet.'} />
+          <EmptyCard message={noDataMessage ?? 'No data yet — ask your Marketing Manager to upload daily page activity data.'} />
         )}
       </section>
 
@@ -271,7 +274,7 @@ export default async function OwnerPageMetricsPage({
               detail={viewsForecastInsight.detail}
             >
               <p className="text-xs text-muted-foreground">
-                Model: {viewsForecast.method === 'holt-winters' ? 'Holt-Winters triple exponential smoothing (trend + weekly seasonality)' : 'Holt linear (double exponential smoothing) — upload more data to enable the full seasonal model'}.
+                Model: {viewsForecast.method === 'holt-winters' ? 'Holt-Winters triple exponential smoothing (α=0.3, β=0.1, γ=0.3; captures trend + weekly seasonality)' : 'Holt linear (double exponential smoothing) — upload more data to enable the full seasonal model'}.
                 Current level: {viewsForecast.lastLevel.toLocaleString()} views/day.
                 Trained on all uploaded history, not the selected date range.
               </p>
@@ -318,7 +321,7 @@ export default async function OwnerPageMetricsPage({
             </div>
           </>
         ) : (
-          <EmptyCard message={noDataMessage ?? 'No follower history data uploaded yet.'} />
+          <EmptyCard message={noDataMessage ?? 'No data yet — ask your Marketing Manager to upload follower history data.'} />
         )}
       </section>
 
@@ -354,7 +357,7 @@ export default async function OwnerPageMetricsPage({
             </div>
           </>
         ) : (
-          <EmptyCard message={noDataMessage ?? 'No viewer data uploaded yet.'} />
+          <EmptyCard message={noDataMessage ?? 'No data yet — ask your Marketing Manager to upload page viewer data.'} />
         )}
       </section>
 
@@ -386,7 +389,7 @@ export default async function OwnerPageMetricsPage({
               )}
             </div>
           ) : (
-            <EmptyCard message="No gender data uploaded yet." />
+            <EmptyCard message="No data yet — ask your Marketing Manager to upload follower gender data." />
           )}
           {territoryData.length > 0 ? (
             <div className="bg-card rounded-2xl card-shadow p-6">
@@ -400,7 +403,7 @@ export default async function OwnerPageMetricsPage({
               )}
             </div>
           ) : (
-            <EmptyCard message="No territory data uploaded yet." />
+            <EmptyCard message="No data yet — ask your Marketing Manager to upload follower territory data." />
           )}
         </div>
       </section>
