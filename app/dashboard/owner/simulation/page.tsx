@@ -1,10 +1,8 @@
-import { auth } from '@/lib/auth'
-import { redirect } from 'next/navigation'
-import SimulationView from '@/components/analytics/pages/SimulationView'
+import { notFound } from 'next/navigation'
 
-export default async function OwnerSimulationPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'BUSINESS_OWNER') redirect('/login')
-
-  return <SimulationView />
+// Simulation is a cut MVP v2 feature (see CLAUDE.md's Architecture section /
+// mvp.md §5) — unlinked from nav but still reachable by direct URL. Gate it
+// so direct navigation 404s; the underlying view and stats stay on disk.
+export default function OwnerSimulationPage() {
+  notFound()
 }

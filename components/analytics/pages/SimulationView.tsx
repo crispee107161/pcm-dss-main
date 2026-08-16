@@ -1,3 +1,7 @@
+// Cut from MVP v2 scope (see CLAUDE.md "Cut features" and mvp.md §5) — the
+// owner/simulation and marketing/simulation routes that rendered this now
+// call notFound() unconditionally, so this component has no live callers.
+// Kept on disk deliberately, not dead code to delete on sight.
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import WhatIfSimulator from '@/components/analytics/WhatIfSimulator'
