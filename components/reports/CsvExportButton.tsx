@@ -31,7 +31,7 @@ export function CsvExportButton({ role }: { role: string }) {
   }
 
   return (
-    <Button type="button" variant="secondary" size="lg" className="px-4" onClick={handleClick} disabled={loading}>
+    <Button type="button" variant="secondary" size="lg" className="px-4 border border-border" onClick={handleClick} disabled={loading}>
       {loading ? 'Generating CSV…' : 'Export CSV'}
     </Button>
   )
