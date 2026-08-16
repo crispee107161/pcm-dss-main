@@ -13,70 +13,10 @@ import {
   MIN_INQUIRIES_FOR_CPI,
 } from '@/lib/stats/campaign-rankings'
 import MethodologyNote from '@/components/analytics/MethodologyNote'
+import { RankingTable, type RankRow } from '@/components/analytics/RankingTable'
 
 function formatPHP(value: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(value)
-}
-
-function formatDate(date: Date | null) {
-  if (!date) return '—'
-  return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
-}
-
-function RankBadge({ rank }: { rank: number }) {
-  const base = 'inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold'
-  if (rank === 1) return <span className={`${base} bg-yellow-400 text-white`}>1</span>
-  if (rank === 2) return <span className={`${base} bg-gray-300 text-gray-800`}>2</span>
-  if (rank === 3) return <span className={`${base} bg-orange-600 text-white`}>3</span>
-  return <span className={`${base} bg-gray-100 text-gray-500`}>{rank}</span>
-}
-
-interface RankRow {
-  name: string
-  adSetName: string
-  value: number
-  reportingStarts: Date | null
-  reportingEnds: Date | null
-}
-
-function RankingTable({ rows, valueLabel, formatValue, emptyMessage }: {
-  rows: RankRow[]
-  valueLabel: string
-  formatValue: (v: number) => string
-  emptyMessage?: string
-}) {
-  if (rows.length === 0) {
-    return <p className="text-gray-500 text-sm p-6">{emptyMessage ?? 'No data available. Upload an Ads CSV first.'}</p>
-  }
-  return (
-    <div className="table-scroll rounded-lg">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-gray-50">
-            <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 w-10">#</th>
-            <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3">Ad Name</th>
-            <th className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">Period</th>
-            <th className="text-right text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 whitespace-nowrap">{valueLabel}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className="hover:bg-gray-50 border-t border-gray-100">
-              <td className="px-4 py-3"><RankBadge rank={i + 1} /></td>
-              <td className="px-4 py-3">
-                <div className="font-medium text-gray-800 text-sm max-w-xs truncate" title={row.name}>{row.name}</div>
-                <div className="text-xs text-muted-foreground truncate" title={row.adSetName}>{row.adSetName}</div>
-              </td>
-              <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                {formatDate(row.reportingStarts)} – {formatDate(row.reportingEnds)}
-              </td>
-              <td className="px-4 py-3 text-right font-semibold text-gray-800 whitespace-nowrap">{formatValue(row.value)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
 }
 
 export default async function OwnerCampaignRankingsPage({
@@ -128,18 +68,12 @@ export default async function OwnerCampaignRankingsPage({
     prisma.ad.count({ where: { ...adWhere, total_messaging_contacts: { gt: 0 } } }),
   ])
 
-  const bestCostPerInquiry: RankRow[] = rankByCostPerInquiry(rankingPoolAds).map(r => ({
-    name: r.name, adSetName: r.adSetName, value: r.value,
-    reportingStarts: r.reportingStarts, reportingEnds: r.reportingEnds,
-  }))
-  const bestCtr: RankRow[] = rankByCtr(rankingPoolAds).map(r => ({
-    name: r.name, adSetName: r.adSetName, value: r.value,
-    reportingStarts: r.reportingStarts, reportingEnds: r.reportingEnds,
-  }))
-  const bestCostPerClick: RankRow[] = rankByCostPerClick(rankingPoolAds).map(r => ({
-    name: r.name, adSetName: r.adSetName, value: r.value,
-    reportingStarts: r.reportingStarts, reportingEnds: r.reportingEnds,
-  }))
+  // rankBy* already returns RankRow's exact shape (RankRow = RankedAd), so
+  // no remapping is needed here — unlike bySpend/byInquiries/byReach below,
+  // which do rename Prisma's snake_case selection into RankRow's fields.
+  const bestCostPerInquiry: RankRow[] = rankByCostPerInquiry(rankingPoolAds)
+  const bestCtr: RankRow[] = rankByCtr(rankingPoolAds)
+  const bestCostPerClick: RankRow[] = rankByCostPerClick(rankingPoolAds)
 
   const bySpend: RankRow[] = topSpendCandidates.map(a => ({
     name: a.ad_name, adSetName: a.ad_set_name, value: a.amount_spent,
