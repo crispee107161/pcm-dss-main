@@ -79,7 +79,7 @@ export async function addKeyword(
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       return { error: `"${word}" is already a keyword.` }
     }
-    throw err
+    return { error: 'Something went wrong. Please try again.' }
   }
 
   revalidatePath('/dashboard/marketing/keywords')
@@ -239,17 +239,17 @@ Return ONLY valid JSON, no explanation:
   return { ok: true, suggestions }
 }
 
-export async function addKeywordsBulk(items: { word: string; categoryId: number }[]): Promise<void> {
+export async function addKeywordsBulk(items: { word: string; categoryId: number }[]): Promise<{ error?: string }> {
   const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') throw new Error('Unauthorized')
-  if (items.length === 0) return
-  if (items.length > 100) throw new Error('Too many keywords in a single bulk insert (max 100).')
+  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') return { error: 'Unauthorized' }
+  if (items.length === 0) return {}
+  if (items.length > 100) return { error: 'Too many keywords in a single bulk insert (max 100).' }
 
   const sanitized = items
     .map(i => ({ word: i.word.trim(), category_id: i.categoryId }))
     .filter(i => i.word.length > 1 && i.word.length <= 100)
 
-  if (sanitized.length === 0) return
+  if (sanitized.length === 0) return {}
 
   await prisma.keyword.createMany({
     data: sanitized,
@@ -257,6 +257,7 @@ export async function addKeywordsBulk(items: { word: string; categoryId: number 
   })
 
   revalidatePath('/dashboard/marketing/keywords')
+  return {}
 }
 
 export async function deleteKeyword(
@@ -280,7 +281,7 @@ export async function deleteKeyword(
     // P2025: row already gone (double-submit, second tab) — treat as a no-op
     // rather than surfacing an error for a delete that already succeeded.
     if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025')) {
-      throw err
+      return { error: 'Something went wrong. Please try again.' }
     }
   }
 

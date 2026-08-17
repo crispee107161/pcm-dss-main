@@ -155,70 +155,78 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return { ok: false, reason: 'AI classification is not configured for this deployment.', retryable: false }
 
-  const posts = await prisma.facebookPost.findMany({
-    where: { category_llm: null },
-    select: { id: true, post_id: true, post_type: true, title: true, description: true },
-  })
-  if (posts.length === 0) return { ok: true, classified: 0, unclassified: 0, batchesRun: 0, batchesRemaining: 0 }
+  // Wraps the DB calls below (findMany, per-batch update/create) so a
+  // genuine infra failure (lost connection mid-run) returns a result this
+  // action's caller can display, instead of throwing uncaught into the
+  // error boundary — mirrors actions/upload.ts's top-level try/catch.
+  try {
+    const posts = await prisma.facebookPost.findMany({
+      where: { category_llm: null },
+      select: { id: true, post_id: true, post_type: true, title: true, description: true },
+    })
+    if (posts.length === 0) return { ok: true, classified: 0, unclassified: 0, batchesRun: 0, batchesRemaining: 0 }
 
-  const batchPosts: BatchPost[] = posts.map((p) => ({
-    id: p.id,
-    post_id: p.post_id,
-    post_type: p.post_type,
-    caption: resolveCaption(p.title, p.description)?.normalize('NFKC') ?? '',
-  }))
-  const batches = chunk(batchPosts, BATCH_SIZE)
+    const batchPosts: BatchPost[] = posts.map((p) => ({
+      id: p.id,
+      post_id: p.post_id,
+      post_type: p.post_type,
+      caption: resolveCaption(p.title, p.description)?.normalize('NFKC') ?? '',
+    }))
+    const batches = chunk(batchPosts, BATCH_SIZE)
 
-  let classified = 0
-  let unclassified = 0
-  let batchesRun = 0
+    let classified = 0
+    let unclassified = 0
+    let batchesRun = 0
 
-  for (const batch of batches) {
-    let outcome: BatchOutcome
-    try {
-      outcome = await classifyBatch(apiKey, batch)
-    } catch (error) {
-      if (error instanceof GroqRateLimitError) {
-        revalidatePath('/dashboard/marketing/categorize')
-        revalidatePath('/dashboard/owner/categorize')
-        return {
-          ok: false,
-          reason: `AI classification is cooling down after recent use — ${batchesRun}/${batches.length} batches completed.`,
-          retryable: true,
-          retryAfterSeconds: error.retryAfterSeconds,
+    for (const batch of batches) {
+      let outcome: BatchOutcome
+      try {
+        outcome = await classifyBatch(apiKey, batch)
+      } catch (error) {
+        if (error instanceof GroqRateLimitError) {
+          revalidatePath('/dashboard/marketing/categorize')
+          revalidatePath('/dashboard/owner/categorize')
+          return {
+            ok: false,
+            reason: `AI classification is cooling down after recent use — ${batchesRun}/${batches.length} batches completed.`,
+            retryable: true,
+            retryAfterSeconds: error.retryAfterSeconds,
+          }
+        }
+        // Non-quota failure (network error, malformed response after retry) —
+        // mark this batch UNCLASSIFIED and keep going with the rest.
+        outcome = {
+          labels: new Map(batch.map((b) => [b.id, 'UNCLASSIFIED' as CategoryLabel])),
+          rawResponse: `(request failed: ${error instanceof Error ? error.message : String(error)})`,
+          succeeded: false,
         }
       }
-      // Non-quota failure (network error, malformed response after retry) —
-      // mark this batch UNCLASSIFIED and keep going with the rest.
-      outcome = {
-        labels: new Map(batch.map((b) => [b.id, 'UNCLASSIFIED' as CategoryLabel])),
-        rawResponse: `(request failed: ${error instanceof Error ? error.message : String(error)})`,
-        succeeded: false,
-      }
-    }
 
-    await Promise.all(
-      [...outcome.labels.entries()].map(([id, label]) =>
-        prisma.facebookPost.update({ where: { id }, data: { category_llm: label } })
+      await Promise.all(
+        [...outcome.labels.entries()].map(([id, label]) =>
+          prisma.facebookPost.update({ where: { id }, data: { category_llm: label } })
+        )
       )
-    )
-    await prisma.llmClassificationRun.create({
-      data: {
-        model_name: MODEL_NAME,
-        post_ids: batch.map((b) => b.id),
-        raw_response: outcome.rawResponse,
-        succeeded: outcome.succeeded,
-      },
-    })
+      await prisma.llmClassificationRun.create({
+        data: {
+          model_name: MODEL_NAME,
+          post_ids: batch.map((b) => b.id),
+          raw_response: outcome.rawResponse,
+          succeeded: outcome.succeeded,
+        },
+      })
 
-    for (const label of outcome.labels.values()) {
-      if (label === 'UNCLASSIFIED') unclassified++
-      else classified++
+      for (const label of outcome.labels.values()) {
+        if (label === 'UNCLASSIFIED') unclassified++
+        else classified++
+      }
+      batchesRun++
     }
-    batchesRun++
-  }
 
-  revalidatePath('/dashboard/marketing/categorize')
-  revalidatePath('/dashboard/owner/categorize')
-  return { ok: true, classified, unclassified, batchesRun, batchesRemaining: batches.length - batchesRun }
+    revalidatePath('/dashboard/marketing/categorize')
+    revalidatePath('/dashboard/owner/categorize')
+    return { ok: true, classified, unclassified, batchesRun, batchesRemaining: batches.length - batchesRun }
+  } catch {
+    return { ok: false, reason: 'Something went wrong. Please try again.', retryable: true }
+  }
 }

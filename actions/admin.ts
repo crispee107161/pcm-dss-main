@@ -8,19 +8,25 @@ import type { Role } from '@/types/index'
 
 const VALID_ROLES: Role[] = ['MARKETING_MANAGER', 'MARKETING_TEAM', 'BUSINESS_OWNER']
 
+// Returns a union rather than throwing: these functions are wired via
+// useActionState, which only catches a *returned* {error} — a throw still
+// bypasses it and crashes the whole page into app/error.tsx (e.g. a session
+// expiring mid-admin-page).
 async function requireOwner() {
   const session = await auth()
   if (!session?.user || session.user.role !== 'BUSINESS_OWNER') {
-    throw new Error('Unauthorized')
+    return { error: 'Unauthorized' as const }
   }
-  return session
+  return { session }
 }
 
 export async function updateUserRole(
   _prev: { error?: string; success?: string } | null,
   formData: FormData
 ): Promise<{ error?: string; success?: string }> {
-  const session = await requireOwner()
+  const auth_ = await requireOwner()
+  if ('error' in auth_) return { error: auth_.error }
+  const { session } = auth_
 
   const userId = parseInt(formData.get('userId') as string, 10)
   const role = formData.get('role') as Role
@@ -43,7 +49,8 @@ export async function createUser(
   _prev: { error?: string; success?: string } | null,
   formData: FormData
 ): Promise<{ error?: string; success?: string }> {
-  await requireOwner()
+  const auth_ = await requireOwner()
+  if ('error' in auth_) return { error: auth_.error }
 
   const email = (formData.get('email') as string | null)?.trim().toLowerCase()
   const password = formData.get('password') as string | null
@@ -77,7 +84,9 @@ export async function resetPassword(
   _prev: { error?: string; success?: string } | null,
   formData: FormData
 ): Promise<{ error?: string; success?: string }> {
-  const session = await requireOwner()
+  const auth_ = await requireOwner()
+  if ('error' in auth_) return { error: auth_.error }
+  const { session } = auth_
 
   const userId = parseInt(formData.get('userId') as string, 10)
   const password = formData.get('password') as string | null
@@ -104,7 +113,9 @@ export async function deleteUser(
   _prev: { error?: string; success?: string } | null,
   formData: FormData
 ): Promise<{ error?: string; success?: string }> {
-  const session = await requireOwner()
+  const auth_ = await requireOwner()
+  if ('error' in auth_) return { error: auth_.error }
+  const { session } = auth_
 
   const userId = parseInt(formData.get('userId') as string, 10)
 

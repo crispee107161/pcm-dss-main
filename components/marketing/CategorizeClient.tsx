@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useActionState, useEffect, useState, useTransition } from 'react'
 import {
   updatePostCategoryForm,
   proposePostCategoryForm,
@@ -148,17 +148,16 @@ function PendingCell({ post }: { post: ReviewPostRow }) {
   )
 }
 
-function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
-  const [isPending, startTransition] = useTransition()
-
-  if (role === 'BUSINESS_OWNER') {
-    return <span className="text-muted-foreground text-xs">View only</span>
-  }
-
-  if (role === 'MARKETING_TEAM') {
-    const boundAction = proposePostCategoryForm.bind(null, post.id)
-    return (
-      <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+// Each role renders as its own component (rather than branching inside one
+// component) so a future per-role useActionState call is guaranteed to stay
+// unconditional — role-branching a single component with hooks inside each
+// branch would violate the rules of hooks the moment one is added there.
+function TeamProposeCell({ post }: { post: ReviewPostRow }) {
+  const boundAction = proposePostCategoryForm.bind(null, post.id)
+  const [proposeState, proposeAction, isProposing] = useActionState(boundAction, null)
+  return (
+    <div className="flex flex-col gap-1">
+      <form action={proposeAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select name="categoryLabel" defaultValue={defaultSelection(post)}>
           <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
             <SelectValue placeholder="Select category" />
@@ -169,15 +168,46 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
             ))}
           </SelectContent>
         </Select>
-        <Button type="submit" size="sm" className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3">
-          {post.category_pending ? 'Update proposal' : 'Propose'}
+        <Button type="submit" size="sm" disabled={isProposing} className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3">
+          {isProposing ? 'Saving…' : post.category_pending ? 'Update proposal' : 'Propose'}
         </Button>
       </form>
-    )
+      {proposeState?.error && (
+        <span role="alert" className="text-status-negative text-[11px]">{proposeState.error}</span>
+      )}
+    </div>
+  )
+}
+
+// MARKETING_MANAGER — full: accept/reject a pending proposal, or override directly.
+function ManagerActionCell({ post }: { post: ReviewPostRow }) {
+  const [isPending, startTransition] = useTransition()
+  const [rowError, setRowError] = useState<string | null>(null)
+  const boundOverride = updatePostCategoryForm.bind(null, post.id)
+  const [overrideState, overrideAction, isOverriding] = useActionState(boundOverride, null)
+
+  // A successful override shouldn't leave a stale Accept/Reject error
+  // showing underneath it.
+  useEffect(() => {
+    if (overrideState?.success) setRowError(null)
+  }, [overrideState])
+
+  function handleAccept() {
+    setRowError(null)
+    startTransition(async () => {
+      const res = await acceptPendingCategory(post.id)
+      if (res.error) setRowError(res.error)
+    })
   }
 
-  // MARKETING_MANAGER — full: accept/reject a pending proposal, or override directly.
-  const boundOverride = updatePostCategoryForm.bind(null, post.id)
+  function handleReject() {
+    setRowError(null)
+    startTransition(async () => {
+      const res = await rejectPendingCategory(post.id)
+      if (res.error) setRowError(res.error)
+    })
+  }
+
   return (
     <div className="flex flex-col gap-2">
       {post.category_pending && (
@@ -186,7 +216,7 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
             type="button"
             size="sm"
             disabled={isPending}
-            onClick={() => startTransition(() => acceptPendingCategory(post.id))}
+            onClick={handleAccept}
             className="bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-3"
           >
             Accept
@@ -196,14 +226,14 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
             size="sm"
             variant="outline"
             disabled={isPending}
-            onClick={() => startTransition(() => rejectPendingCategory(post.id))}
+            onClick={handleReject}
             className="text-xs h-7 px-3"
           >
             Reject
           </Button>
         </div>
       )}
-      <form action={boundOverride} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+      <form action={overrideAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select name="categoryLabel" defaultValue={defaultSelection(post)}>
           <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
             <SelectValue placeholder="— None —" />
@@ -215,12 +245,25 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
             ))}
           </SelectContent>
         </Select>
-        <Button type="submit" size="sm" variant="outline" className="text-xs whitespace-nowrap h-7 px-3">
-          Override & finalize
+        <Button type="submit" size="sm" variant="outline" disabled={isOverriding} className="text-xs whitespace-nowrap h-7 px-3">
+          {isOverriding ? 'Saving…' : 'Override & finalize'}
         </Button>
       </form>
+      {(rowError || overrideState?.error) && (
+        <span role="alert" className="text-status-negative text-[11px]">{rowError ?? overrideState?.error}</span>
+      )}
     </div>
   )
+}
+
+function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
+  if (role === 'BUSINESS_OWNER') {
+    return <span className="text-muted-foreground text-xs">View only</span>
+  }
+  if (role === 'MARKETING_TEAM') {
+    return <TeamProposeCell post={post} />
+  }
+  return <ManagerActionCell post={post} />
 }
 
 function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
@@ -269,7 +312,9 @@ function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
 export default function CategorizeClient({ posts, role }: Props) {
   const [isPending, startTransition] = useTransition()
   const [autoResult, setAutoResult] = useState<{ posts: number } | null>(null)
+  const [autoError, setAutoError] = useState<string | null>(null)
   const [bulkResult, setBulkResult] = useState<{ accepted: number } | null>(null)
+  const [bulkError, setBulkError] = useState<string | null>(null)
   const [llmResult, setLlmResult] = useState<string | null>(null)
   const [llmIsError, setLlmIsError] = useState(false)
   // Gates the live countdown suffix — only true while a cooldown started by
@@ -287,17 +332,21 @@ export default function CategorizeClient({ posts, role }: Props) {
 
   function handleAutoCategorize() {
     setAutoResult(null)
+    setAutoError(null)
     startTransition(async () => {
       const res = await autoCategorizeAll()
-      setAutoResult(res)
+      if (res.ok) setAutoResult({ posts: res.posts })
+      else setAutoError(res.reason)
     })
   }
 
   function handleBulkAccept() {
     setBulkResult(null)
+    setBulkError(null)
     startTransition(async () => {
       const res = await bulkAcceptPendingCategories()
-      setBulkResult(res)
+      if (res.ok) setBulkResult({ accepted: res.accepted })
+      else setBulkError(res.reason)
     })
   }
 
@@ -352,9 +401,19 @@ export default function CategorizeClient({ posts, role }: Props) {
               {autoResult.posts === 0 ? 'Nothing new to categorize' : `Applied to ${autoResult.posts} post${autoResult.posts !== 1 ? 's' : ''}`}
             </p>
           )}
+          {autoError && (
+            <p role="alert" className="animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
+              {autoError}
+            </p>
+          )}
           {bulkResult && (
             <p className="animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
               Accepted {bulkResult.accepted} proposal{bulkResult.accepted !== 1 ? 's' : ''}
+            </p>
+          )}
+          {bulkError && (
+            <p role="alert" className="animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
+              {bulkError}
             </p>
           )}
           {llmResult && (

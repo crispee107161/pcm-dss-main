@@ -99,6 +99,7 @@ export default function KeywordsClient({ categories }: Props) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [added, setAdded] = useState<Set<string>>(new Set())
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [bulkAddError, setBulkAddError] = useState<string | null>(null)
   // Only true while a cooldown started by this attempt is still running —
   // gates whether the live countdown suffix is appended to analyzeError, so
   // a non-retryable message (e.g. "not enough categorized content") never
@@ -164,8 +165,10 @@ export default function KeywordsClient({ categories }: Props) {
     if (!s) return
     const items = activeFor(s).map(word => ({ word, categoryId }))
     if (!items.length) return
+    setBulkAddError(null)
     startAdd(async () => {
-      await addKeywordsBulk(items)
+      const res = await addKeywordsBulk(items)
+      if (res.error) { setBulkAddError(res.error); return }
       setAdded(prev => {
         const next = new Set(prev)
         items.forEach(i => next.add(key(categoryId, i.word)))
@@ -177,8 +180,10 @@ export default function KeywordsClient({ categories }: Props) {
   function handleAddAll() {
     const items = suggestions.flatMap(s => activeFor(s).map(word => ({ word, categoryId: s.categoryId })))
     if (!items.length) return
+    setBulkAddError(null)
     startAdd(async () => {
-      await addKeywordsBulk(items)
+      const res = await addKeywordsBulk(items)
+      if (res.error) { setBulkAddError(res.error); return }
       setAdded(prev => {
         const next = new Set(prev)
         items.forEach(i => next.add(key(i.categoryId, i.word)))
@@ -331,6 +336,9 @@ export default function KeywordsClient({ categories }: Props) {
                   Dismiss all
                 </button>
               </div>
+            )}
+            {bulkAddError && (
+              <p role="alert" className="text-xs text-status-negative">{bulkAddError}</p>
             )}
           </div>
         )}

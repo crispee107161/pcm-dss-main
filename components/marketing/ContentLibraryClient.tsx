@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useActionState, useState } from 'react'
 import { updatePostCategoryForm } from '@/actions/categorize'
 import { CATEGORY_LABEL_DISPLAY } from '@/lib/category-label'
 import { Badge } from '@/components/ui/badge'
@@ -63,6 +63,46 @@ function CategoryBadge({ label }: { label: CategoryLabel }) {
   )
 }
 
+// Owns its own useActionState call — hooks can't be created per-item inside
+// a .map(), so this needs to be its own component.
+function CategoryCell({ post, canEdit }: { post: ContentLibraryRow; canEdit: boolean }) {
+  const boundAction = updatePostCategoryForm.bind(null, post.id)
+  const [state, action, isPending] = useActionState(boundAction, null)
+
+  if (!canEdit) {
+    return post.category_final ? (
+      <CategoryBadge label={post.category_final} />
+    ) : (
+      <span className="text-muted-foreground text-xs">Uncategorized</span>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <form action={action} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <Select name="categoryLabel" defaultValue={post.category_final ?? ''}>
+          <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
+            <SelectValue placeholder="— None —" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">— None —</SelectItem>
+            {ASSIGNABLE_LABELS.map((label) => (
+              <SelectItem key={label} value={label}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="submit" size="sm" disabled={isPending}
+          className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3">
+          {isPending ? 'Saving…' : 'Save'}
+        </Button>
+      </form>
+      {state?.error && (
+        <span role="alert" className="text-status-negative text-[11px]">{state.error}</span>
+      )}
+    </div>
+  )
+}
+
 function PaginationBar({
   page, pageCount, onPageChange,
 }: { page: number; pageCount: number; onPageChange: (page: number) => void }) {
@@ -113,53 +153,28 @@ export default function ContentLibraryClient({ posts, canEdit }: Props) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pagedPosts.map((post) => {
-            const boundAction = updatePostCategoryForm.bind(null, post.id)
-            return (
-              <TableRow key={post.id} className="hover:bg-secondary/50 border-t border-border">
-                <TableCell className="px-4 py-3 max-w-xs">
-                  {post.title ? (
-                    <div className="font-medium text-foreground text-sm truncate" title={post.title}>{post.title}</div>
-                  ) : (
-                    <span className="text-muted-foreground text-xs italic">No title</span>
-                  )}
-                  <a href={post.permalink} target="_blank" rel="noopener noreferrer"
-                    className="text-primary hover:text-green-700 hover:underline text-xs mt-0.5 inline-block">
-                    View post ↗
-                  </a>
-                </TableCell>
-                <TableCell className="px-4 py-3"><TypeBadge type={post.post_type} /></TableCell>
-                <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmtDate(post.publish_time)}</TableCell>
-                <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.views !== null ? post.views.toLocaleString() : '—'}</TableCell>
-                <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.engagement_rate.toFixed(2)}%</TableCell>
-                <TableCell className="px-4 py-3">
-                  {canEdit ? (
-                    <form action={boundAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      <Select name="categoryLabel" defaultValue={post.category_final ?? ''}>
-                        <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
-                          <SelectValue placeholder="— None —" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">— None —</SelectItem>
-                          {ASSIGNABLE_LABELS.map((label) => (
-                            <SelectItem key={label} value={label}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button type="submit" size="sm"
-                        className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3">
-                        Save
-                      </Button>
-                    </form>
-                  ) : post.category_final ? (
-                    <CategoryBadge label={post.category_final} />
-                  ) : (
-                    <span className="text-muted-foreground text-xs">Uncategorized</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            )
-          })}
+          {pagedPosts.map((post) => (
+            <TableRow key={post.id} className="hover:bg-secondary/50 border-t border-border">
+              <TableCell className="px-4 py-3 max-w-xs">
+                {post.title ? (
+                  <div className="font-medium text-foreground text-sm truncate" title={post.title}>{post.title}</div>
+                ) : (
+                  <span className="text-muted-foreground text-xs italic">No title</span>
+                )}
+                <a href={post.permalink} target="_blank" rel="noopener noreferrer"
+                  className="text-primary hover:text-green-700 hover:underline text-xs mt-0.5 inline-block">
+                  View post ↗
+                </a>
+              </TableCell>
+              <TableCell className="px-4 py-3"><TypeBadge type={post.post_type} /></TableCell>
+              <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmtDate(post.publish_time)}</TableCell>
+              <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.views !== null ? post.views.toLocaleString() : '—'}</TableCell>
+              <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.engagement_rate.toFixed(2)}%</TableCell>
+              <TableCell className="px-4 py-3">
+                <CategoryCell post={post} canEdit={canEdit} />
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
       <PaginationBar page={clampedPage} pageCount={pageCount} onPageChange={setPage} />
