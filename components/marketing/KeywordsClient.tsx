@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import {
   addKeyword, deleteKeyword, suggestKeywords, addKeywordsBulk,
   type KeywordSuggestion,
@@ -22,12 +22,83 @@ const ANALYZE_COOLDOWN_SECONDS = 60
 
 const COOLDOWN_STORAGE_KEY = 'pcm-analyze-content-cooldown-until'
 
+// Owns its own confirm-then-delete state and useActionState call — hooks
+// can't be created per-item inside a .map(), so each chip needs to be its
+// own component (mirrors UserManagement.tsx's UserRow extraction).
+function KeywordChip({ kw }: { kw: Keyword }) {
+  const [confirming, setConfirming] = useState(false)
+  const [delState, delAction, isDeleting] = useActionState(deleteKeyword, null)
+  const confirmBtnRef = useRef<HTMLButtonElement>(null)
+  const triggerBtnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (confirming) confirmBtnRef.current?.focus()
+  }, [confirming])
+
+  function cancel() {
+    setConfirming(false)
+    triggerBtnRef.current?.focus()
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 bg-muted text-foreground rounded-full px-3 py-1 text-xs font-medium">
+      {kw.word}
+      {confirming ? (
+        <span
+          className="inline-flex items-center gap-1 ml-0.5"
+          onKeyDown={(e) => { if (e.key === 'Escape') cancel() }}
+        >
+          <form
+            action={delAction}
+            className="inline"
+            onSubmit={() => setConfirming(false)}
+          >
+            <input type="hidden" name="id" value={kw.id} />
+            <button
+              ref={confirmBtnRef}
+              type="submit"
+              disabled={isDeleting}
+              aria-label={`Confirm delete keyword "${kw.word}"`}
+              title="Confirm delete"
+              className="text-status-negative hover:text-status-negative/70 disabled:opacity-50 transition-colors leading-none p-1.5 -m-1.5"
+            >
+              ✓
+            </button>
+          </form>
+          <button
+            type="button"
+            onClick={cancel}
+            aria-label="Cancel delete"
+            title="Cancel"
+            className="text-muted-foreground hover:text-foreground transition-colors leading-none p-1.5 -m-1.5"
+          >
+            ×
+          </button>
+        </span>
+      ) : (
+        <button
+          ref={triggerBtnRef}
+          type="button"
+          onClick={() => setConfirming(true)}
+          aria-label={`Delete keyword "${kw.word}"`}
+          title="Delete"
+          className="text-muted-foreground hover:text-status-negative transition-colors leading-none ml-0.5 p-1.5 -m-1.5"
+        >
+          ×
+        </button>
+      )}
+      {delState?.error && (
+        <span role="alert" className="text-status-negative text-[10px] ml-1">{delState.error}</span>
+      )}
+    </span>
+  )
+}
+
 export default function KeywordsClient({ categories }: Props) {
   const [suggestions, setSuggestions] = useState<KeywordSuggestion[]>([])
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [added, setAdded] = useState<Set<string>>(new Set())
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
   // Only true while a cooldown started by this attempt is still running —
   // gates whether the live countdown suffix is appended to analyzeError, so
   // a non-retryable message (e.g. "not enough categorized content") never
@@ -36,19 +107,12 @@ export default function KeywordsClient({ categories }: Props) {
   const [isAnalyzing, startAnalyze] = useTransition()
   const [isAdding, startAdd] = useTransition()
   const { secondsLeft: cooldown, begin: beginCooldown } = useCooldown(COOLDOWN_STORAGE_KEY)
-  const confirmDeleteBtnRef = useRef<HTMLButtonElement>(null)
-  const deleteTriggerRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
+  const [addState, addAction, isAddingKeyword] = useActionState(addKeyword, null)
+  const addFormRef = useRef<HTMLFormElement>(null)
 
-  // Move focus onto the confirm button when a delete is armed, so keyboard
-  // users land on the confirm/cancel step instead of losing focus to <body>.
   useEffect(() => {
-    if (pendingDeleteId !== null) confirmDeleteBtnRef.current?.focus()
-  }, [pendingDeleteId])
-
-  function cancelDelete(id: number) {
-    setPendingDeleteId(null)
-    deleteTriggerRefs.current.get(id)?.focus()
-  }
+    if (addState?.success) addFormRef.current?.reset()
+  }, [addState])
 
   function key(categoryId: number, word: string) { return `${categoryId}:${word}` }
 
@@ -300,55 +364,7 @@ export default function KeywordsClient({ categories }: Props) {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {cat.keywords.map(kw => (
-                      <span key={kw.id} className="inline-flex items-center gap-1 bg-muted text-foreground rounded-full px-3 py-1 text-xs font-medium">
-                        {kw.word}
-                        {pendingDeleteId === kw.id ? (
-                          <span
-                            className="inline-flex items-center gap-1 ml-0.5"
-                            onKeyDown={(e) => { if (e.key === 'Escape') cancelDelete(kw.id) }}
-                          >
-                            <form
-                              action={deleteKeyword}
-                              className="inline"
-                              onSubmit={() => setPendingDeleteId(null)}
-                            >
-                              <input type="hidden" name="id" value={kw.id} />
-                              <button
-                                ref={confirmDeleteBtnRef}
-                                type="submit"
-                                aria-label={`Confirm delete keyword "${kw.word}"`}
-                                title="Confirm delete"
-                                className="text-status-negative hover:text-status-negative/70 transition-colors leading-none p-1.5 -m-1.5"
-                              >
-                                ✓
-                              </button>
-                            </form>
-                            <button
-                              type="button"
-                              onClick={() => cancelDelete(kw.id)}
-                              aria-label="Cancel delete"
-                              title="Cancel"
-                              className="text-muted-foreground hover:text-foreground transition-colors leading-none p-1.5 -m-1.5"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            ref={(el) => {
-                              if (el) deleteTriggerRefs.current.set(kw.id, el)
-                              else deleteTriggerRefs.current.delete(kw.id)
-                            }}
-                            type="button"
-                            onClick={() => setPendingDeleteId(kw.id)}
-                            aria-label={`Delete keyword "${kw.word}"`}
-                            title="Delete"
-                            className="text-muted-foreground hover:text-status-negative transition-colors leading-none ml-0.5 p-1.5 -m-1.5"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </span>
+                      <KeywordChip key={kw.id} kw={kw} />
                     ))}
                   </div>
                 )}
@@ -362,7 +378,7 @@ export default function KeywordsClient({ categories }: Props) {
       <div className="bg-card rounded-2xl card-shadow p-6"
         style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
         <h2 className="text-sm font-bold text-foreground mb-4">Add Keyword Manually</h2>
-        <form action={addKeyword} className="flex flex-col sm:flex-row gap-3">
+        <form ref={addFormRef} action={addAction} className="flex flex-col sm:flex-row gap-3">
           <Input
             name="word"
             placeholder="Enter keyword..."
@@ -381,11 +397,20 @@ export default function KeywordsClient({ categories }: Props) {
           </Select>
           <button
             type="submit"
-            className="bg-primary hover:bg-primary/90 active:bg-primary/80 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-[background-color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            disabled={isAddingKeyword}
+            className="bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-white rounded-lg px-4 py-2 text-sm font-semibold transition-[background-color] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           >
-            Add Keyword
+            {isAddingKeyword ? 'Adding…' : 'Add Keyword'}
           </button>
         </form>
+        {addState?.error && (
+          <Alert className="mt-3 bg-status-negative/10 border-status-negative/30 text-status-negative">
+            <AlertDescription className="text-xs">{addState.error}</AlertDescription>
+          </Alert>
+        )}
+        {addState?.success && (
+          <p role="status" className="mt-3 text-xs text-status-positive">{addState.success}</p>
+        )}
       </div>
     </div>
   )

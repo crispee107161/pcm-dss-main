@@ -36,35 +36,54 @@ export type SuggestKeywordsResult =
   | { ok: true; suggestions: KeywordSuggestion[] }
   | { ok: false; reason: string; retryable: boolean; retryAfterSeconds?: number }
 
-export async function addKeyword(formData: FormData): Promise<void> {
+export async function addKeyword(
+  _prev: { error?: string; success?: string } | null,
+  formData: FormData
+): Promise<{ error?: string; success?: string }> {
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
-    throw new Error('Unauthorized')
+    return { error: 'Unauthorized' }
   }
 
   const word = (formData.get('word') as string)?.trim()
   const categoryId = parseInt(formData.get('categoryId') as string, 10)
 
   if (!word || isNaN(categoryId)) {
-    throw new Error('Word and category are required')
+    return { error: 'Word and category are required.' }
   }
   if (word.length > 100) {
-    throw new Error('Keyword must be 100 characters or fewer')
+    return { error: 'Keyword must be 100 characters or fewer.' }
   }
 
   const category = await prisma.category.findUnique({ where: { id: categoryId } })
   if (!category) {
-    throw new Error('Invalid category')
+    return { error: 'Invalid category.' }
   }
 
-  await prisma.keyword.create({
-    data: {
-      word,
-      category_id: categoryId,
-    },
-  })
+  const existing = await prisma.keyword.findUnique({ where: { word } })
+  if (existing) {
+    return { error: `"${word}" is already a keyword.` }
+  }
+
+  try {
+    await prisma.keyword.create({
+      data: {
+        word,
+        category_id: categoryId,
+      },
+    })
+  } catch (err) {
+    // P2002: lost a race against another add (manual or bulk-suggestion)
+    // between the findUnique check above and this create — the pre-check
+    // is a friendly common-case message, this is the correctness backstop.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return { error: `"${word}" is already a keyword.` }
+    }
+    throw err
+  }
 
   revalidatePath('/dashboard/marketing/keywords')
+  return { success: `Added "${word}".` }
 }
 
 export async function suggestKeywords(): Promise<SuggestKeywordsResult> {
@@ -240,16 +259,19 @@ export async function addKeywordsBulk(items: { word: string; categoryId: number 
   revalidatePath('/dashboard/marketing/keywords')
 }
 
-export async function deleteKeyword(formData: FormData): Promise<void> {
+export async function deleteKeyword(
+  _prev: { error?: string } | null,
+  formData: FormData
+): Promise<{ error?: string }> {
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
-    throw new Error('Unauthorized')
+    return { error: 'Unauthorized' }
   }
 
   const id = parseInt(formData.get('id') as string, 10)
 
   if (isNaN(id)) {
-    throw new Error('Invalid keyword ID')
+    return { error: 'Invalid keyword ID' }
   }
 
   try {
@@ -263,4 +285,5 @@ export async function deleteKeyword(formData: FormData): Promise<void> {
   }
 
   revalidatePath('/dashboard/marketing/keywords')
+  return {}
 }
