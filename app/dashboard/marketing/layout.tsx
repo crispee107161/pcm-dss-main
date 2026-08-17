@@ -24,7 +24,10 @@ const navItems: NavItem[] = [
   // route file left on disk per this repo's convention for superseded pages.
   { section: 'Analytics', label: 'Analysis', href: '/dashboard/marketing/analysis', icon: <IconChart /> },
   { label: 'Method Evaluation', href: '/dashboard/marketing/method-evaluation', icon: <IconScale /> },
-  { label: 'Campaign Rankings', href: '/dashboard/marketing/campaign-rankings', icon: <IconRanking /> },
+  // Named "Top Ads" to match the Owner nav's naming for the same page — see
+  // app/dashboard/owner/layout.tsx's comment on why "Campaign Rankings" was
+  // renamed there (it ranks individual ads, not campaigns).
+  { label: 'Top Ads', href: '/dashboard/marketing/campaign-rankings', icon: <IconRanking /> },
   { label: 'Post Type Performance', href: '/dashboard/marketing/post-type-performance', icon: <IconLayers /> },
   { label: 'Trend Analysis', href: '/dashboard/marketing/trend-analysis', icon: <IconTrendUp /> },
   { label: 'Page Metrics', href: '/dashboard/marketing/page-metrics', icon: <IconMetrics /> },

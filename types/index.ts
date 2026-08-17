@@ -15,7 +15,6 @@ export interface UploadResult {
   records_updated: number
   records_unchanged: number
   error_message?: string
-  retrained: boolean
 }
 
 export interface SpearmanRow {

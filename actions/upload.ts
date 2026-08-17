@@ -15,7 +15,6 @@ import { upsertPageMetric } from '@/lib/db/upsert-page-metric'
 import { upsertFollowerHistory } from '@/lib/db/upsert-follower-history'
 import { upsertPageViewers } from '@/lib/db/upsert-page-viewers'
 import { upsertDemographics } from '@/lib/db/upsert-demographics'
-import { maybeRetrainRegression } from '@/lib/stats/regression'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import type { UploadResult, UploadType } from '@/types/index'
@@ -39,7 +38,6 @@ export async function uploadCSV(
       records_updated: 0,
       records_unchanged: 0,
       error_message: 'Unauthorized: you must be logged in',
-      retrained: false,
     }
   }
 
@@ -51,7 +49,6 @@ export async function uploadCSV(
       records_updated: 0,
       records_unchanged: 0,
       error_message: 'Forbidden: only Marketing Managers can upload CSV files',
-      retrained: false,
     }
   }
 
@@ -64,7 +61,6 @@ export async function uploadCSV(
       records_updated: 0,
       records_unchanged: 0,
       error_message: 'No file provided',
-      retrained: false,
     }
   }
 
@@ -77,7 +73,6 @@ export async function uploadCSV(
       records_updated: 0,
       records_unchanged: 0,
       error_message: 'File too large. Maximum allowed size is 10 MB.',
-      retrained: false,
     }
   }
 
@@ -92,7 +87,6 @@ export async function uploadCSV(
     let records_inserted = 0
     let records_updated = 0
     let records_unchanged = 0
-    let retrained = false
 
     // --- Page metric files (UTF-16 LE with sep=, header) ---
     if (detectIfPageMetricBuffer(buffer)) {
@@ -121,9 +115,6 @@ export async function uploadCSV(
         records_inserted  = counts.inserted
         records_updated   = counts.updated
         records_unchanged = counts.unchanged
-        if (counts.inserted > 0 || counts.updated > 0) {
-          retrained = await maybeRetrainRegression()
-        }
 
       } else if (csvType === 'POSTS_CSV') {
         const postRecords = validatePostsRows(rows)
@@ -176,7 +167,6 @@ export async function uploadCSV(
       records_inserted,
       records_updated,
       records_unchanged,
-      retrained,
     }
   } catch (err) {
     const internalMessage = (err as Error).message
@@ -206,7 +196,6 @@ export async function uploadCSV(
       records_updated: 0,
       records_unchanged: 0,
       error_message: clientMessage,
-      retrained: false,
     }
   }
 }

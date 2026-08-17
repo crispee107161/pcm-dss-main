@@ -2,6 +2,7 @@
 
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@/app/generated/prisma/client'
 import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 import { CATEGORY_NAME_TO_LABEL } from '@/lib/category-label'
@@ -251,9 +252,15 @@ export async function deleteKeyword(formData: FormData): Promise<void> {
     throw new Error('Invalid keyword ID')
   }
 
-  await prisma.keyword.delete({
-    where: { id },
-  })
+  try {
+    await prisma.keyword.delete({ where: { id } })
+  } catch (err) {
+    // P2025: row already gone (double-submit, second tab) — treat as a no-op
+    // rather than surfacing an error for a delete that already succeeded.
+    if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025')) {
+      throw err
+    }
+  }
 
   revalidatePath('/dashboard/marketing/keywords')
 }

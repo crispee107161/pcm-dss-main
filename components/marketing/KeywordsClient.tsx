@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import {
   addKeyword, deleteKeyword, suggestKeywords, addKeywordsBulk,
   type KeywordSuggestion,
@@ -27,6 +27,7 @@ export default function KeywordsClient({ categories }: Props) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [added, setAdded] = useState<Set<string>>(new Set())
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
   // Only true while a cooldown started by this attempt is still running —
   // gates whether the live countdown suffix is appended to analyzeError, so
   // a non-retryable message (e.g. "not enough categorized content") never
@@ -35,6 +36,19 @@ export default function KeywordsClient({ categories }: Props) {
   const [isAnalyzing, startAnalyze] = useTransition()
   const [isAdding, startAdd] = useTransition()
   const { secondsLeft: cooldown, begin: beginCooldown } = useCooldown(COOLDOWN_STORAGE_KEY)
+  const confirmDeleteBtnRef = useRef<HTMLButtonElement>(null)
+  const deleteTriggerRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
+
+  // Move focus onto the confirm button when a delete is armed, so keyboard
+  // users land on the confirm/cancel step instead of losing focus to <body>.
+  useEffect(() => {
+    if (pendingDeleteId !== null) confirmDeleteBtnRef.current?.focus()
+  }, [pendingDeleteId])
+
+  function cancelDelete(id: number) {
+    setPendingDeleteId(null)
+    deleteTriggerRefs.current.get(id)?.focus()
+  }
 
   function key(categoryId: number, word: string) { return `${categoryId}:${word}` }
 
@@ -119,23 +133,23 @@ export default function KeywordsClient({ categories }: Props) {
       <div className="bg-card rounded-2xl card-shadow overflow-hidden"
         style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
 
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+        <div className="px-6 py-5 border-b border-border flex items-center justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <svg className="w-4 h-4 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
                   d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              <h2 className="text-sm font-bold text-gray-800">AI Keyword Suggestions</h2>
+              <h2 className="text-sm font-bold text-foreground">AI Keyword Suggestions</h2>
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-foreground">
               Analyzes your categorized posts and ads to suggest keywords for each category. Powered by Groq.
             </p>
           </div>
           <button
             onClick={handleAnalyze}
             disabled={isAnalyzing || cooldown > 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0"
             style={{ boxShadow: !isAnalyzing && cooldown === 0 ? '0 4px 14px color-mix(in srgb, var(--primary) 25%, transparent)' : undefined }}
           >
             {isAnalyzing ? (
@@ -186,21 +200,21 @@ export default function KeywordsClient({ categories }: Props) {
                     : `${s.categoryName} — all dismissed`
                 return (
                   <div key={s.categoryId} className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="text-xs text-gray-400">{label}</span>
+                    <span className="text-xs text-muted-foreground">{label}</span>
                   </div>
                 )
               }
               return (
                 <div key={s.categoryId}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-[0.1em]">{s.categoryName}</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.1em]">{s.categoryName}</p>
                     <button
                       onClick={() => handleAddCategory(s.categoryId)}
                       disabled={isAdding}
-                      className="text-xs font-semibold text-green-400 hover:text-green-300 disabled:opacity-40 transition-[color]"
+                      className="text-xs font-semibold text-status-positive hover:text-status-positive/80 disabled:opacity-40 transition-[color]"
                     >
                       Add all ({active.length})
                     </button>
@@ -209,12 +223,12 @@ export default function KeywordsClient({ categories }: Props) {
                     {active.map(word => (
                       <span
                         key={word}
-                        className="animate-fade-slide-up inline-flex items-center gap-1.5 bg-green-500/10 border border-green-500/30 text-green-400 rounded-full px-3 py-1 text-xs font-medium"
+                        className="animate-fade-slide-up inline-flex items-center gap-1.5 bg-status-positive/10 border border-status-positive/30 text-status-positive rounded-full px-3 py-1 text-xs font-medium"
                       >
                         {word}
                         <button
                           onClick={() => dismiss(s.categoryId, word)}
-                          className="text-green-400 hover:text-gray-400 transition-[color] leading-none ml-0.5"
+                          className="text-status-positive hover:text-muted-foreground transition-[color] leading-none ml-0.5"
                           title="Dismiss"
                         >
                           ×
@@ -228,11 +242,11 @@ export default function KeywordsClient({ categories }: Props) {
 
             {/* Global actions */}
             {totalActive > 0 && (
-              <div className="pt-4 border-t border-gray-100 flex items-center gap-3">
+              <div className="pt-4 border-t border-border flex items-center gap-3">
                 <button
                   onClick={handleAddAll}
                   disabled={isAdding}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {isAdding ? (
                     <>
@@ -248,7 +262,7 @@ export default function KeywordsClient({ categories }: Props) {
                 </button>
                 <button
                   onClick={dismissAll}
-                  className="text-sm text-gray-400 hover:text-gray-600 transition-[color]"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-[color]"
                 >
                   Dismiss all
                 </button>
@@ -259,8 +273,8 @@ export default function KeywordsClient({ categories }: Props) {
 
         {/* Idle state */}
         {!hasSuggestions && !analyzeError && !isAnalyzing && (
-          <p className="px-6 py-5 text-xs text-gray-400">
-            Click <span className="font-medium text-gray-500">Analyze Content</span> to scan your categorized posts and ads for keyword suggestions. Requires at least a few categorized items.
+          <p className="px-6 py-5 text-xs text-muted-foreground">
+            Click <span className="font-medium text-foreground">Analyze Content</span> to scan your categorized posts and ads for keyword suggestions. Requires at least a few categorized items.
           </p>
         )}
       </div>
@@ -268,36 +282,72 @@ export default function KeywordsClient({ categories }: Props) {
       {/* ── Keywords by Category ── */}
       <div className="bg-card rounded-2xl card-shadow p-6"
         style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
-        <h2 className="text-sm font-bold text-gray-800 mb-5">Keywords by Category</h2>
+        <h2 className="text-sm font-bold text-foreground mb-5">Keywords by Category</h2>
         {categories.length === 0 ? (
-          <p className="text-gray-400 text-sm">No categories found.</p>
+          <p className="text-muted-foreground text-sm">No categories found.</p>
         ) : (
           <div className="space-y-6">
             {categories.map(cat => (
               <div key={cat.id}>
                 <div className="flex items-center gap-3 mb-2">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-[0.1em]">{cat.name}</p>
-                  <span className="text-[10px] font-medium text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.1em]">{cat.name}</p>
+                  <span className="text-[10px] font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
                     {cat.keywords.length} keyword{cat.keywords.length !== 1 ? 's' : ''}
                   </span>
                 </div>
                 {cat.keywords.length === 0 ? (
-                  <p className="text-gray-400 text-xs italic">No keywords yet — use the form below or Analyze Content.</p>
+                  <p className="text-muted-foreground text-xs italic">No keywords yet — use the form below or Analyze Content.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {cat.keywords.map(kw => (
-                      <span key={kw.id} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 rounded-full px-3 py-1 text-xs font-medium">
+                      <span key={kw.id} className="inline-flex items-center gap-1 bg-muted text-foreground rounded-full px-3 py-1 text-xs font-medium">
                         {kw.word}
-                        <form action={deleteKeyword} className="inline">
-                          <input type="hidden" name="id" value={kw.id} />
+                        {pendingDeleteId === kw.id ? (
+                          <span
+                            className="inline-flex items-center gap-1 ml-0.5"
+                            onKeyDown={(e) => { if (e.key === 'Escape') cancelDelete(kw.id) }}
+                          >
+                            <form
+                              action={deleteKeyword}
+                              className="inline"
+                              onSubmit={() => setPendingDeleteId(null)}
+                            >
+                              <input type="hidden" name="id" value={kw.id} />
+                              <button
+                                ref={confirmDeleteBtnRef}
+                                type="submit"
+                                aria-label={`Confirm delete keyword "${kw.word}"`}
+                                title="Confirm delete"
+                                className="text-status-negative hover:text-status-negative/70 transition-colors leading-none p-1.5 -m-1.5"
+                              >
+                                ✓
+                              </button>
+                            </form>
+                            <button
+                              type="button"
+                              onClick={() => cancelDelete(kw.id)}
+                              aria-label="Cancel delete"
+                              title="Cancel"
+                              className="text-muted-foreground hover:text-foreground transition-colors leading-none p-1.5 -m-1.5"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ) : (
                           <button
-                            type="submit"
-                            className="text-gray-400 hover:text-red-600 transition-[color] leading-none ml-0.5"
+                            ref={(el) => {
+                              if (el) deleteTriggerRefs.current.set(kw.id, el)
+                              else deleteTriggerRefs.current.delete(kw.id)
+                            }}
+                            type="button"
+                            onClick={() => setPendingDeleteId(kw.id)}
+                            aria-label={`Delete keyword "${kw.word}"`}
                             title="Delete"
+                            className="text-muted-foreground hover:text-status-negative transition-colors leading-none ml-0.5 p-1.5 -m-1.5"
                           >
                             ×
                           </button>
-                        </form>
+                        )}
                       </span>
                     ))}
                   </div>
@@ -311,16 +361,16 @@ export default function KeywordsClient({ categories }: Props) {
       {/* ── Add Keyword Form ── */}
       <div className="bg-card rounded-2xl card-shadow p-6"
         style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
-        <h2 className="text-sm font-bold text-gray-800 mb-4">Add Keyword Manually</h2>
+        <h2 className="text-sm font-bold text-foreground mb-4">Add Keyword Manually</h2>
         <form action={addKeyword} className="flex flex-col sm:flex-row gap-3">
           <Input
             name="word"
             placeholder="Enter keyword..."
             required
-            className="flex-1 border-gray-300 focus-visible:ring-ring"
+            className="flex-1 border-border focus-visible:ring-ring"
           />
           <Select name="categoryId">
-            <SelectTrigger className="border-gray-300 text-gray-900 focus-visible:ring-ring w-auto min-w-[160px]">
+            <SelectTrigger className="border-border text-foreground focus-visible:ring-ring w-auto min-w-[160px]">
               <SelectValue placeholder="Select category…" />
             </SelectTrigger>
             <SelectContent>

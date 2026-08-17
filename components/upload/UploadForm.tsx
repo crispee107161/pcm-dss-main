@@ -51,7 +51,6 @@ export default function UploadForm() {
   const totalInserted  = queue.reduce((s, f) => s + (f.result?.records_inserted ?? 0), 0)
   const totalUpdated   = queue.reduce((s, f) => s + (f.result?.records_updated ?? 0), 0)
   const totalUnchanged = queue.reduce((s, f) => s + (f.result?.records_unchanged ?? 0), 0)
-  const retrainCount   = queue.filter((f) => f.result?.retrained).length
   const isDone        = queue.length > 0 && pendingCount === 0 && !isPending
 
   useEffect(() => {
@@ -62,14 +61,14 @@ export default function UploadForm() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-gray-800">Upload Facebook CSVs</h2>
+      <h2 className="text-lg font-semibold text-foreground">Upload Facebook CSVs</h2>
 
       {/* Drop zone */}
       <div
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
           isDragging
-            ? 'border-primary bg-green-500/10'
-            : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
+            ? 'border-primary bg-status-positive/10'
+            : 'border-border hover:border-status-positive/60 hover:bg-accent'
         }`}
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
@@ -81,16 +80,16 @@ export default function UploadForm() {
         }}
       >
         <div className="flex justify-center mb-3">
-          <DatabaseIcon size={40} className="text-gray-400" />
+          <DatabaseIcon size={40} className="text-muted-foreground" />
         </div>
-        <p className="text-gray-600 font-medium text-sm">
+        <p className="text-muted-foreground font-medium text-sm">
           Drag & drop CSV files here, or{' '}
           <span className="text-primary">click to browse</span>
         </p>
-        <p className="text-gray-400 text-xs mt-1">
-          Select multiple files at once — Ads, Posts, Page Metrics, and more
+        <p className="text-muted-foreground text-xs mt-1">
+          Select multiple files at once — Ads, Posts, Page Metrics, Follower History, Page Viewers, and Demographics
         </p>
-        <p className="text-gray-400 text-xs mt-1">
+        <p className="text-muted-foreground text-xs mt-1">
           Records are matched by date, so re-uploading the same file is safe and never creates duplicates.
         </p>
         <input
@@ -107,7 +106,7 @@ export default function UploadForm() {
       {queue.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-700">
+            <p className="text-sm font-medium text-foreground">
               {queue.length} file{queue.length !== 1 ? 's' : ''} queued
             </p>
             {!isPending && (
@@ -115,7 +114,7 @@ export default function UploadForm() {
                 onClick={handleClearAll}
                 variant="ghost"
                 size="sm"
-                className="text-xs text-gray-400 hover:text-gray-600 h-auto py-0"
+                className="text-xs text-muted-foreground hover:text-foreground h-auto py-0"
               >
                 Clear all
               </Button>
@@ -143,11 +142,11 @@ export default function UploadForm() {
                   {entry.result?.status === 'SUCCESS' && (
                     <div className="flex flex-wrap gap-1.5 mt-1 items-center">
                       {entry.result.records_inserted === 0 && entry.result.records_updated === 0 ? (
-                        <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200">
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground border-border">
                           Already up to date
                         </Badge>
                       ) : (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {[
                             entry.result.records_inserted > 0 && `${entry.result.records_inserted} added`,
                             entry.result.records_updated > 0 && `${entry.result.records_updated} changed`,
@@ -155,14 +154,9 @@ export default function UploadForm() {
                           ].filter(Boolean).join(' · ')}
                         </span>
                       )}
-                      <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200">
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground border-border">
                         {UPLOAD_TYPE_LABELS[entry.result.upload_type] ?? entry.result.upload_type}
                       </Badge>
-                      {entry.result.retrained && (
-                        <Badge className="bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30 font-medium">
-                          Model retrained
-                        </Badge>
-                      )}
                     </div>
                   )}
                   {entry.result?.status === 'FAILED' && (
@@ -234,7 +228,7 @@ export default function UploadForm() {
             onClick={handleClearAll}
             variant="ghost"
             size="sm"
-            className="text-gray-500 w-full sm:w-auto"
+            className="text-muted-foreground w-full sm:w-auto"
           >
             Clear
           </Button>
@@ -259,12 +253,12 @@ export default function UploadForm() {
               <CircleCheckIcon ref={successIconRef} size={20} className="text-status-positive flex-shrink-0 mt-0.5" />
             )}
             <div>
-              <p className="font-medium text-sm text-gray-800">
+              <p className="font-medium text-sm text-foreground">
                 {successCount} of {queue.length} file{queue.length !== 1 ? 's' : ''} uploaded successfully
                 {failedCount > 0 && `, ${failedCount} failed`}
               </p>
               {successCount > 0 && (
-                <p className="text-sm text-gray-600 mt-0.5">
+                <p className="text-sm text-muted-foreground mt-0.5">
                   {totalInserted === 0 && totalUpdated === 0
                     ? 'No changes — your data was already current.'
                     : [
@@ -272,11 +266,6 @@ export default function UploadForm() {
                         totalUpdated > 0 && `${totalUpdated} updated`,
                         totalUnchanged > 0 && `${totalUnchanged} already up to date`,
                       ].filter(Boolean).join(', ')}
-                </p>
-              )}
-              {retrainCount > 0 && (
-                <p className="text-xs text-violet-700 dark:text-violet-400 font-medium mt-1">
-                  Regression model retrained {retrainCount} time{retrainCount !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
