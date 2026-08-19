@@ -399,7 +399,7 @@ export default function KeywordsClient({ categories }: Props) {
             </SelectTrigger>
             <SelectContent>
               {categories.map(cat => (
-                <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+                <SelectItem key={cat.id} value={String(cat.id)} label={cat.name}>{cat.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

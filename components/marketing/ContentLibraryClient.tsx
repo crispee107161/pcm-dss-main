@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { updatePostCategoryForm } from '@/actions/categorize'
-import { CATEGORY_LABEL_DISPLAY } from '@/lib/category-label'
+import { CATEGORY_LABEL_DISPLAY, categorySelectLabel } from '@/lib/category-label'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -81,14 +81,33 @@ function CategoryCell({ post, canEdit }: { post: ContentLibraryRow; canEdit: boo
     <div className="flex flex-col gap-1">
       <form action={action} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select name="categoryLabel" defaultValue={post.category_final ?? ''}>
-          <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
-            <SelectValue placeholder="— None —" />
+          {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
+              with the selected label's length — keeps the Save button lined up
+              in a straight column across rows. */}
+          <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-48 h-7" size="sm">
+            {/* categorySelectLabel already resolves '' to "— None —", so the
+                placeholder prop below would never actually render. */}
+            <SelectValue>{categorySelectLabel}</SelectValue>
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">— None —</SelectItem>
+          {/* alignItemWithTrigger={false}: base-ui's default popup positioning
+              overlays the list directly on top of the trigger, which spills the
+              list across the row below and visually collides with its Save
+              button. Normal dropdown positioning (opens below the trigger)
+              avoids that. Popup width stays default (== trigger width) — it
+              doesn't need to stretch over the Save button; base-ui's Select is
+              modal, so the button is inert while the popup is open anyway. */}
+          <SelectContent align="start" alignItemWithTrigger={false}>
+            <SelectItem value="" label="— None —">— None —</SelectItem>
             {ASSIGNABLE_LABELS.map((label) => (
-              <SelectItem key={label} value={label}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
+              <SelectItem key={label} value={label} label={CATEGORY_LABEL_DISPLAY[label]}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
             ))}
+            {/* category_final can be the algorithm's own "zero-match" outcome
+                (FR-13: system-set, never a manual choice) — shown disabled so
+                the trigger's label has a matching, checked item instead of
+                floating with nothing selected in the open list. */}
+            <SelectItem value="UNCLASSIFIED" label={CATEGORY_LABEL_DISPLAY.UNCLASSIFIED} disabled>
+              {CATEGORY_LABEL_DISPLAY.UNCLASSIFIED}
+            </SelectItem>
           </SelectContent>
         </Select>
         <Button type="submit" size="sm" disabled={isPending}

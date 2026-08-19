@@ -10,7 +10,7 @@ import {
   autoCategorizeAll,
 } from '@/actions/categorize'
 import { runLlmClassification } from '@/actions/classify-posts'
-import { CATEGORY_LABEL_DISPLAY } from '@/lib/category-label'
+import { CATEGORY_LABEL_DISPLAY, categorySelectLabel } from '@/lib/category-label'
 import { useCooldown } from '@/hooks/useCooldown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,14 @@ import type { CategoryLabel, Role } from '@/app/generated/prisma/client'
 // Entertainment are assignable manually. UNCLASSIFIED is a system-set
 // outcome (ALG-04/05 zero-match), not a manual choice.
 const ASSIGNABLE_LABELS: CategoryLabel[] = ['PRODUCT_SHOWCASE', 'PROMOTIONAL_OFFER', 'TESTIMONIAL', 'ENTERTAINMENT']
+
+// Same first-paint rationale as categorySelectLabel (lib/category-label.ts),
+// which it delegates to for everything except '' — this Select has no
+// "— None —" item, so an empty value means nothing has been proposed yet
+// and should resolve back to the placeholder text instead.
+function proposeCategoryLabel(value: string | null): string {
+  return value === '' || value === null ? 'Select category' : categorySelectLabel(value)
+}
 
 // Client-side pacing floor, same rationale and value as Manage Keywords'
 // ANALYZE_COOLDOWN_SECONDS (components/marketing/KeywordsClient.tsx) — a
@@ -159,12 +167,24 @@ function TeamProposeCell({ post }: { post: ReviewPostRow }) {
     <div className="flex flex-col gap-1">
       <form action={proposeAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select name="categoryLabel" defaultValue={defaultSelection(post)}>
-          <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
-            <SelectValue placeholder="Select category" />
+          {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
+              with the selected label's length — keeps the submit button lined up
+              in a straight column across rows. */}
+          <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-48 h-7" size="sm">
+            {/* proposeCategoryLabel already resolves '' to "Select category", so
+                the placeholder prop below would never actually render. */}
+            <SelectValue>{proposeCategoryLabel}</SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          {/* alignItemWithTrigger={false}: base-ui's default popup positioning
+              overlays the list directly on top of the trigger, which spills the
+              list across the row below and visually collides with its submit
+              button. Normal dropdown positioning (opens below the trigger)
+              avoids that. Popup width stays default (== trigger width) — it
+              doesn't need to stretch over the button; base-ui's Select is
+              modal, so the button is inert while the popup is open anyway. */}
+          <SelectContent align="start" alignItemWithTrigger={false}>
             {ASSIGNABLE_LABELS.map((label) => (
-              <SelectItem key={label} value={label}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
+              <SelectItem key={label} value={label} label={CATEGORY_LABEL_DISPLAY[label]}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -235,13 +255,25 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
       )}
       <form action={overrideAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <Select name="categoryLabel" defaultValue={defaultSelection(post)}>
-          <SelectTrigger className="text-xs border-border focus-visible:ring-ring min-w-[140px] h-7" size="sm">
-            <SelectValue placeholder="— None —" />
+          {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
+              with the selected label's length — keeps the "Override & finalize"
+              button lined up in a straight column across rows. */}
+          <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-48 h-7" size="sm">
+            {/* categorySelectLabel already resolves '' to "— None —", so the
+                placeholder prop below would never actually render. */}
+            <SelectValue>{categorySelectLabel}</SelectValue>
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">— None —</SelectItem>
+          {/* alignItemWithTrigger={false}: base-ui's default popup positioning
+              overlays the list directly on top of the trigger, which spills the
+              list across the row below and visually collides with its "Override
+              & finalize" button. Normal dropdown positioning (opens below the
+              trigger) avoids that. Popup width stays default (== trigger width)
+              — it doesn't need to stretch over the button; base-ui's Select is
+              modal, so the button is inert while the popup is open anyway. */}
+          <SelectContent align="start" alignItemWithTrigger={false}>
+            <SelectItem value="" label="— None —">— None —</SelectItem>
             {ASSIGNABLE_LABELS.map((label) => (
-              <SelectItem key={label} value={label}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
+              <SelectItem key={label} value={label} label={CATEGORY_LABEL_DISPLAY[label]}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
             ))}
           </SelectContent>
         </Select>

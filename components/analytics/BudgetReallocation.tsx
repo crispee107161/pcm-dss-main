@@ -15,6 +15,18 @@ function formatPHP(v: number) {
 // (₱1,000) is provisional pending Chapter 1 (mvp.md §9, open item 1).
 const THRESHOLD_OPTIONS = [300, 500, 1000]
 
+// SelectValue's default label lookup depends on the popup's SelectItems having
+// registered into base-ui's internal store, which only happens once the popup
+// has mounted (i.e. after the Select is opened at least once) — until then it
+// falls back to the raw value. Since `value` is set from a URL param on
+// mount, resolving the label ourselves keeps the trigger text correct from
+// first paint instead of showing a raw number until first click.
+function minSpendLabel(value: string | null): string {
+  if (value === null) return 'Minimum spend'
+  const t = Number(value)
+  return THRESHOLD_OPTIONS.includes(t) ? `Spend ≥ ${formatPHP(t)}` : value
+}
+
 export function MinSpendSelect({ value }: { value: number }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -22,11 +34,13 @@ export function MinSpendSelect({ value }: { value: number }) {
   return (
     <Select value={String(value)} onValueChange={v => router.push(`${pathname}?minSpend=${v}`)}>
       <SelectTrigger className="border-border text-foreground focus-visible:ring-ring w-auto min-w-[140px]">
-        <SelectValue placeholder="Minimum spend" />
+        {/* minSpendLabel already resolves null to "Minimum spend", so the
+            placeholder prop below would never actually render. */}
+        <SelectValue>{minSpendLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {THRESHOLD_OPTIONS.map(t => (
-          <SelectItem key={t} value={String(t)}>Spend ≥ {formatPHP(t)}</SelectItem>
+          <SelectItem key={t} value={String(t)} label={`Spend ≥ ${formatPHP(t)}`}>Spend ≥ {formatPHP(t)}</SelectItem>
         ))}
       </SelectContent>
     </Select>

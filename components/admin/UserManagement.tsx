@@ -29,6 +29,15 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'MARKETING_TEAM', label: 'Marketing Team Member' },
 ]
 
+// SelectValue's default label lookup depends on the popup's SelectItems having
+// registered into base-ui's internal store, which only happens once the popup
+// has mounted (i.e. after the Select is opened at least once) — until then it
+// falls back to the raw value. Resolving the label ourselves from ROLE_OPTIONS
+// keeps the trigger text correct from first paint.
+function roleLabel(value: string | null) {
+  return ROLE_OPTIONS.find(r => r.value === value)?.label ?? value ?? ''
+}
+
 const ROLE_BADGE_CLASS: Record<Role, string> = {
   BUSINESS_OWNER: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30',
   MARKETING_TEAM: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
@@ -101,11 +110,11 @@ function CreateUserForm() {
               <label htmlFor="create-user-role" className="block text-xs font-medium text-muted-foreground mb-1">Role</label>
               <Select name="role" defaultValue={ROLE_OPTIONS[0].value}>
                 <SelectTrigger id="create-user-role" className="w-full border-border focus-visible:ring-ring">
-                  <SelectValue />
+                  <SelectValue>{roleLabel}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {ROLE_OPTIONS.map(r => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    <SelectItem key={r.value} value={r.value} label={r.label}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -152,18 +161,28 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
         <TableCell className="px-4 py-3">
           {isSelf ? (
             <Badge className={`${ROLE_BADGE_CLASS[user.role]} rounded-full text-xs font-medium h-auto py-0.5 px-2.5`}>
-              {ROLE_OPTIONS.find(r => r.value === user.role)?.label}
+              {roleLabel(user.role)}
             </Badge>
           ) : (
             <form action={roleAction} className="flex items-center gap-2">
               <input type="hidden" name="userId" value={user.id} />
               <Select name="role" defaultValue={user.role}>
-                <SelectTrigger className="border-border focus-visible:ring-ring h-7 text-xs min-w-[140px]" size="sm">
-                  <SelectValue />
+                {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
+                    with the selected label's length — keeps the Save button lined up
+                    in a straight column across rows regardless of which role is shown. */}
+                <SelectTrigger className="border-border focus-visible:ring-ring h-7 text-xs w-52" size="sm">
+                  <SelectValue>{roleLabel}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                {/* alignItemWithTrigger={false}: base-ui's default popup positioning
+                    overlays the list directly on top of the trigger, which spills the
+                    list across the row below and visually collides with its Save
+                    button. Normal dropdown positioning (opens below the trigger)
+                    avoids that. Popup width stays default (== trigger width) — it
+                    doesn't need to stretch over the Save button; base-ui's Select is
+                    modal, so the button is inert while the popup is open anyway. */}
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   {ROLE_OPTIONS.map(r => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    <SelectItem key={r.value} value={r.value} label={r.label}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
