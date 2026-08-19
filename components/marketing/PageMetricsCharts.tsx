@@ -8,7 +8,7 @@ import {
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'
 import { ChartTooltipRow } from '@/lib/chart-tooltip'
-import { CHART_TICK_FILL, CHART_COLORS } from '@/lib/chart-axis'
+import { CHART_TICK_FILL, CHART_COLORS, formatCompactCount } from '@/lib/chart-axis'
 
 const DAILY_METRICS_CONFIG = {
   follows: { label: 'Follows', color: 'var(--chart-2)' },
@@ -76,7 +76,7 @@ export function ViewsClicksChart({ data }: { data: DailyMetricPoint[] }) {
       <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
-        <YAxis yAxisId="views"  tickFormatter={v => `${(v/1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis yAxisId="views"  tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
         <YAxis yAxisId="clicks" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
         <ChartTooltip
           cursor={false}
@@ -136,7 +136,7 @@ export function ViewersChart({ data }: { data: ViewerPoint[] }) {
       <BarChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
-        <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
         <ChartTooltip
           cursor={false}
           content={

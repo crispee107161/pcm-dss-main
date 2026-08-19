@@ -168,16 +168,18 @@ export default async function DashboardOverview({ role, displayName, from, to, a
       </div>
 
       {/* CPI distribution & category performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-start">
-        <div className="bg-card rounded-2xl p-5" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-stretch">
+        <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Cost-per-Inquiry Distribution</SectionLabel>
           <p className="text-xs text-muted-foreground -mt-3 mb-3">Per-ad CPI, {data.periodLabel} — histogram and box plot of the same population as the KPI above.</p>
           <CpiDistributionChart data={data.cpiDistribution} />
         </div>
-        <div className="bg-card rounded-2xl p-5" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
+        <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Performance by Content Category</SectionLabel>
           <p className="text-xs text-muted-foreground -mt-3 mb-3">Median organic engagement rate, {data.periodLabel} — n labelled per bar since sample sizes differ.</p>
-          <CategoryPerformanceChart data={data.categoryPerformance} />
+          <div className="flex-1 min-h-[240px]">
+            <CategoryPerformanceChart data={data.categoryPerformance} />
+          </div>
         </div>
       </div>
 

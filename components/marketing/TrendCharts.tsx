@@ -7,7 +7,7 @@ import {
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'
 import { ChartTooltipRow } from '@/lib/chart-tooltip'
-import { CHART_COLORS } from '@/lib/chart-axis'
+import { CHART_COLORS, formatCompactCount, formatCompactPhp } from '@/lib/chart-axis'
 
 // Empty on purpose — every chart below passes its own color via the Bar/Line
 // `fill`/`stroke` prop (matching the CHART_COLORS tokens used app-wide)
@@ -53,9 +53,7 @@ interface Props {
   postTrends: MonthlyPostTrend[]
 }
 
-function formatPHP(v: number) {
-  return `₱${(v / 1000).toFixed(0)}k`
-}
+const formatPHP = formatCompactPhp
 
 // Spend and messaging conversations are different units (₱ vs count), so this
 // renders as two single-axis small multiples sharing the same period axis
@@ -72,7 +70,7 @@ export function SpendTrendChart({ data }: { data: MonthlyAdTrend[] }) {
           cursor={false}
           content={<ChartTooltipContent hideLabel formatter={value => <ChartTooltipRow color={CHART_COLORS.blue} label="Total Spend" value={`₱${Number(value).toLocaleString()}`} />} />}
         />
-        <Bar dataKey="total_spend" name="Total Spend" fill="var(--color-total_spend)" radius={4} />
+        <Bar dataKey="total_spend" name="Total Spend" fill="var(--color-total_spend)" radius={6} maxBarSize={48} />
       </BarChart>
     </ChartContainer>
   )
@@ -89,7 +87,7 @@ export function MessagingTrendChart({ data }: { data: MonthlyAdTrend[] }) {
           cursor={false}
           content={<ChartTooltipContent hideLabel formatter={value => <ChartTooltipRow color={CHART_COLORS.green} label="Messaging Conversations" value={Number(value).toLocaleString()} />} />}
         />
-        <Bar dataKey="total_inquiries" name="Messaging Conversations" fill="var(--color-total_inquiries)" radius={4} />
+        <Bar dataKey="total_inquiries" name="Messaging Conversations" fill="var(--color-total_inquiries)" radius={6} maxBarSize={48} />
       </BarChart>
     </ChartContainer>
   )
@@ -101,7 +99,7 @@ export function ReachTrendChart({ data, compact }: { data: MonthlyAdTrend[]; com
       <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
         <ChartTooltip
           cursor={false}
           content={<ChartTooltipContent hideLabel formatter={v => <ChartTooltipRow color={CHART_COLORS.violet} label="Reach" value={Number(v).toLocaleString()} />} />}
@@ -128,7 +126,7 @@ export function EngagementRateChart({ data }: { data: MonthlyPostTrend[] }) {
           content={<ChartTooltipContent hideLabel formatter={value => <ChartTooltipRow color={CHART_COLORS.orange} label="Avg Engagement Rate" value={`${Number(value).toFixed(2)}%`} />} />}
         />
         <ChartLegend content={<ChartLegendContent />} />
-        <Bar dataKey="avg_engagement_rate" name="Avg Engagement Rate" fill="var(--color-avg_engagement_rate)" radius={4} />
+        <Bar dataKey="avg_engagement_rate" name="Avg Engagement Rate" fill="var(--color-avg_engagement_rate)" radius={6} maxBarSize={48} />
       </BarChart>
     </ChartContainer>
   )
@@ -146,7 +144,7 @@ export function PostCountChart({ data }: { data: MonthlyPostTrend[] }) {
           content={<ChartTooltipContent hideLabel formatter={value => <ChartTooltipRow color={CHART_COLORS.blue} label="Post Count" value={Number(value).toLocaleString()} />} />}
         />
         <ChartLegend content={<ChartLegendContent />} />
-        <Bar dataKey="post_count" name="Post Count" fill="var(--color-post_count)" radius={4} />
+        <Bar dataKey="post_count" name="Post Count" fill="var(--color-post_count)" radius={6} maxBarSize={48} />
       </BarChart>
     </ChartContainer>
   )

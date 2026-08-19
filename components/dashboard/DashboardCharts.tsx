@@ -7,7 +7,7 @@ import {
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'
 import { ChartTooltipRow } from '@/lib/chart-tooltip'
-import { CHART_COLORS } from '@/lib/chart-axis'
+import { CHART_COLORS, formatCompactCount } from '@/lib/chart-axis'
 import { median, iqr } from '@/lib/stats/descriptive'
 
 const CPI_HISTOGRAM_CONFIG = {
@@ -95,16 +95,16 @@ export function CpiDistributionChart({ data }: { data: number[] }) {
 
   return (
     <div>
-      <ChartContainer config={CPI_HISTOGRAM_CONFIG} className="aspect-auto h-[180px] w-full">
+      <ChartContainer config={CPI_HISTOGRAM_CONFIG} className="aspect-auto h-[200px] w-full">
         <BarChart accessibilityLayer data={histogram} margin={{ top: 8 }}>
           <CartesianGrid vertical={false} />
-          <XAxis dataKey="bin" tickLine={false} axisLine={false} interval={0} angle={-25} textAnchor="end" height={46} tick={{ fontSize: 9 }} />
+          <XAxis dataKey="bin" tickLine={false} axisLine={false} interval={0} angle={-20} textAnchor="end" height={50} tickMargin={8} tick={{ fontSize: 11 }} />
           <YAxis tickLine={false} axisLine={false} tickMargin={8} allowDecimals={false} />
           <ChartTooltip
             cursor={false}
             content={<ChartTooltipContent hideLabel formatter={v => <ChartTooltipRow color={CHART_COLORS.violet} label="Ads" value={Number(v).toLocaleString()} />} />}
           />
-          <Bar dataKey="count" name="Ads" fill="var(--color-count)" radius={4} />
+          <Bar dataKey="count" name="Ads" fill="var(--color-count)" radius={6} maxBarSize={56} />
         </BarChart>
       </ChartContainer>
       <BoxPlot stats={stats} />
@@ -122,7 +122,7 @@ export function CategoryPerformanceChart({ data }: { data: CategoryBarDatum[] })
   }
 
   return (
-    <ChartContainer config={CATEGORY_PERFORMANCE_CONFIG} className="aspect-auto h-[240px] w-full">
+    <ChartContainer config={CATEGORY_PERFORMANCE_CONFIG} className="aspect-auto h-full w-full">
       <BarChart accessibilityLayer data={data} margin={{ top: 24 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
@@ -131,7 +131,7 @@ export function CategoryPerformanceChart({ data }: { data: CategoryBarDatum[] })
           cursor={false}
           content={<ChartTooltipContent hideLabel formatter={value => <ChartTooltipRow color={CHART_COLORS.orange} label="Median Engagement Rate" value={`${Number(value).toFixed(2)}%`} />} />}
         />
-        <Bar dataKey="medianEngagement" name="Median Engagement Rate" fill="var(--color-medianEngagement)" radius={4}>
+        <Bar dataKey="medianEngagement" name="Median Engagement Rate" fill="var(--color-medianEngagement)" radius={6} maxBarSize={56}>
           <LabelList dataKey="n" position="top" offset={8} className="fill-foreground" fontSize={10} formatter={(v: unknown) => `n=${v}`} />
         </Bar>
       </BarChart>
@@ -153,8 +153,8 @@ export function PostReachViewsTrendChart({ data }: { data: ReachViewsPoint[] }) 
       <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis yAxisId="reach" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis yAxisId="views" orientation="right" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis yAxisId="reach" tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis yAxisId="views" orientation="right" tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
         <ChartTooltip
           cursor={false}
           content={
@@ -188,7 +188,7 @@ export function PageFunnelChart({ data }: { data: PageFunnelPoint[] }) {
         <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
-          <YAxis yAxisId="visits" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} />
+          <YAxis yAxisId="visits" tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
           <YAxis yAxisId="follows" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
           <ChartTooltip
             cursor={false}
