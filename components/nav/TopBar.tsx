@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useActionState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { NavItem } from './Sidebar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
+import { SmoothDropdown } from '@/components/ui/smooth-dropdown'
 import { Menu01Icon } from '@animateicons/react/huge'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useBlur } from '@/contexts/BlurContext'
@@ -28,20 +29,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
   const { blurred, toggleBlur } = useBlur()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [changePwOpen, setChangePwOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const [pwState, pwAction, pwPending] = useActionState(changePasswordAction, null)
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false)
-        setChangePwOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [])
 
   // Close dropdown on Escape
   useEffect(() => {
@@ -188,110 +176,113 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
           )}
         </button>
 
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setDropdownOpen(v => !v)}
-            aria-haspopup="menu"
-            aria-label="Account menu"
-            aria-expanded={dropdownOpen}
-            className="flex items-center rounded-full p-0.5 hover:bg-muted transition-[background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-          >
-            <Avatar className="w-8 h-8 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
-              <AvatarFallback className="bg-crimson-500 text-white text-xs font-bold">{initial}</AvatarFallback>
+        <SmoothDropdown
+          open={dropdownOpen}
+          onOpenChange={(v) => {
+            setDropdownOpen(v)
+            if (!v) setChangePwOpen(false)
+          }}
+          trigger={
+            <button
+              onClick={() => setDropdownOpen(v => !v)}
+              aria-haspopup="menu"
+              aria-label="Account menu"
+              aria-expanded={dropdownOpen}
+              className="flex items-center rounded-full p-0.5 hover:bg-muted transition-[background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            >
+              <Avatar className="w-8 h-8 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
+                <AvatarFallback className="bg-crimson-500 text-white text-xs font-bold">{initial}</AvatarFallback>
+              </Avatar>
+            </button>
+          }
+        >
+          {/* Identity */}
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
+            <Avatar className="w-10 h-10 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
+              <AvatarFallback className="bg-crimson-500 text-white text-sm font-bold">{initial}</AvatarFallback>
             </Avatar>
-          </button>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">{roleLabel}</p>
+              <p className="text-xs text-muted-foreground truncate">{email}</p>
+            </div>
+          </div>
 
-          {dropdownOpen && (
-            <div className="animate-fade-slide-up absolute z-10 top-full mt-2 right-0 w-64 bg-card border border-border rounded-xl overflow-hidden card-shadow-floating">
-              {/* Identity */}
-              <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
-                <Avatar className="w-10 h-10 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
-                  <AvatarFallback className="bg-crimson-500 text-white text-sm font-bold">{initial}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{roleLabel}</p>
-                  <p className="text-xs text-muted-foreground truncate">{email}</p>
-                </div>
-              </div>
+          <div className="p-1.5 space-y-0.5">
+            {/* Change password toggle */}
+            <button
+              onClick={() => setChangePwOpen(v => !v)}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              Change Password
+              <svg
+                className={`w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform ${changePwOpen ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-              <div className="p-1.5 space-y-0.5">
-                {/* Change password toggle */}
-                <button
-                  onClick={() => setChangePwOpen(v => !v)}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                  Change Password
-                  <svg
-                    className={`w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform ${changePwOpen ? 'rotate-180' : ''}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {/* Change password form — grid height transition */}
-                <div className={`expand-grid${changePwOpen ? ' open' : ''}`}>
-                  <div>
-                    <form action={pwAction} className="px-3 pb-2 pt-1 space-y-2">
-                      {pwState?.error && (
-                        <p className="text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-900 rounded-lg px-2 py-1.5">{pwState.error}</p>
-                      )}
-                      {pwState?.success && (
-                        <p className="text-green-600 dark:text-green-400 text-xs bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-900 rounded-lg px-2 py-1.5">{pwState.success}</p>
-                      )}
-                      <Input
-                        name="current_password"
-                        type="password"
-                        placeholder="Current password"
-                        required
-                        className="w-full text-base sm:text-xs"
-                      />
-                      <Input
-                        name="new_password"
-                        type="password"
-                        placeholder="New password"
-                        required
-                        className="w-full text-base sm:text-xs"
-                      />
-                      <Input
-                        name="confirm_password"
-                        type="password"
-                        placeholder="Confirm new password"
-                        required
-                        className="w-full text-base sm:text-xs"
-                      />
-                      <button
-                        type="submit"
-                        disabled={pwPending}
-                        className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:text-white/60 text-white text-xs rounded-lg py-1.5 font-medium transition-[background-color]"
-                      >
-                        {pwPending ? 'Updating...' : 'Update Password'}
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sign out */}
-              <div className="p-1.5 pt-0 border-t border-border">
-                <form action={logoutAction}>
+            {/* Change password form — grid height transition */}
+            <div className={`expand-grid${changePwOpen ? ' open' : ''}`}>
+              <div>
+                <form action={pwAction} className="px-3 pb-2 pt-1 space-y-2">
+                  {pwState?.error && (
+                    <p className="text-red-600 dark:text-red-400 text-xs bg-red-50 dark:bg-red-900/40 border border-red-200 dark:border-red-900 rounded-lg px-2 py-1.5">{pwState.error}</p>
+                  )}
+                  {pwState?.success && (
+                    <p className="text-green-600 dark:text-green-400 text-xs bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-900 rounded-lg px-2 py-1.5">{pwState.success}</p>
+                  )}
+                  <Input
+                    name="current_password"
+                    type="password"
+                    placeholder="Current password"
+                    required
+                    className="w-full text-base sm:text-xs"
+                  />
+                  <Input
+                    name="new_password"
+                    type="password"
+                    placeholder="New password"
+                    required
+                    className="w-full text-base sm:text-xs"
+                  />
+                  <Input
+                    name="confirm_password"
+                    type="password"
+                    placeholder="Confirm new password"
+                    required
+                    className="w-full text-base sm:text-xs"
+                  />
                   <button
                     type="submit"
-                    className="w-full flex items-center gap-3 px-3 py-2 mt-1.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                    disabled={pwPending}
+                    className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:text-white/60 text-white text-xs rounded-lg py-1.5 font-medium transition-[background-color]"
                   >
-                    <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Sign Out
+                    {pwPending ? 'Updating...' : 'Update Password'}
                   </button>
                 </form>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+
+          {/* Sign out */}
+          <div className="p-1.5 pt-0 border-t border-border">
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="w-full flex items-center gap-3 px-3 py-2 mt-1.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Sign Out
+              </button>
+            </form>
+          </div>
+        </SmoothDropdown>
       </div>
     </div>
   )
