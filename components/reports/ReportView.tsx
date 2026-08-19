@@ -194,8 +194,8 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
         }))} />
         {budgetReallocation.n > 0 && (
           <p className={`text-sm mt-4 ${isPrint ? 'text-neutral-700' : 'text-gray-700'}`}>
-            Q4&apos;s {formatPHP(budgetReallocation.q4Spend)} spend produced {budgetReallocation.q4Inquiries} conversations;
-            the same spend at Q1&apos;s rate would have generated {Math.round(budgetReallocation.counterfactualInquiries)} conversations
+            Q4&apos;s {formatPHP(budgetReallocation.q4Spend)} spend produced {budgetReallocation.q4Inquiries}{'\u00A0'}conversations;
+            the same spend at Q1&apos;s rate would have generated {Math.round(budgetReallocation.counterfactualInquiries)}{'\u00A0'}conversations
             based on recorded results — a retrospective comparison, not a forecast.
           </p>
         )}
