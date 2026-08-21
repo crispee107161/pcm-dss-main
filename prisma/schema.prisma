@@ -254,6 +254,99 @@ model CorrelationAssumptionRun {
   shapiro_y_p Float
 }
 
+enum RegressionSpecification {
+  PRIMARY
+  SECONDARY
+}
+
+/// FR-31 (docs/raven/FR31_Regression_Specification.md, amended by
+/// docs/raven/FR31_Amendment_TypeScript_Implementation.md): one row per
+/// specification (PRIMARY = spend >= the shared ₱1,000 threshold, n=108;
+/// SECONDARY = all messaging ads, n=187) per S7 Analysis page load. Written
+/// but never read back by the app — like CorrelationAssumptionRun, this is
+/// a manuscript audit trail for Chapter 4, not application state. Flat
+/// columns rather than a child coefficients table because the four
+/// predictors are fixed by the spec, not user-configurable.
+///
+/// This is a DIFFERENT model from the cut-feature RegressionModel above
+/// (messaging conversations ~ reach + spend, a predictive model) — do not
+/// confuse the two. RegressionModel/lib/stats/regression.ts stay untouched.
+model RegressionRun {
+  id                   Int                     @id @default(autoincrement())
+  run_at               DateTime                @default(now())
+  specification        RegressionSpecification
+  n                    Int
+  min_spend_filter     Float?
+
+  // Overall fit
+  r_squared            Float
+  adj_r_squared        Float
+  f_statistic          Float
+  f_p_value            Float
+  residual_std_error   Float
+
+  // Coefficients (term order: intercept, engagement_rate, frequency, ctr, cpm)
+  intercept_coef       Float
+  intercept_se_ols     Float
+  intercept_se_hc3     Float
+  intercept_p_ols      Float
+  intercept_p_hc3      Float
+
+  engagement_rate_coef   Float
+  engagement_rate_se_ols Float
+  engagement_rate_se_hc3 Float
+  engagement_rate_p_ols  Float
+  engagement_rate_p_hc3  Float
+  engagement_rate_vif    Float
+
+  frequency_coef       Float
+  frequency_se_ols     Float
+  frequency_se_hc3     Float
+  frequency_p_ols      Float
+  frequency_p_hc3      Float
+  frequency_vif        Float
+
+  ctr_coef             Float
+  ctr_se_ols           Float
+  ctr_se_hc3           Float
+  ctr_p_ols            Float
+  ctr_p_hc3            Float
+  ctr_vif              Float
+
+  cpm_coef             Float
+  cpm_se_ols           Float
+  cpm_se_hc3           Float
+  cpm_p_ols            Float
+  cpm_p_hc3            Float
+  cpm_vif              Float
+
+  // Diagnostics
+  breusch_pagan_lm     Float
+  breusch_pagan_p      Float
+  jarque_bera_jb       Float
+  jarque_bera_p        Float
+  jarque_bera_skew     Float
+  jarque_bera_exkurt   Float
+  shapiro_wilk_w       Float?
+  shapiro_wilk_p       Float?
+
+  // Accuracy (primary specification only — the secondary row leaves these null)
+  in_sample_mae        Float?
+  in_sample_rmse       Float?
+  in_sample_mape       Float?
+  cv_r_squared         Float?
+  cv_mae               Float?
+  cv_rmse              Float?
+  cv_mape              Float?
+  baseline_mae         Float?
+  baseline_rmse        Float?
+  baseline_mape        Float?
+
+  // Residual diagnostic (primary specification only)
+  residual_flagged_count       Int?
+  residual_flagged_total_spend Float?
+}
+
 model RegressionModel {
   id                   Int      @id @default(autoincrement())
   intercept            Float

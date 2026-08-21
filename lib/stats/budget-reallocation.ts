@@ -1,3 +1,10 @@
+// Shared with FR-31 (see lib/stats/fr31-regression.ts), which the FR-31 spec
+// explicitly requires to use "the same named constant" as FR-25 for its
+// ≥₱1,000 population filter — hoisted here rather than left as separate
+// private literals in app/dashboard/owner/budget-reallocation/page.tsx and
+// lib/reports/report-data.ts.
+export const MIN_SPEND_THRESHOLD_PHP = 1000
+
 export interface AdForReallocation {
   ad_id: string
   ad_name: string

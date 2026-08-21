@@ -199,3 +199,101 @@ export function studentTPValue(t: number, df: number): number {
   const x = df / (df + t * t)
   return regularizedIncompleteBeta(x, df / 2, 0.5)
 }
+
+// Upper-tail p-value P(F > f) for an F(df1, df2) statistic — FR-31's overall
+// model significance test. Identity: P(F > f) = I_x(df2/2, df1/2) with
+// x = df2/(df2 + df1*f). Note the swapped argument order versus the F
+// statistic's own (df1, df2) — the incomplete-beta arguments are
+// (denominator df / 2, numerator df / 2). Built on the same
+// regularizedIncompleteBeta already validated for studentTPValue above; no
+// new special function.
+export function fPValue(f: number, df1: number, df2: number): number {
+  if (df1 <= 0 || df2 <= 0) throw new Error('fPValue: degrees of freedom must be positive')
+  if (!Number.isFinite(f)) return 0 // a perfect (zero-residual) fit
+  if (f <= 0) return 1
+  const x = df2 / (df2 + df1 * f)
+  return regularizedIncompleteBeta(x, df2 / 2, df1 / 2)
+}
+
+// Upper-tail probability P(X > x) for a chi-square statistic with EVEN
+// degrees of freedom only — used by FR-31 for Breusch-Pagan (df = predictor
+// count) and Jarque-Bera (df = 2, always). For even df the survival function
+// collapses to a finite sum, exp(-x/2) * sum_{j=0}^{df/2-1} (x/2)^j / j!,
+// with no incomplete-gamma function needed.
+//
+// JB's df=2 is structural and can never be odd. BP's df equals the current
+// predictor count (4 for FR-31's four ratios) — even only because of that
+// specific count. If the predictor set ever changes to an odd count, this
+// throws rather than silently returning a wrong p-value; callers must pass
+// a derived df (e.g. `predictors.length`), never a hardcoded literal, so
+// the guard can actually fire.
+export function chiSquareUpperTailEvenDf(x: number, df: number): number {
+  if (!Number.isInteger(df) || df < 2 || df % 2 !== 0) {
+    throw new Error(
+      `chiSquareUpperTailEvenDf: df must be a positive even integer (got ${df}). ` +
+        'Odd df requires the regularized incomplete gamma function, which is not implemented.'
+    )
+  }
+  if (x <= 0) return 1
+  // Running-term recurrence (term_j = term_{j-1} * (x/2) / j) avoids both a
+  // factorial helper and overflow from (x/2)^j at large x/df.
+  const half = x / 2
+  let term = 1
+  let sum = 1
+  for (let j = 1; j < df / 2; j++) {
+    term *= half / j
+    sum += term
+  }
+  // Combined in log space so a large statistic yields a tiny-but-nonzero p
+  // rather than underflowing to a bare 0.
+  return Math.exp(-half + Math.log(sum))
+}
+
+// Two-tailed p-value for a standard normal z statistic — used for FR-31's
+// HC3 robust standard errors. HC3 is an asymptotic (sandwich) estimator, so
+// its ratio coef/SE_HC3 is referred to the normal distribution, not t —
+// this is statsmodels' behaviour (`cov_type='HC3'` implies `use_t=False`)
+// and was confirmed against FR-31's published reference numbers (e.g. ctr's
+// HC3 p = 0.0339 matches the normal tail exactly; the t(103) tail gives
+// 0.0362, which does not match).
+//
+// `1 - normalCdf` alone suffers catastrophic cancellation and can return an
+// exact 0 for |z| beyond ~5.7 (erf's own error is only ~1.5e-7 anyway, so
+// any tail below that is noise regardless). For |z| > 5 this instead
+// evaluates via the complementary error function's asymptotic continued
+// fraction (Numerical Recipes' erfcc-style Chebyshev approximation),
+// accurate to ~1.2e-7 relative error, so FR-31's Chapter-4 dump never has
+// to report a bare 0 for a coefficient like cpm whose HC3 z-score is large.
+function erfcApprox(x: number): number {
+  const z = Math.abs(x)
+  const t = 2 / (2 + z)
+  const ty = 4 * t - 2
+  // Numerical Recipes 3rd ed., §6.2.2 — Chebyshev coefficients for erfccheb.
+  const cof = [
+    -1.3026537197817094, 6.4196979235649026e-1, 1.9476473204185836e-2,
+    -9.561514786808631e-3, -9.46595344482036e-4, 3.66839497852761e-4,
+    4.2523324806907e-5, -2.0278578112534e-5, -1.624290004647e-6,
+    1.303655835580e-6, 1.5626441722e-8, -8.5238095915e-8,
+    6.529054439e-9, 5.059343495e-9, -9.91364156e-10,
+    -2.27365122e-10, 9.6467911e-11, 2.394038e-12,
+    -6.886027e-12, 8.94487e-13, 3.13092e-13,
+    -1.12708e-13, 3.81e-16, 7.106e-15,
+  ]
+  let d = 0
+  let dd = 0
+  for (let j = cof.length - 1; j > 0; j--) {
+    const tmp = d
+    d = ty * d - dd + cof[j]
+    dd = tmp
+  }
+  const ans = t * Math.exp(-z * z + 0.5 * (cof[0] + ty * d) - dd)
+  return x >= 0 ? ans : 2 - ans
+}
+
+export function normalTwoTailedPValue(z: number): number {
+  const az = Math.abs(z)
+  if (az <= 5) {
+    return 2 * normalUpperTail(az)
+  }
+  return erfcApprox(az / Math.SQRT2)
+}

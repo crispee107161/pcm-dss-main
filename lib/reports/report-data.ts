@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getDashboardOverview } from '@/lib/data/dashboard'
 import { loadAnalysisScreenData, loadAdLifecycleData } from '@/lib/data/analysis'
-import { computeBudgetReallocation, type BudgetReallocationResult } from '@/lib/stats/budget-reallocation'
+import { computeBudgetReallocation, MIN_SPEND_THRESHOLD_PHP, type BudgetReallocationResult } from '@/lib/stats/budget-reallocation'
 import { rankByAdSet, type GroupRankingRow } from '@/lib/stats/ad-set-ranking'
 import { computePostTypePerformance, type PostTypeRow } from '@/lib/stats/post-type-performance'
 import { computeWatchThrough, type WatchThroughResult } from '@/lib/stats/watch-through'
@@ -13,8 +13,6 @@ export interface ReportOptions {
   // the rest of this report which both Owner and Marketing Manager see.
   role: 'owner' | 'marketing'
 }
-
-const BUDGET_MIN_SPEND = 1000
 
 export async function buildReportData({ role }: ReportOptions) {
   const [overview, budgetAds, adSetAds, posts, analysis, lifecycle] = await Promise.all([
@@ -36,7 +34,7 @@ export async function buildReportData({ role }: ReportOptions) {
     role === 'owner' ? loadAdLifecycleData() : Promise.resolve(null),
   ])
 
-  const budgetReallocation: BudgetReallocationResult = computeBudgetReallocation(budgetAds, BUDGET_MIN_SPEND)
+  const budgetReallocation: BudgetReallocationResult = computeBudgetReallocation(budgetAds, MIN_SPEND_THRESHOLD_PHP)
   const adSetRows: GroupRankingRow[] = rankByAdSet(adSetAds)
   const postTypeRows: PostTypeRow[] = computePostTypePerformance(posts)
   const watchThroughEligible = posts.filter((p) => p.duration_sec !== null && p.avg_seconds_viewed !== null)

@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { loadAnalysisScreenData } from '@/lib/data/analysis'
+import { loadAnalysisScreenData, loadRegressionAnalysis } from '@/lib/data/analysis'
 import AnalysisView from '@/components/analytics/pages/AnalysisView'
 
 export default async function MarketingAnalysisPage() {
@@ -9,7 +9,7 @@ export default async function MarketingAnalysisPage() {
     redirect('/login')
   }
 
-  const data = await loadAnalysisScreenData()
+  const [data, regression] = await Promise.all([loadAnalysisScreenData(), loadRegressionAnalysis()])
 
-  return <AnalysisView data={data} />
+  return <AnalysisView data={data} regression={regression} />
 }

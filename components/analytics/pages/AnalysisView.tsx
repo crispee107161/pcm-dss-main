@@ -1,9 +1,10 @@
-import type { AnalysisScreenData } from '@/lib/data/analysis'
+import type { AnalysisScreenData, RegressionAnalysisData } from '@/lib/data/analysis'
 import type { AdLifecycleResult } from '@/lib/stats/ad-lifecycle'
 import { interpretCorrelation } from '@/lib/stats/interpret'
 import { CATEGORY_LABEL_DISPLAY } from '@/lib/category-label'
 import { PageHeader } from '@/components/nav/PageHeader'
 import MethodologyNote from '@/components/analytics/MethodologyNote'
+import RegressionSection from '@/components/analytics/RegressionSection'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 function fmtInt(n: number | null): string {
@@ -107,7 +108,15 @@ function LifecycleSection({ lifecycle }: { lifecycle: AdLifecycleResult }) {
   )
 }
 
-export default function AnalysisView({ data, lifecycle }: { data: AnalysisScreenData; lifecycle?: AdLifecycleResult }) {
+export default function AnalysisView({
+  data,
+  lifecycle,
+  regression,
+}: {
+  data: AnalysisScreenData
+  lifecycle?: AdLifecycleResult
+  regression: RegressionAnalysisData
+}) {
   const { ranking, categoryDistribution, correlation } = data
   const rankingInterpretation = interpretCorrelation(ranking.rho, ranking.n, ranking.p)
   const correlationInterpretation = interpretCorrelation(correlation.coefficient, correlation.n, correlation.p)
@@ -212,6 +221,9 @@ export default function AnalysisView({ data, lifecycle }: { data: AnalysisScreen
 
       {lifecycle && <LifecycleSection lifecycle={lifecycle} />}
 
+      {/* FR-31 — Regression analysis, new S7 section */}
+      <RegressionSection data={regression} />
+
       <div className="mt-4">
         <MethodologyNote>
           Ranking comparison (FR-19): Spearman rank correlation between Views and organic engagement rate, with
@@ -229,7 +241,16 @@ export default function AnalysisView({ data, lifecycle }: { data: AnalysisScreen
               leaving the denominator early. CPI at each point is spend summed over results summed, never an
               average of per-row CPI.
             </>
-          )}
+          )} Regression (FR-31): an explanatory OLS model of ln(cost per inquiry) on four ratio predictors —
+          engagement rate, frequency, CTR, and CPM — not a predictor, forecast, or simulation; reach and spend are
+          excluded as predictors for near-perfect collinearity with the others. Ordinary and heteroscedasticity-
+          consistent (HC3) standard errors are both reported because residuals are non-normal; HC3 significance is
+          referred to the standard normal distribution, OLS significance to the t distribution, since HC3 is an
+          asymptotic estimator. Two specifications are shown side by side (spend-filtered and unfiltered) and any
+          predictor whose sign or significance changes between them is flagged as not robust rather than reported
+          as if it were settled. Accuracy is 10-fold cross-validated (seed 42) against a median-CPI baseline, and
+          the residual diagnostic compares each ad&apos;s actual cost per inquiry to the level associated with its
+          own characteristics — not a prediction of future performance.
         </MethodologyNote>
       </div>
     </div>

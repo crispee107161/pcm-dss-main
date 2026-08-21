@@ -41,7 +41,7 @@ FR-13 (final category assignment) is restricted to the Marketing Manager. FR-03 
 | S4 | Categorisation Review | queue of uncategorised/low-confidence posts; accept or override in bulk | FR-12, FR-13, FR-14 | View | **Full (only role that finalises)** | Suggest only |
 | S5 | Advertising Performance | ads by campaign/ad set/ad; spend, results, CPI; **FR-25, FR-26 tabs** | FR-11, FR-17, FR-25, FR-26 | Full | View | — |
 | S6 | Content Performance | organic posts by category and month; engagement rate; **FR-28, FR-29** | FR-11, FR-17, FR-28, FR-29 | View | Full | View — this is their screen |
-| S7 | Analysis | FR-19 ranking comparison, FR-20 category distribution, FR-21 correlation, FR-22 interpretation; **FR-27 lifecycle** | FR-19–FR-22, FR-27 | Full | Full | View |
+| S7 | Analysis | FR-19 ranking comparison, FR-20 category distribution, FR-21 correlation, FR-22 interpretation; **FR-27 lifecycle**; **FR-31 regression** | FR-19–FR-22, FR-27, FR-31 | Full | Full | View |
 | S8 | Method Evaluation | keyword vs. LLM agreement, kappa, confusion matrix | FR-15 | View | Full | — |
 | S9 | Reports | build and export PDF/CSV | FR-23 | Full | Full | View |
 | S10 | User Management | create, edit, deactivate accounts; reset credentials | FR-03 | **Full (only role)** | — | — |
@@ -167,6 +167,20 @@ Reels get ~2× the engagement rate of photos but the lowest reach; videos get th
 
 <sub>Original 2026-08-12 figures: 389,577 visits, 11,386 new follows, 2.92 follows per 100 page visits over 12 months; monthly follows range 652–1,641.</sub>
 
+### 4.5A FR-31 — Regression analysis (reinstated 2026-08-17/18, after being cut in §5 on 2026-08-12)
+
+Owner + Marketing-Manager-facing (Marketing Team: View), lives on S7 Analysis as a new section alongside FR-19–FR-22 and FR-27.
+
+> ⚠️ **Not the multiple-linear-regression this document originally cut.** The version cut on 12 Aug (log(CPI) on reach + spend, VIF≈500) is the exact methodological exposure this reinstated version avoids. FR-31 drops reach and spend entirely — they're excluded as predictors (r=0.984 on the log scale) in favour of four ratios (engagement rate, frequency, CTR, CPM), all VIF 1.10–1.35. It is explanatory, not predictive: **no what-if slider, no forecast, no simulation** — that prohibition is unchanged from §5.
+
+**Population:** messaging ads (`Result type = "Messaging conversations started"`), aggregated to Ad ID (sum-then-divide, ALG-09). Primary specification: spend ≥ the same configurable threshold FR-25 uses (default ₱1,000, n=108). Secondary specification: unfiltered (n=187) — both shown side by side, not just the primary.
+
+**Model:** OLS of `ln(cost per inquiry)` on engagement_rate, frequency, CTR, CPM. Full diagnostic suite required and displayed: VIF, Breusch-Pagan, Jarque-Bera (with Shapiro-Wilk shown alongside as a corroborating check), HC3 robust standard errors (residuals are non-normal, so both OLS and HC3 significance are reported — HC3 referred to the standard normal distribution, OLS to Student-t, since HC3 is an asymptotic estimator). 10-fold cross-validated accuracy (seed 42, named constant) against a median-CPI baseline. A residual diagnostic flags ads whose actual CPI exceeds 1.5× the level their own characteristics would predict.
+
+**The finding the feature is built to surface, not hide:** `engagement_rate`'s coefficient flips sign between the two specifications and does not survive HC3 robust significance in either — flagged on screen as *"not robust across specifications"*, not reported as if settled. `cpm` (positive) and `ctr` (negative) are stable across both specifications and are the defensible results.
+
+Full specification, exact reference numbers, and the TypeScript implementation decisions: `docs/raven/FR31_Regression_Specification.md`, `docs/raven/FR31_Amendment_TypeScript_Implementation.md`, `docs/raven/FR31_Answers_HC3_and_Reach.md`.
+
 ### 4.6 Audit trail (FR-24)
 
 Log user, timestamp, affected records for every upload and every manual category assignment. This is the system's direct answer to Chapter 1's Condition 5 (attribution collected verbally, never retained) — it will be pointed to at defence.
@@ -206,9 +220,8 @@ Per handoff §15, none of the following appears in the Objectives of the Study, 
 
 | Feature | Reason |
 |---|---|
-| What-if / Monte Carlo simulation | Rests on a regression explaining ~40–47% of variance in an observational, non-experimental sample. A "what if I change X" slider implies a causal lever the data cannot support. |
+| What-if / Monte Carlo simulation | Rests on a regression explaining ~40–55% of variance in an observational, non-experimental sample. A "what if I change X" slider implies a causal lever the data cannot support. Still cut even after FR-31 reinstated regression itself — see §4.5A. |
 | Holt-Winters / seasonal forecasting | Needs ≥2 complete seasonal cycles; only 12 monthly observations exist (exactly one cycle). FR-18 month-over-month comparison covers the same real need (Condition 4) without model assumptions. |
-| Multiple linear regression | Technically feasible (log(CPI) model: R²=0.465, n=187) but reach and spend are near-collinear (VIF≈500; even a reduced spec carries VIF 12–19). Not in the Objectives. FR-21 already answers the underlying question with far less methodological exposure. If a predictive component is ever requested, bring regression back with a documented VIF-screening step — not simulation or forecasting. |
 | Lagged correlation / Fisher z | No organic↔ads join key exists (§1.2 below) — nothing to lag. |
 | Campaign health score | Composite weights would be arbitrary; FR-25/FR-26 give the same answer from raw figures without an invented weighting scheme. |
 
@@ -272,6 +285,7 @@ The existing codebase was built for a different system. This section is the acti
 11. Analysis screen — FR-19–FR-22, ALG-07, ALG-08, plus FR-28
 12. **FR-27 lifecycle diagnostics**
 13. Reports + audit log — FR-23, FR-24
+14. **FR-31 regression analysis** (reinstated 2026-08-17/18 — see §4.5A)
 
 Steps 6–7 are deliberately promoted ahead of the older step 8 order: they are cheap (group-by aggregations over data already ingested) and directly answer "where is the money going" — the panel's stated concern about the system delivering no profitable insight.
 
