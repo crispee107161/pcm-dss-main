@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { DownloadIcon } from '@/components/ui/download-icon'
+import { Spinner } from '@/components/ui/spinner'
 
 export function CsvExportButton({ role }: { role: string }) {
   const [loading, setLoading] = useState(false)
@@ -32,6 +34,7 @@ export function CsvExportButton({ role }: { role: string }) {
 
   return (
     <Button type="button" variant="secondary" size="lg" className="px-4 border border-border" onClick={handleClick} disabled={loading}>
+      {loading ? <Spinner /> : <DownloadIcon size={16} />}
       {loading ? 'Generating CSV…' : 'Export CSV'}
     </Button>
   )
