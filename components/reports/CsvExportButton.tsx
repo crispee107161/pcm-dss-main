@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { DownloadIcon } from '@/components/ui/download-icon'
+import { DownloadIcon, type DownloadIconHandle } from '@/components/ui/download-icon'
 import { Spinner } from '@/components/ui/spinner'
 
 export function CsvExportButton({ role }: { role: string }) {
   const [loading, setLoading] = useState(false)
+  const iconRef = useRef<DownloadIconHandle>(null)
 
   async function handleClick() {
     setLoading(true)
@@ -33,8 +34,19 @@ export function CsvExportButton({ role }: { role: string }) {
   }
 
   return (
-    <Button type="button" variant="secondary" size="lg" className="px-4 border border-border" onClick={handleClick} disabled={loading}>
-      {loading ? <Spinner /> : <DownloadIcon size={16} />}
+    <Button
+      type="button"
+      variant="secondary"
+      size="lg"
+      className="px-4 border border-border"
+      onClick={handleClick}
+      disabled={loading}
+      onMouseEnter={() => iconRef.current?.startAnimation()}
+      onMouseLeave={() => iconRef.current?.stopAnimation()}
+      onFocus={() => iconRef.current?.startAnimation()}
+      onBlur={() => iconRef.current?.stopAnimation()}
+    >
+      {loading ? <Spinner /> : <DownloadIcon ref={iconRef} size={16} />}
       {loading ? 'Generating CSV…' : 'Export CSV'}
     </Button>
   )

@@ -2,10 +2,11 @@
 
 import { forwardRef, useImperativeHandle, useRef } from 'react'
 import {
-  HouseIcon, UploadIcon, FolderIcon, KeyIcon, ChartScatterIcon, LayersIcon,
+  UploadIcon, FolderIcon, KeyIcon, ChartScatterIcon, LayersIcon,
   TrendingUpIcon, GlobeIcon, WalletIcon, LayoutGridIcon, UsersIcon,
   GitCompareIcon,
 } from '@animateicons/react/lucide'
+import { HomeIcon } from '@/components/ui/home-icon'
 import { TagIcon } from '@/components/ui/tag-icon'
 import { FileTextIcon } from '@/components/ui/file-text-icon'
 import { FileClockIcon } from '@/components/ui/file-clock-icon'
@@ -28,7 +29,7 @@ interface NavIconComponentProps {
 // strings (not JSX) so they can cross the Server -> Client boundary from the
 // role layouts (app/dashboard/{owner,marketing}/layout.tsx) into Sidebar.
 const NAV_ICONS = {
-  home: HouseIcon,
+  home: HomeIcon,
   upload: UploadIcon,
   folder: FolderIcon,
   tag: TagIcon,

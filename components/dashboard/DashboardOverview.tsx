@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { getGreeting } from '@/lib/greeting'
 import { getDashboardOverview } from '@/lib/data/dashboard'
 import { KpiCard, formatPhp, formatPhpPrecise, formatNumber } from '@/components/kpi/KpiCard'
@@ -8,6 +7,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import DateRangeFilter from '@/components/ui/DateRangeFilter'
 import UploadHistory from '@/components/upload/UploadHistory'
 import AlertsStrip from '@/components/dashboard/AlertsStrip'
+import { ExportLink } from '@/components/dashboard/ExportLink'
 import type { Role } from '@/types/index'
 
 interface DashboardOverviewProps {
@@ -95,15 +95,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangeFilter from={from} to={to} anchor={data.dataAnchor} />
-          {!isTeam && (
-            <Link
-              href={reportHref}
-              className="flex items-center gap-2 text-sm font-semibold rounded-lg px-3.5 py-2 bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-              Export
-            </Link>
-          )}
+          {!isTeam && <ExportLink href={reportHref} />}
         </div>
       </div>
 
