@@ -62,3 +62,11 @@ dev.db
 .claude/
 !.claude/settings.json
 !.claude/settings.local.json
+
+# Local-only planning/security docs (not for the public repo)
+/BRAND-RESKIN-PLAN.md
+/CREDENTIAL-ROTATION-CHECKLIST.md
+/PCM-DSS-Forecast-Validation-Report.docx
+/DESIGN.md
+/SECURITY.md
+/TODO-2026-08-04.md
