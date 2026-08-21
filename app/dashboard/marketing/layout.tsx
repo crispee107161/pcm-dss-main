@@ -1,11 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Sidebar, { NavItem } from '@/components/nav/Sidebar'
-import {
-  IconHome, IconUpload, IconTag, IconKey, IconChart,
-  IconRanking, IconTrendUp, IconMetrics, IconReport, IconAuditLog, IconScale,
-  IconFolder, IconLayers,
-} from '@/components/nav/icons'
 import { UploadProvider } from '@/contexts/UploadContext'
 import UploadStatusBar from '@/components/upload/UploadStatusBar'
 
@@ -14,25 +9,25 @@ import UploadStatusBar from '@/components/upload/UploadStatusBar'
 // claims) — left off the nav so they're unreachable, route files stay on
 // disk for a later dedicated deletion step.
 const navItems: NavItem[] = [
-  { section: 'Overview', label: 'Dashboard', href: '/dashboard/marketing', icon: <IconHome /> },
-  { section: 'Data', label: 'Upload Data', href: '/dashboard/marketing/upload', icon: <IconUpload /> },
-  { label: 'Content Library', href: '/dashboard/marketing/content', icon: <IconFolder /> },
-  { label: 'Categorization Review', href: '/dashboard/marketing/categorize', icon: <IconTag /> },
-  { label: 'Manage Keywords', href: '/dashboard/marketing/keywords', icon: <IconKey /> },
+  { section: 'Overview', label: 'Dashboard', href: '/dashboard/marketing', icon: 'home' },
+  { section: 'Data', label: 'Upload Data', href: '/dashboard/marketing/upload', icon: 'upload' },
+  { label: 'Content Library', href: '/dashboard/marketing/content', icon: 'folder' },
+  { label: 'Categorization Review', href: '/dashboard/marketing/categorize', icon: 'tag' },
+  { label: 'Manage Keywords', href: '/dashboard/marketing/keywords', icon: 'key' },
   // "Correlation" (the old ad-metrics-vs-messaging Spearman matrix, cut-era
   // code) is superseded by S7 Analysis (FR-19-22) — unlinked from the nav,
   // route file left on disk per this repo's convention for superseded pages.
-  { section: 'Analytics', label: 'Analysis', href: '/dashboard/marketing/analysis', icon: <IconChart /> },
-  { label: 'Method Evaluation', href: '/dashboard/marketing/method-evaluation', icon: <IconScale /> },
+  { section: 'Analytics', label: 'Analysis', href: '/dashboard/marketing/analysis', icon: 'chart' },
+  { label: 'Method Evaluation', href: '/dashboard/marketing/method-evaluation', icon: 'compare' },
   // Named "Top Ads" to match the Owner nav's naming for the same page — see
   // app/dashboard/owner/layout.tsx's comment on why "Campaign Rankings" was
   // renamed there (it ranks individual ads, not campaigns).
-  { label: 'Top Ads', href: '/dashboard/marketing/campaign-rankings', icon: <IconRanking /> },
-  { label: 'Post Type Performance', href: '/dashboard/marketing/post-type-performance', icon: <IconLayers /> },
-  { label: 'Trend Analysis', href: '/dashboard/marketing/trend-analysis', icon: <IconTrendUp /> },
-  { label: 'Page Metrics', href: '/dashboard/marketing/page-metrics', icon: <IconMetrics /> },
-  { section: 'Reports', label: 'Generate Report', href: '/dashboard/marketing/report', icon: <IconReport /> },
-  { label: 'Audit Log', href: '/dashboard/marketing/audit-log', icon: <IconAuditLog /> },
+  { label: 'Top Ads', href: '/dashboard/marketing/campaign-rankings', icon: 'ranking' },
+  { label: 'Post Type Performance', href: '/dashboard/marketing/post-type-performance', icon: 'layers' },
+  { label: 'Trend Analysis', href: '/dashboard/marketing/trend-analysis', icon: 'trendUp' },
+  { label: 'Page Metrics', href: '/dashboard/marketing/page-metrics', icon: 'metrics' },
+  { section: 'Reports', label: 'Generate Report', href: '/dashboard/marketing/report', icon: 'report' },
+  { label: 'Audit Log', href: '/dashboard/marketing/audit-log', icon: 'auditLog' },
 ]
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {

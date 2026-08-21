@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'motion/react'
 import TopBar from './TopBar'
 import ChatBot from '@/components/analytics/ChatBot'
+import { AnimatedNavIcon, type NavIconHandle, type NavIconKey } from './nav-icons'
 
 const RAIL_WIDTH = 80
 const EXPANDED_WIDTH = 240
@@ -61,8 +62,50 @@ function FadeDivider({ show }: { show: boolean }) {
 export interface NavItem {
   label: string
   href: string
-  icon: React.ReactNode
+  icon: NavIconKey
   section?: string
+}
+
+// Hover/focus on the whole row drives the icon animation, not just the 20px
+// glyph — icon components are refs, so this needs its own component (a plain
+// render function can't hold a ref) rather than living inline in Sidebar.
+function NavLink({ item, active, showText }: { item: NavItem; active: boolean; showText: boolean }) {
+  const iconRef = useRef<NavIconHandle>(null)
+  const reduceMotion = useReducedMotion()
+
+  function play() {
+    if (reduceMotion) return
+    iconRef.current?.startAnimation()
+  }
+  function reset() {
+    iconRef.current?.stopAnimation()
+  }
+
+  return (
+    <Link
+      href={item.href}
+      title={!showText ? item.label : undefined}
+      aria-label={!showText ? item.label : undefined}
+      onMouseEnter={play}
+      onMouseLeave={reset}
+      onFocus={play}
+      onBlur={reset}
+      className={`group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors px-3 py-1.5 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar ${
+        active ? 'text-sidebar-foreground bg-sidebar-accent' : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+      } ${!showText ? 'justify-center' : ''}`}
+    >
+      <span
+        className={`absolute -left-3 top-1 bottom-1 w-0.5 rounded-r-full bg-crimson-500 ${active ? '' : 'hidden'}`}
+        aria-hidden
+      />
+      <span className={`w-5 h-5 flex-shrink-0 ${active ? 'text-crimson-500' : 'group-hover:text-crimson-500'}`}>
+        <AnimatedNavIcon ref={iconRef} name={item.icon} size={20} />
+      </span>
+      <FadeText show={showText} className="whitespace-nowrap">
+        {item.label}
+      </FadeText>
+    </Link>
+  )
 }
 
 interface SidebarProps {
@@ -150,28 +193,13 @@ export default function Sidebar({ navItems, email, roleLabel, children }: Sideba
   }
 
   function renderNavItem(item: NavItem) {
-    const active = isActive(item.href)
     return (
-      <Link
+      <NavLink
         key={item.href}
-        href={item.href}
-        title={!showText ? item.label : undefined}
-        aria-label={!showText ? item.label : undefined}
-        className={`group relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors px-3 py-1.5 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar ${
-          active ? 'text-sidebar-foreground bg-sidebar-accent' : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-        } ${!showText ? 'justify-center' : ''}`}
-      >
-        <span
-          className={`absolute -left-3 top-1 bottom-1 w-0.5 rounded-r-full bg-crimson-500 ${active ? '' : 'hidden'}`}
-          aria-hidden
-        />
-        <span className={`w-5 h-5 flex-shrink-0 ${active ? 'text-crimson-500' : 'group-hover:text-crimson-500'}`}>
-          {item.icon}
-        </span>
-        <FadeText show={showText} className="whitespace-nowrap">
-          {item.label}
-        </FadeText>
-      </Link>
+        item={item}
+        active={isActive(item.href)}
+        showText={showText}
+      />
     )
   }
 
