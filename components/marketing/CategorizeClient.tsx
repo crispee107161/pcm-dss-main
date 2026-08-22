@@ -358,7 +358,7 @@ function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
       <TableBody>
         {posts.map((post) => (
           <TableRow key={post.id} className="hover:bg-secondary border-t border-border">
-            <TableCell className="px-4 py-3 max-w-xs">
+            <TableCell className="px-4 py-3 max-w-xs align-top">
               {post.title ? (
                 <div className="font-medium text-foreground text-sm truncate" title={post.title}>{post.title}</div>
               ) : (
@@ -369,10 +369,10 @@ function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
                 View post ↗
               </a>
             </TableCell>
-            <TableCell className="px-4 py-3"><TypeBadge type={post.post_type} /></TableCell>
-            <TableCell className="px-4 py-3"><PendingCell post={post} /></TableCell>
-            <TableCell className="px-4 py-3 max-w-[220px]"><FlagReasonCell post={post} /></TableCell>
-            <TableCell className="px-4 py-3"><ActionCell post={post} role={role} /></TableCell>
+            <TableCell className="px-4 py-3 align-top"><TypeBadge type={post.post_type} /></TableCell>
+            <TableCell className="px-4 py-3 align-top"><PendingCell post={post} /></TableCell>
+            <TableCell className="px-4 py-3 max-w-[220px] whitespace-normal align-top"><FlagReasonCell post={post} /></TableCell>
+            <TableCell className="px-4 py-3 align-top"><ActionCell post={post} role={role} /></TableCell>
           </TableRow>
         ))}
       </TableBody>
