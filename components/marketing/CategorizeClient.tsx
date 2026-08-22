@@ -51,7 +51,7 @@ export interface ReviewPostRow {
   llmSuggestion: CategoryLabel | null
   category_pending: CategoryLabel | null
   // docs/raven/S4_Categorisation_Review_UI_Change.md §2.1/§3.2 — specific
-  // condition(s), rendered via FLAG_REASON_MESSAGE. Empty = unflagged.
+  // condition(s), rendered via FLAG_REASON_SHORT. Empty = unflagged.
   flagReasons: CategoryFlagReason[]
   pendingByEmail: string | null
 }

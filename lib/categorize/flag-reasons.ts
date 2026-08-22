@@ -54,14 +54,15 @@ export const FLAG_REASON_MESSAGE: Record<CategoryFlagReason, string> = {
   SHORT_CAPTION: 'Needs review — this caption is very short',
 }
 
-// Same copy as FLAG_REASON_MESSAGE without the leading "Needs review — ",
-// for compact per-row display (e.g. CategorizeClient's flag-reason column)
-// where the column header already conveys that. Kept as its own field
-// rather than derived via string surgery so editing FLAG_REASON_MESSAGE's
-// prefix can't silently desync the short form.
+// Same copy as FLAG_REASON_MESSAGE without the leading "Needs review — "
+// prefix, sentence-cased for standalone display, for compact per-row
+// display (e.g. CategorizeClient's flag-reason column) where the column
+// header already conveys that. Kept as its own field rather than derived
+// via string surgery so editing FLAG_REASON_MESSAGE's prefix or casing
+// can't silently desync the short form.
 export const FLAG_REASON_SHORT: Record<CategoryFlagReason, string> = {
-  DISAGREEMENT: 'the automated methods produced different results for this post',
-  UNCLASSIFIED: "the post's category could not be determined automatically",
-  ENTERTAINMENT_SUGGESTED: 'entertainment was suggested for this post',
-  SHORT_CAPTION: 'this caption is very short',
+  DISAGREEMENT: 'The automated methods produced different results for this post',
+  UNCLASSIFIED: "The post's category could not be determined automatically",
+  ENTERTAINMENT_SUGGESTED: 'Entertainment was suggested for this post',
+  SHORT_CAPTION: 'This caption is very short',
 }
