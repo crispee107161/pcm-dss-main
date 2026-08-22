@@ -28,9 +28,17 @@ export default async function OwnerMethodEvaluationPage() {
       <div className="bg-card rounded-2xl card-shadow p-4 mb-4 border-l-4 border-status-warning">
         <p className="text-xs text-gray-600">
           <span className="font-semibold">Sample caveat:</span> this compares each method against whatever posts
-          currently have a final category assigned (n={data.sampleSize}) — mvp.md recommends a purpose-built
-          random sample of 150–200 posts for this study; that dedicated labelling pass has not been run, so this
-          reflects the S4 finalisation queue&apos;s output to date, not necessarily a random or complete sample.
+          currently have a final category assigned (n={data.sampleSize}, including any Ground Truth rows already
+          finalised) — this is the S4 finalisation queue&apos;s output to date, not a random or complete sample.
+          {groundTruth.n > 0 ? (
+            <> mvp.md&apos;s recommended purpose-built random sample of 150–200 posts is the separate Ground
+            Truth study below, which has been run — treat that comparison, not this one, as the authoritative
+            FR-15 figure.</>
+          ) : (
+            <> mvp.md recommends a purpose-built random sample of 150–200 posts for that authoritative FR-15
+            comparison — see the Ground Truth section below, which is still waiting on that dedicated
+            labelling pass.</>
+          )}
         </p>
       </div>
 
@@ -42,8 +50,8 @@ export default async function OwnerMethodEvaluationPage() {
             almost certainly set by bulk-accepting keyword suggestions (Auto-Categorize + Accept all pending),
             not independent human judgment. Comparing the keyword method against a reference largely derived
             from itself inflates its agreement figures and is not the honest, independent comparison FR-15
-            requires. Treat the kappa values below as unreliable until a genuinely independent manual sample
-            (mvp.md&apos;s recommended 150–200 posts) is labelled.
+            requires. Treat the kappa values below as unreliable and use the Ground Truth comparison further
+            down instead{groundTruth.n === 0 && ' — which is still waiting on that independent manual sample'}.
           </p>
         </div>
       )}

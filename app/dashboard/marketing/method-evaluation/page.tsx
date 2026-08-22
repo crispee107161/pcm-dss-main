@@ -29,10 +29,18 @@ export default async function MarketingMethodEvaluationPage() {
       <div className="bg-card rounded-2xl card-shadow p-4 mb-4 border-l-4 border-status-warning">
         <p className="text-xs text-gray-600">
           <span className="font-semibold">Sample caveat:</span> this compares each method against whatever posts
-          currently have a final category assigned (n={data.sampleSize}) — mvp.md recommends a purpose-built
-          random sample of 150–200 posts for this study; that dedicated labelling pass has not been run, so this
-          reflects the S4 finalisation queue&apos;s output to date, not necessarily a random or complete sample.
-          Run &quot;Classify with AI (LLM)&quot; on the Categorisation Review screen to populate more LLM suggestions.
+          currently have a final category assigned (n={data.sampleSize}, including any Ground Truth rows already
+          finalised) — this is the S4 finalisation queue&apos;s output to date, not a random or complete sample.
+          {groundTruth.n > 0 ? (
+            <> mvp.md&apos;s recommended purpose-built random sample of 150–200 posts is the separate Ground
+            Truth study below, which has been run — treat that comparison, not this one, as the authoritative
+            FR-15 figure.</>
+          ) : (
+            <> mvp.md recommends a purpose-built random sample of 150–200 posts for that authoritative FR-15
+            comparison — see the Ground Truth section below, which is still waiting on that dedicated
+            labelling pass.</>
+          )} Run &quot;Classify with AI (LLM)&quot; on the Categorisation Review screen to populate more LLM
+          suggestions here.
         </p>
       </div>
 
@@ -44,9 +52,8 @@ export default async function MarketingMethodEvaluationPage() {
             almost certainly set by bulk-accepting keyword suggestions (Auto-Categorize + Accept all pending),
             not independent judgment. Comparing the keyword method against a reference largely derived from
             itself inflates its agreement figures and is not the honest, independent comparison FR-15 requires.
-            For a defensible kappa, manually re-review a random sample of ~150–200 posts&apos; final categories
-            (mvp.md&apos;s recommendation) without looking at the keyword suggestion first, rather than relying
-            on the bulk-accept history.
+            Treat the kappa values below as unreliable and use the Ground Truth comparison further down
+            instead{groundTruth.n === 0 && ' — which is still waiting on that independent manual sample'}.
           </p>
         </div>
       )}
