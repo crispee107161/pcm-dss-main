@@ -44,25 +44,36 @@ export function computeFlagReasons({ categoryKeyword, categoryLlm, caption }: Fl
   return reasons
 }
 
-// §2.1's reworded wording — no method names, ever. ENTERTAINMENT_SUGGESTED's
-// text names the category (that's not attribution — it's not saying which
-// method suggested it), per docs/raven/S4_Flag_Thresholds_Answers.md §2.
-export const FLAG_REASON_MESSAGE: Record<CategoryFlagReason, string> = {
-  DISAGREEMENT: 'Needs review — the automated methods produced different results for this post',
-  UNCLASSIFIED: "Needs review — the post's category could not be determined automatically",
-  ENTERTAINMENT_SUGGESTED: 'Needs review — entertainment was suggested for this post',
-  SHORT_CAPTION: 'Needs review — this caption is very short',
+// docs/raven/S4_Presentation_Fix.md §2.3 — written as an instruction to the
+// Manager (what the situation is *for him*, what to do about it), not a
+// description of which internal check fired. Superseded the original
+// "Needs review — <system internals>" wording (and the now-removed
+// FLAG_REASON_MESSAGE constant it lived in): a fixed "Needs review — "
+// prefix doesn't fit once each condition has its own framing verb. Still no
+// method names, ever, per docs/raven/S4_Flag_Thresholds_Answers.md §2 —
+// ENTERTAINMENT_SUGGESTED's text names the category, not which method
+// suggested it.
+export const FLAG_REASON_SHORT: Record<CategoryFlagReason, string> = {
+  DISAGREEMENT: 'Needs your judgment — this post sits between two categories',
+  UNCLASSIFIED: "Needs your judgment — the system couldn't determine a category",
+  ENTERTAINMENT_SUGGESTED: 'Check this one — entertainment is often over-suggested',
+  SHORT_CAPTION: 'Open the post — the caption is too short to classify from text',
 }
 
-// Same copy as FLAG_REASON_MESSAGE without the leading "Needs review — "
-// prefix, sentence-cased for standalone display, for compact per-row
-// display (e.g. CategorizeClient's flag-reason column) where the column
-// header already conveys that. Kept as its own field rather than derived
-// via string surgery so editing FLAG_REASON_MESSAGE's prefix or casing
-// can't silently desync the short form.
-export const FLAG_REASON_SHORT: Record<CategoryFlagReason, string> = {
-  DISAGREEMENT: 'The automated methods produced different results for this post',
-  UNCLASSIFIED: "The post's category could not be determined automatically",
-  ENTERTAINMENT_SUGGESTED: 'Entertainment was suggested for this post',
-  SHORT_CAPTION: 'This caption is very short',
+// docs/raven/S4_Presentation_Fix.md §2.2 — most-informative-first. Two
+// independent methods actively disagreeing is the strongest signal of a
+// genuine boundary case; a mechanical caption-length check is the weakest.
+// Display-only ordering — doesn't affect computeFlagReasons or storage.
+const FLAG_REASON_RANK: Record<CategoryFlagReason, number> = {
+  DISAGREEMENT: 1,
+  ENTERTAINMENT_SUGGESTED: 2,
+  UNCLASSIFIED: 3,
+  SHORT_CAPTION: 4,
+}
+
+// Stacking every fired reason read as an undifferentiated wall of warnings
+// (docs/raven/S4_Presentation_Fix.md §1) — callers show only the first
+// (most informative) entry plus a count of the rest, expandable on demand.
+export function rankFlagReasons(reasons: CategoryFlagReason[]): CategoryFlagReason[] {
+  return [...reasons].sort((a, b) => FLAG_REASON_RANK[a] - FLAG_REASON_RANK[b])
 }

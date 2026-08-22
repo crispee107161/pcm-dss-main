@@ -186,8 +186,13 @@ export async function rejectPendingCategory(postId: number): Promise<{ error?: s
 
 export type BulkAcceptResult = { ok: true; accepted: number } | { ok: false; reason: string }
 
-// S4 bulk accept — every post currently carrying a pending proposal.
-export async function bulkAcceptPendingCategories(): Promise<BulkAcceptResult> {
+// S4 bulk accept — every post currently carrying a pending proposal, or (when
+// the Manager has the review queue filtered/searched down) only the subset
+// visible in that filtered view. `postIds` is client-supplied scope, not
+// trust — it's ANDed onto the same eligibility query, so passing an
+// arbitrary id list can only narrow the result, never accept a post that
+// wasn't already pending.
+export async function bulkAcceptPendingCategories(postIds?: number[]): Promise<BulkAcceptResult> {
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
     return { ok: false, reason: 'Unauthorized' }
@@ -195,7 +200,14 @@ export async function bulkAcceptPendingCategories(): Promise<BulkAcceptResult> {
 
   try {
     const pendingPosts = await prisma.facebookPost.findMany({
-      where: { category_pending: { not: null } },
+      where: {
+        category_pending: { not: null },
+        // Fails closed: an explicitly-passed empty array scopes to nothing,
+        // not "everything" — only an omitted (undefined) postIds means
+        // unscoped. An empty array reading as "no scope" would be a fail-open
+        // default on a category-finalizing write.
+        ...(postIds !== undefined ? { id: { in: postIds } } : {}),
+      },
       select: { id: true, category_pending: true, category_final: true },
     })
     const userId = parseInt(session.user.id, 10)
@@ -291,7 +303,8 @@ export type BatchConfirmResult = { ok: true; confirmed: number } | { ok: false; 
 // other flag condition fired. category_pending is excluded even when it
 // happens to equal the agreed label — accept/reject already own that path,
 // and finalising it here too would double-write the audit trail.
-export async function batchConfirmAgreed(): Promise<BatchConfirmResult> {
+// `postIds` is client-supplied scope, not trust — see bulkAcceptPendingCategories.
+export async function batchConfirmAgreed(postIds?: number[]): Promise<BatchConfirmResult> {
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
     return { ok: false, reason: 'Unauthorized' }
@@ -299,7 +312,15 @@ export async function batchConfirmAgreed(): Promise<BatchConfirmResult> {
 
   try {
     const candidates = await prisma.facebookPost.findMany({
-      where: { category_final: null, category_pending: null },
+      where: {
+        category_final: null,
+        category_pending: null,
+        // Fails closed: an explicitly-passed empty array scopes to nothing,
+        // not "everything" — only an omitted (undefined) postIds means
+        // unscoped. An empty array reading as "no scope" would be a fail-open
+        // default on a category-finalizing write.
+        ...(postIds !== undefined ? { id: { in: postIds } } : {}),
+      },
       select: { id: true, category_keyword: true, category_llm: true, category_flag_reasons: true },
     })
     const toConfirm = candidates.filter(isUnflaggedAgreed)

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeFlagReasons, captionWordCount, type FlagReasonInput } from './flag-reasons'
+import { computeFlagReasons, captionWordCount, rankFlagReasons, type FlagReasonInput } from './flag-reasons'
 
 function input(overrides: Partial<FlagReasonInput> = {}): FlagReasonInput {
   return {
@@ -80,5 +80,26 @@ describe('computeFlagReasons', () => {
       expect.arrayContaining(['DISAGREEMENT', 'UNCLASSIFIED', 'ENTERTAINMENT_SUGGESTED', 'SHORT_CAPTION'])
     )
     expect(reasons).toHaveLength(4)
+  })
+})
+
+describe('rankFlagReasons', () => {
+  it('orders disagreement before entertainment before unclassified before short caption', () => {
+    const ranked = rankFlagReasons(['SHORT_CAPTION', 'UNCLASSIFIED', 'ENTERTAINMENT_SUGGESTED', 'DISAGREEMENT'])
+    expect(ranked).toEqual(['DISAGREEMENT', 'ENTERTAINMENT_SUGGESTED', 'UNCLASSIFIED', 'SHORT_CAPTION'])
+  })
+
+  it('returns a single reason unchanged', () => {
+    expect(rankFlagReasons(['SHORT_CAPTION'])).toEqual(['SHORT_CAPTION'])
+  })
+
+  it('returns an empty array unchanged', () => {
+    expect(rankFlagReasons([])).toEqual([])
+  })
+
+  it('does not mutate the input array', () => {
+    const input: Parameters<typeof rankFlagReasons>[0] = ['SHORT_CAPTION', 'DISAGREEMENT']
+    rankFlagReasons(input)
+    expect(input).toEqual(['SHORT_CAPTION', 'DISAGREEMENT'])
   })
 })

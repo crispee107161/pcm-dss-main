@@ -1,8 +1,8 @@
 'use client'
 
-import { useActionState, useEffect, useState, useTransition } from 'react'
+import { useActionState, useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
 import {
-  updatePostCategoryForm,
+  updatePostCategory,
   proposePostCategoryForm,
   acceptPendingCategory,
   rejectPendingCategory,
@@ -12,12 +12,13 @@ import {
 } from '@/actions/categorize'
 import { runLlmClassification } from '@/actions/classify-posts'
 import { CATEGORY_LABEL_DISPLAY, categorySelectLabel } from '@/lib/category-label'
-import { FLAG_REASON_SHORT } from '@/lib/categorize/flag-reasons'
+import { FLAG_REASON_SHORT, rankFlagReasons } from '@/lib/categorize/flag-reasons'
 import { useCooldown } from '@/hooks/useCooldown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import type { CategoryLabel, CategoryFlagReason, Role } from '@/app/generated/prisma/client'
 
 // FR-13: only Product Showcase / Promotional Offer / Testimonial /
@@ -102,9 +103,21 @@ const PAGE_SIZE = 50
 function PaginationBar({
   page, pageCount, onPageChange,
 }: { page: number; pageCount: number; onPageChange: (page: number) => void }) {
+  const [jumpValue, setJumpValue] = useState('')
+
   if (pageCount <= 1) return null
+
+  function handleJumpSubmit(e: FormEvent) {
+    e.preventDefault()
+    const target = parseInt(jumpValue, 10)
+    if (Number.isInteger(target) && target >= 1 && target <= pageCount) {
+      onPageChange(target)
+    }
+    setJumpValue('')
+  }
+
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border">
+    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border flex-wrap">
       <p className="text-xs text-muted-foreground">Page {page} of {pageCount}</p>
       <div className="flex items-center gap-2">
         <Button type="button" size="sm" variant="outline" disabled={page <= 1}
@@ -115,6 +128,25 @@ function PaginationBar({
           onClick={() => onPageChange(page + 1)} className="h-7 px-3 text-xs">
           Next
         </Button>
+        {/* Jump-to-page: Previous/Next alone means a long queue can take a dozen
+            blind clicks to reach a specific page. */}
+        {pageCount > 3 && (
+          <form onSubmit={handleJumpSubmit} className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              min={1}
+              max={pageCount}
+              value={jumpValue}
+              onChange={(e) => setJumpValue(e.target.value)}
+              placeholder="Go to…"
+              aria-label="Jump to page"
+              className="h-7 w-20 text-xs"
+            />
+            <Button type="submit" size="sm" variant="outline" className="h-7 px-3 text-xs">
+              Go
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   )
@@ -136,7 +168,9 @@ function CategoryBadge({ label }: { label: CategoryLabel }) {
     PRODUCT_SHOWCASE: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30',
     TESTIMONIAL: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30',
     PROMOTIONAL_OFFER: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30',
-    ENTERTAINMENT: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30',
+    // violet, not purple — purple has no branded ramp in globals.css and
+    // would render literal default-Tailwind purple instead of the theme.
+    ENTERTAINMENT: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30',
     UNCLASSIFIED: 'bg-secondary text-muted-foreground border-border',
     // Ground-truth-only; never shown here in practice (S4 never assigns it), kept for exhaustiveness.
     UNCLEAR: 'bg-secondary text-muted-foreground border-border',
@@ -162,8 +196,15 @@ function PendingCell({ post }: { post: ReviewPostRow }) {
   // Docs/raven/S4_Categorisation_Review_UI_Change.md §2.2: show suggestions
   // as unlabelled candidates, deduped (agreement collapses to one badge) and
   // in a consistent alphabetical order — never which method produced which.
+  // docs/raven/S4_Presentation_Fix.md §3.1: when one method abstains
+  // (UNCLASSIFIED), rendering it as a chip still leaks which method said
+  // what — UNCLASSIFIED is unmistakably "the keyword method found nothing,"
+  // not a candidate category, and can't be selected anyway. The abstention
+  // is already communicated by the UNCLASSIFIED flag reason, so it's
+  // filtered out here via assignableSuggestion rather than shown as a chip.
   const suggestions = Array.from(
-    new Set([post.keywordSuggestion, post.llmSuggestion].filter((v): v is CategoryLabel => v !== null))
+    new Set([assignableSuggestion(post.keywordSuggestion), assignableSuggestion(post.llmSuggestion)]
+      .filter((v): v is CategoryLabel => v !== undefined))
   ).sort((a, b) => CATEGORY_LABEL_DISPLAY[a].localeCompare(CATEGORY_LABEL_DISPLAY[b]))
   if (suggestions.length === 0) {
     return <span className="text-muted-foreground text-xs">Uncategorized</span>
@@ -214,24 +255,33 @@ function TeamProposeCell({ post }: { post: ReviewPostRow }) {
         </Button>
       </form>
       {proposeState?.error && (
-        <span role="alert" className="text-status-negative text-[11px]">{proposeState.error}</span>
+        <span role="alert" className="text-status-negative text-xs">{proposeState.error}</span>
       )}
     </div>
   )
 }
 
-// MARKETING_MANAGER — full: accept/reject a pending proposal, or override directly.
+// MARKETING_MANAGER — full: accept/reject a pending proposal, or override
+// directly. When a pending proposal exists, the override form starts
+// collapsed behind a toggle so Accept/Reject reads as the default path and
+// override as the deliberate exception — showing both a full Select+button
+// form and Accept/Reject side by side left every row asking the Manager to
+// re-parse "am I accepting, or overriding?" (impeccable critique, P2).
+// Override itself now confirms before writing, matching the two bulk
+// actions — it performs the identical category-finalizing write, used far
+// more often, and had been the one path left with no safety net (P1).
 function ManagerActionCell({ post }: { post: ReviewPostRow }) {
   const [isPending, startTransition] = useTransition()
   const [rowError, setRowError] = useState<string | null>(null)
-  const boundOverride = updatePostCategoryForm.bind(null, post.id)
-  const [overrideState, overrideAction, isOverriding] = useActionState(boundOverride, null)
-
-  // A successful override shouldn't leave a stale Accept/Reject error
-  // showing underneath it.
-  useEffect(() => {
-    if (overrideState?.success) setRowError(null)
-  }, [overrideState])
+  const [overrideValue, setOverrideValue] = useState<CategoryLabel | ''>(defaultSelection(post))
+  // Derived, not snapshotted: this component instance survives across a
+  // Reject's revalidate (ReviewTable keys by post.id), so a plain
+  // useState(post.category_pending === null) would freeze at its mount-time
+  // value — after Reject clears category_pending, the toggle block above
+  // unmounts and this stayed false, leaving the row with no controls at all.
+  const [overrideExpanded, setOverrideExpanded] = useState(false)
+  const showOverrideForm = overrideExpanded || post.category_pending === null
+  const [confirmOverrideOpen, setConfirmOverrideOpen] = useState(false)
 
   function handleAccept() {
     setRowError(null)
@@ -249,6 +299,15 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
     })
   }
 
+  function handleOverride() {
+    setRowError(null)
+    startTransition(async () => {
+      const res = await updatePostCategory(post.id, overrideValue || null)
+      setConfirmOverrideOpen(false)
+      if (res.error) setRowError(res.error)
+    })
+  }
+
   return (
     <div className="flex flex-col gap-2">
       {post.category_pending && (
@@ -258,7 +317,7 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
             size="sm"
             disabled={isPending}
             onClick={handleAccept}
-            className="bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-3"
+            className="text-xs h-7 px-3"
           >
             Accept
           </Button>
@@ -272,56 +331,119 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
           >
             Reject
           </Button>
+          {!showOverrideForm && (
+            <button
+              type="button"
+              onClick={() => setOverrideExpanded(true)}
+              className="text-xs text-primary hover:underline"
+            >
+              Choose a different category
+            </button>
+          )}
         </div>
       )}
-      <form action={overrideAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        <Select name="categoryLabel" defaultValue={defaultSelection(post)}>
-          {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
-              with the selected label's length — keeps the "Override & finalize"
-              button lined up in a straight column across rows. */}
-          <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-48 h-7" size="sm">
-            {/* categorySelectLabel already resolves '' to "— None —", so the
-                placeholder prop below would never actually render. */}
-            <SelectValue>{categorySelectLabel}</SelectValue>
-          </SelectTrigger>
-          {/* alignItemWithTrigger={false}: base-ui's default popup positioning
-              overlays the list directly on top of the trigger, which spills the
-              list across the row below and visually collides with its "Override
-              & finalize" button. Normal dropdown positioning (opens below the
-              trigger) avoids that. Popup width stays default (== trigger width)
-              — it doesn't need to stretch over the button; base-ui's Select is
-              modal, so the button is inert while the popup is open anyway. */}
-          <SelectContent align="start" alignItemWithTrigger={false}>
-            <SelectItem value="" label="— None —">— None —</SelectItem>
-            {ASSIGNABLE_LABELS.map((label) => (
-              <SelectItem key={label} value={label} label={CATEGORY_LABEL_DISPLAY[label]}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button type="submit" size="sm" variant="outline" disabled={isOverriding} className="text-xs whitespace-nowrap h-7 px-3">
-          {isOverriding ? 'Saving…' : 'Override & finalize'}
-        </Button>
-      </form>
-      {(rowError || overrideState?.error) && (
-        <span role="alert" className="text-status-negative text-[11px]">{rowError ?? overrideState?.error}</span>
+      {showOverrideForm && (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Select value={overrideValue} onValueChange={(v) => setOverrideValue(v as CategoryLabel | '')}>
+            {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
+                with the selected label's length — keeps the "Override & finalize"
+                button lined up in a straight column across rows. */}
+            <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-48 h-7" size="sm">
+              {/* categorySelectLabel already resolves '' to "— None —", so the
+                  placeholder prop below would never actually render. */}
+              <SelectValue>{categorySelectLabel}</SelectValue>
+            </SelectTrigger>
+            {/* alignItemWithTrigger={false}: base-ui's default popup positioning
+                overlays the list directly on top of the trigger, which spills the
+                list across the row below and visually collides with its "Override
+                & finalize" button. Normal dropdown positioning (opens below the
+                trigger) avoids that. Popup width stays default (== trigger width)
+                — it doesn't need to stretch over the button; base-ui's Select is
+                modal, so the button is inert while the popup is open anyway. */}
+            <SelectContent align="start" alignItemWithTrigger={false}>
+              <SelectItem value="" label="— None —">— None —</SelectItem>
+              {ASSIGNABLE_LABELS.map((label) => (
+                <SelectItem key={label} value={label} label={CATEGORY_LABEL_DISPLAY[label]}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Dialog open={confirmOverrideOpen} onOpenChange={setConfirmOverrideOpen}>
+            <DialogTrigger
+              disabled={isPending}
+              render={<Button type="button" size="sm" variant="outline" className="text-xs whitespace-nowrap h-7 px-3" />}
+            >
+              Override & finalize
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Finalize as &ldquo;{categorySelectLabel(overrideValue)}&rdquo;?</DialogTitle>
+                <DialogDescription>
+                  This finalizes the category directly. It can&apos;t be undone from here — a finalized post can only be changed afterward from the Content Library, one at a time.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setConfirmOverrideOpen(false)} className="text-xs">
+                  Cancel
+                </Button>
+                <Button type="button" disabled={isPending} onClick={handleOverride} className="text-xs">
+                  {isPending ? 'Saving…' : 'Confirm'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+      {rowError && (
+        <span role="alert" className="text-status-negative text-xs">{rowError}</span>
       )}
     </div>
   )
 }
 
+// docs/raven/S4_Presentation_Fix.md §2.1 — stacking every fired reason read
+// as an undifferentiated wall of warnings across rows. Show only the
+// highest-ranked (most informative) reason, with the rest available on
+// demand rather than always visible.
 function FlagReasonCell({ post }: { post: ReviewPostRow }) {
+  const [expanded, setExpanded] = useState(false)
+
   if (post.flagReasons.length === 0) {
     return <span className="text-muted-foreground text-xs">—</span>
   }
+
+  const [primary, ...rest] = rankFlagReasons(post.flagReasons)
+  // §2.4 — every row here is flagged by definition, so a triangle on every
+  // one carries no information; dropped entirely. Warning-color emphasis is
+  // reserved for the rank-1 DISAGREEMENT case, the strongest signal, so it
+  // still stands out from the other three, purely text-driven differences.
+  const primaryIsDisagreement = primary === 'DISAGREEMENT'
+
   return (
-    <ul className="flex flex-col gap-1">
-      {post.flagReasons.map((reason) => (
-        <li key={reason} className="text-xs text-status-warning flex items-start gap-1">
-          <span aria-hidden="true">⚠</span>
-          <span>{FLAG_REASON_SHORT[reason]}</span>
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-1">
+      <div className={`text-xs ${primaryIsDisagreement ? 'text-status-warning font-medium' : 'text-foreground'}`}>
+        {FLAG_REASON_SHORT[primary]}
+      </div>
+      {rest.length > 0 && (
+        <>
+          {expanded && (
+            <ul className="flex flex-col gap-1 pl-4">
+              {rest.map((reason) => (
+                <li key={reason} className="text-xs text-muted-foreground">
+                  {FLAG_REASON_SHORT[reason]}
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-primary hover:underline text-left pl-4 w-fit"
+          >
+            {expanded ? 'Show less' : `+${rest.length} more`}
+          </button>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -335,6 +457,47 @@ function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
   return <ManagerActionCell post={post} />
 }
 
+// docs/raven/S4_Presentation_Fix.md §4 — one card per post instead of a
+// five-column table row. The table spread "View post," the suggestion
+// chips, and the review reason across separate columns that could be a
+// full row-width apart; a card keeps them in one visual block so, e.g.,
+// the reason line and the action control read together instead of
+// requiring a left-to-right scan. Suggested-category input stays the
+// existing Select (ManagerActionCell/TeamProposeCell), not the mockup's
+// literal radio buttons — same rationale as
+// docs/raven/S4_Categorisation_Review_UI_Change.md §2.2's badge+Select
+// choice: same no-attribution/no-forced-pick effect, already-built control.
+function ReviewCard({ post, role }: { post: ReviewPostRow; role: Role }) {
+  return (
+    <div className="px-4 py-4 border-t border-border first:border-t-0 hover:bg-secondary transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {post.title ? (
+            <div className="font-medium text-foreground text-sm truncate" title={post.title}>{post.title}</div>
+          ) : (
+            <span className="text-muted-foreground text-xs italic">No title</span>
+          )}
+          <a href={post.permalink} target="_blank" rel="noopener noreferrer"
+            className="text-primary hover:text-primary/80 hover:underline text-xs mt-0.5 inline-block">
+            View post ↗
+          </a>
+        </div>
+        <TypeBadge type={post.post_type} />
+      </div>
+
+      <div className="mt-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Suggested / Pending</p>
+        <PendingCell post={post} />
+      </div>
+
+      <div className="mt-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        <div className="min-w-0 flex-1"><FlagReasonCell post={post} /></div>
+        <div className="shrink-0"><ActionCell post={post} role={role} /></div>
+      </div>
+    </div>
+  )
+}
+
 function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
   if (posts.length === 0) {
     return (
@@ -345,39 +508,37 @@ function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow className="bg-secondary">
-          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Post Details</TableHead>
-          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</TableHead>
-          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Suggested / Pending</TableHead>
-          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Review reason(s)</TableHead>
-          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {posts.map((post) => (
-          <TableRow key={post.id} className="hover:bg-secondary border-t border-border">
-            <TableCell className="px-4 py-3 max-w-xs align-top">
-              {post.title ? (
-                <div className="font-medium text-foreground text-sm truncate" title={post.title}>{post.title}</div>
-              ) : (
-                <span className="text-muted-foreground text-xs italic">No title</span>
-              )}
-              <a href={post.permalink} target="_blank" rel="noopener noreferrer"
-                className="text-primary hover:text-primary/80 hover:underline text-xs mt-0.5 inline-block">
-                View post ↗
-              </a>
-            </TableCell>
-            <TableCell className="px-4 py-3 align-top"><TypeBadge type={post.post_type} /></TableCell>
-            <TableCell className="px-4 py-3 align-top"><PendingCell post={post} /></TableCell>
-            <TableCell className="px-4 py-3 max-w-[220px] whitespace-normal align-top"><FlagReasonCell post={post} /></TableCell>
-            <TableCell className="px-4 py-3 align-top"><ActionCell post={post} role={role} /></TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div>
+      {posts.map((post) => (
+        <ReviewCard key={post.id} post={post} role={role} />
+      ))}
+    </div>
   )
+}
+
+// Toast messages persist until either the next relevant action or this
+// timeout — without it, a manager who fires several actions in one session
+// accumulates stale confirmations next to fresh ones (5 independent slots,
+// nothing clearing an unrelated one previously).
+const MESSAGE_AUTO_DISMISS_MS = 6000
+
+type FlagFilter = 'ALL' | 'FLAGGED' | 'UNFLAGGED' | CategoryFlagReason
+
+const FLAG_FILTER_OPTIONS: { value: FlagFilter; label: string }[] = [
+  { value: 'ALL', label: 'All posts' },
+  { value: 'FLAGGED', label: 'Flagged only' },
+  { value: 'UNFLAGGED', label: 'Unflagged only' },
+  { value: 'DISAGREEMENT', label: 'Needs judgment — disagreement' },
+  { value: 'UNCLASSIFIED', label: "Needs judgment — couldn't classify" },
+  { value: 'ENTERTAINMENT_SUGGESTED', label: 'Entertainment suggested' },
+  { value: 'SHORT_CAPTION', label: 'Short caption' },
+]
+
+function matchesFlagFilter(post: ReviewPostRow, filter: FlagFilter): boolean {
+  if (filter === 'ALL') return true
+  if (filter === 'FLAGGED') return post.flagReasons.length > 0
+  if (filter === 'UNFLAGGED') return post.flagReasons.length === 0
+  return post.flagReasons.includes(filter)
 }
 
 export default function CategorizeClient({ posts, role }: Props) {
@@ -396,17 +557,81 @@ export default function CategorizeClient({ posts, role }: Props) {
   const [llmCoolingDown, setLlmCoolingDown] = useState(false)
   const [llmPending, setLlmPending] = useState(false)
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [flagFilter, setFlagFilter] = useState<FlagFilter>('ALL')
+  const [confirmBulkOpen, setConfirmBulkOpen] = useState(false)
+  const [confirmBatchOpen, setConfirmBatchOpen] = useState(false)
   const { secondsLeft: llmCooldown, begin: beginLlmCooldown } = useCooldown(LLM_COOLDOWN_STORAGE_KEY)
 
   const pendingCount = posts.filter((p) => p.category_pending !== null).length
   const batchConfirmCount = posts.filter(isBatchConfirmEligible).length
-  const pageCount = Math.max(1, Math.ceil(posts.length / PAGE_SIZE))
+
+  const filteredPosts = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return posts.filter((post) => {
+      if (query && !(post.title ?? '').toLowerCase().includes(query)) return false
+      return matchesFlagFilter(post, flagFilter)
+    })
+  }, [posts, search, flagFilter])
+
+  const pageCount = Math.max(1, Math.ceil(filteredPosts.length / PAGE_SIZE))
   const clampedPage = Math.min(page, pageCount)
-  const pagedPosts = posts.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE)
+  const pagedPosts = filteredPosts.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE)
+  const isFiltered = search.trim() !== '' || flagFilter !== 'ALL'
+
+  // Bulk actions default to the active filter's scope (impeccable critique,
+  // P1) — "Accept all pending" sitting directly above a filtered view
+  // previously accepted everything in the whole queue, not what was visible.
+  // When unfiltered, filtered === full queue, so behavior is unchanged.
+  const pendingIdsInView = filteredPosts.filter((p) => p.category_pending !== null).map((p) => p.id)
+  const batchConfirmIdsInView = filteredPosts.filter(isBatchConfirmEligible).map((p) => p.id)
+  const pendingCountInView = pendingIdsInView.length
+  const batchConfirmCountInView = batchConfirmIdsInView.length
+  const pendingCountOutsideView = pendingCount - pendingCountInView
+  const batchConfirmCountOutsideView = batchConfirmCount - batchConfirmCountInView
+
+  function updateSearch(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
+
+  function updateFlagFilter(value: FlagFilter) {
+    setFlagFilter(value)
+    setPage(1)
+  }
+
+  // Auto-dismiss non-LLM toasts so a long review session doesn't accumulate
+  // stale confirmations. llmResult is excluded — it doubles as the live
+  // cooldown countdown display and must persist until the cooldown clears.
+  useEffect(() => {
+    if (!autoResult && !autoError) return
+    const timer = setTimeout(() => { setAutoResult(null); setAutoError(null) }, MESSAGE_AUTO_DISMISS_MS)
+    return () => clearTimeout(timer)
+  }, [autoResult, autoError])
+
+  useEffect(() => {
+    if (!bulkResult && !bulkError) return
+    const timer = setTimeout(() => { setBulkResult(null); setBulkError(null) }, MESSAGE_AUTO_DISMISS_MS)
+    return () => clearTimeout(timer)
+  }, [bulkResult, bulkError])
+
+  useEffect(() => {
+    if (!batchConfirmResult && !batchConfirmError) return
+    const timer = setTimeout(() => { setBatchConfirmResult(null); setBatchConfirmError(null) }, MESSAGE_AUTO_DISMISS_MS)
+    return () => clearTimeout(timer)
+  }, [batchConfirmResult, batchConfirmError])
+
+  // Clears every toast slot, not just the one the caller's about to fill —
+  // otherwise unrelated stale confirmations from an earlier action keep
+  // sitting in the header while a new one renders next to them.
+  function clearAllMessages() {
+    setAutoResult(null); setAutoError(null)
+    setBulkResult(null); setBulkError(null)
+    setBatchConfirmResult(null); setBatchConfirmError(null)
+  }
 
   function handleAutoCategorize() {
-    setAutoResult(null)
-    setAutoError(null)
+    clearAllMessages()
     startTransition(async () => {
       const res = await autoCategorizeAll()
       if (res.ok) setAutoResult({ posts: res.posts })
@@ -414,27 +639,28 @@ export default function CategorizeClient({ posts, role }: Props) {
     })
   }
 
-  function handleBulkAccept() {
-    setBulkResult(null)
-    setBulkError(null)
+  function handleBulkAccept(scopeToView: boolean) {
+    clearAllMessages()
+    setConfirmBulkOpen(false)
     startTransition(async () => {
-      const res = await bulkAcceptPendingCategories()
+      const res = await bulkAcceptPendingCategories(scopeToView ? pendingIdsInView : undefined)
       if (res.ok) setBulkResult({ accepted: res.accepted })
       else setBulkError(res.reason)
     })
   }
 
-  function handleBatchConfirm() {
-    setBatchConfirmResult(null)
-    setBatchConfirmError(null)
+  function handleBatchConfirm(scopeToView: boolean) {
+    clearAllMessages()
+    setConfirmBatchOpen(false)
     startTransition(async () => {
-      const res = await batchConfirmAgreed()
+      const res = await batchConfirmAgreed(scopeToView ? batchConfirmIdsInView : undefined)
       if (res.ok) setBatchConfirmResult({ confirmed: res.confirmed })
       else setBatchConfirmError(res.reason)
     })
   }
 
   async function handleLlmClassify() {
+    clearAllMessages()
     setLlmResult(null)
     setLlmIsError(false)
     setLlmCoolingDown(false)
@@ -471,11 +697,12 @@ export default function CategorizeClient({ posts, role }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
         <div>
           <h2 className="font-semibold text-foreground">Uncategorized Posts</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {posts.length} in queue{pendingCount > 0 ? ` · ${pendingCount} pending review` : ''}
+            {isFiltered ? `${filteredPosts.length} of ${posts.length} in queue` : `${posts.length} in queue`}
+            {pendingCount > 0 ? ` · ${pendingCount} pending review` : ''}
           </p>
         </div>
 
@@ -511,7 +738,7 @@ export default function CategorizeClient({ posts, role }: Props) {
             </p>
           )}
           {llmResult && (
-            <p className={`animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
+            <p role={llmIsError ? 'alert' : undefined} className={`animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
               llmIsError
                 ? 'text-status-warning bg-status-warning/10 border-status-warning/30'
                 : 'text-status-positive bg-green-500/10 border-green-500/30'
@@ -520,52 +747,125 @@ export default function CategorizeClient({ posts, role }: Props) {
             </p>
           )}
 
-          {role === 'MARKETING_MANAGER' && pendingCount > 0 && (
-            <Button
-              type="button"
-              size="sm"
-              disabled={isPending}
-              onClick={handleBulkAccept}
-              className="bg-green-600 hover:bg-green-700 text-white text-xs h-8 px-3"
-            >
-              Accept all pending ({pendingCount})
-            </Button>
+          {role === 'MARKETING_MANAGER' && pendingCountInView > 0 && (
+            <Dialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
+              <DialogTrigger
+                disabled={isPending}
+                render={<Button type="button" size="sm" className="text-xs h-8 px-3" />}
+              >
+                {isFiltered ? `Accept pending in view (${pendingCountInView})` : `Accept all pending (${pendingCountInView})`}
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Accept {pendingCountInView} pending proposal{pendingCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
+                  <DialogDescription>
+                    This finalizes the category for every post a Team member has proposed on{isFiltered ? ' that matches your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the Content Library, one at a time.
+                    {isFiltered && pendingCountOutsideView > 0 && (
+                      <> {pendingCountOutsideView} more pending proposal{pendingCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to accept everything.</>
+                    )}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setConfirmBulkOpen(false)} className="text-xs">
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={() => handleBulkAccept(isFiltered)} className="text-xs">
+                    Accept {pendingCountInView}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
 
-          {role === 'MARKETING_MANAGER' && batchConfirmCount > 0 && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={isPending}
-              onClick={handleBatchConfirm}
-              className="text-xs h-8 px-3"
-            >
-              Batch confirm agreed ({batchConfirmCount})
-            </Button>
+          {role === 'MARKETING_MANAGER' && batchConfirmCountInView > 0 && (
+            <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
+              <DialogTrigger
+                disabled={isPending}
+                render={<Button type="button" size="sm" variant="outline" className="text-xs h-8 px-3" />}
+              >
+                {isFiltered ? `Batch confirm in view (${batchConfirmCountInView})` : `Batch confirm agreed (${batchConfirmCountInView})`}
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Confirm {batchConfirmCountInView} unflagged, agreed post{batchConfirmCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
+                  <DialogDescription>
+                    Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the Content Library, one at a time.
+                    {isFiltered && batchConfirmCountOutsideView > 0 && (
+                      <> {batchConfirmCountOutsideView} more eligible post{batchConfirmCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to confirm everything.</>
+                    )}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setConfirmBatchOpen(false)} className="text-xs">
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={() => handleBatchConfirm(isFiltered)} className="text-xs">
+                    Confirm {batchConfirmCountInView}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
 
           {role === 'MARKETING_MANAGER' && (
-            <button
-              onClick={handleAutoCategorize}
-              disabled={isPending || posts.length === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-            >
-              {isPending ? 'Categorizing…' : 'Generate suggestions'}
-            </button>
+            <div className="flex flex-col items-start gap-0.5">
+              <button
+                onClick={handleAutoCategorize}
+                disabled={isPending || posts.length === 0}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              >
+                {isPending ? 'Categorizing…' : 'Generate suggestions'}
+              </button>
+              <span className="text-xs text-muted-foreground pl-1">Matches your keyword lists</span>
+            </div>
           )}
 
           {role === 'MARKETING_MANAGER' && (
-            <button
-              onClick={handleLlmClassify}
-              disabled={llmPending || posts.length === 0 || llmCooldown > 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-            >
-              {llmPending ? 'Classifying…' : llmCooldown > 0 ? `Wait ${llmCooldown}s` : 'Generate AI suggestions'}
-            </button>
+            <div className="flex flex-col items-start gap-0.5">
+              <button
+                onClick={handleLlmClassify}
+                disabled={llmPending || posts.length === 0 || llmCooldown > 0}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              >
+                {llmPending ? 'Classifying…' : llmCooldown > 0 ? `Wait ${llmCooldown}s` : 'Generate AI suggestions'}
+              </button>
+              <span className="text-xs text-muted-foreground pl-1">Uses AI to read each post</span>
+            </div>
           )}
         </div>
       </div>
+
+      {posts.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Input
+            type="search"
+            value={search}
+            onChange={(e) => updateSearch(e.target.value)}
+            placeholder="Search by title…"
+            aria-label="Search posts by title"
+            className="h-8 max-w-xs text-xs"
+          />
+          <Select value={flagFilter} onValueChange={(v) => updateFlagFilter(v as FlagFilter)}>
+            <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-56 h-8" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {FLAG_FILTER_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} label={opt.label}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isFiltered && (
+            <button
+              type="button"
+              onClick={() => { updateSearch(''); updateFlagFilter('ALL') }}
+              className="text-xs text-primary hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
 
       {allCaughtUp ? (
         <div className="animate-fade-slide-up flex flex-col items-center justify-center py-16 px-6 text-center bg-card rounded-2xl card-shadow">
@@ -576,6 +876,13 @@ export default function CategorizeClient({ posts, role }: Props) {
           </div>
           <p className="text-sm font-semibold text-foreground mb-1">All caught up</p>
           <p className="text-xs text-muted-foreground max-w-[240px]">Every post has a final category. Reassign from the Content Library if needed.</p>
+        </div>
+      ) : filteredPosts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-card rounded-2xl card-shadow">
+          <p className="text-sm font-semibold text-foreground mb-1">No posts match your filters</p>
+          <button type="button" onClick={() => { updateSearch(''); updateFlagFilter('ALL') }} className="text-xs text-primary hover:underline mt-1">
+            Clear filters
+          </button>
         </div>
       ) : (
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
