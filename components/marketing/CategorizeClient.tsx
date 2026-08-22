@@ -267,9 +267,12 @@ function TeamProposeCell({ post }: { post: ReviewPostRow }) {
 // override as the deliberate exception — showing both a full Select+button
 // form and Accept/Reject side by side left every row asking the Manager to
 // re-parse "am I accepting, or overriding?" (impeccable critique, P2).
-// Override itself now confirms before writing, matching the two bulk
-// actions — it performs the identical category-finalizing write, used far
-// more often, and had been the one path left with no safety net (P1).
+// Accept and Override both now confirm before writing, matching the
+// confirmation gate on the two bulk actions (though not their close timing —
+// the bulk dialogs close before the transition, these close after) — all
+// four paths perform the identical category-finalizing write, so none
+// should be a single unconfirmed click (evaluate audit, P1: Accept had been
+// the one path left with no safety net).
 function ManagerActionCell({ post }: { post: ReviewPostRow }) {
   const [isPending, startTransition] = useTransition()
   const [rowError, setRowError] = useState<string | null>(null)
@@ -281,12 +284,14 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
   // unmounts and this stayed false, leaving the row with no controls at all.
   const [overrideExpanded, setOverrideExpanded] = useState(false)
   const showOverrideForm = overrideExpanded || post.category_pending === null
+  const [confirmAcceptOpen, setConfirmAcceptOpen] = useState(false)
   const [confirmOverrideOpen, setConfirmOverrideOpen] = useState(false)
 
   function handleAccept() {
     setRowError(null)
     startTransition(async () => {
       const res = await acceptPendingCategory(post.id)
+      setConfirmAcceptOpen(false)
       if (res.error) setRowError(res.error)
     })
   }
@@ -312,15 +317,30 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
     <div className="flex flex-col gap-2">
       {post.category_pending && (
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            disabled={isPending}
-            onClick={handleAccept}
-            className="text-xs h-7 px-3"
-          >
-            Accept
-          </Button>
+          <Dialog open={confirmAcceptOpen} onOpenChange={setConfirmAcceptOpen}>
+            <DialogTrigger
+              disabled={isPending}
+              render={<Button type="button" size="sm" className="text-xs h-7 px-3" />}
+            >
+              Accept
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Finalize as &ldquo;{categorySelectLabel(post.category_pending)}&rdquo;?</DialogTitle>
+                <DialogDescription>
+                  This finalizes the category directly. It can&apos;t be undone from here — a finalized post can only be changed afterward from the Content Library, one at a time.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setConfirmAcceptOpen(false)} className="text-xs">
+                  Cancel
+                </Button>
+                <Button type="button" disabled={isPending} onClick={handleAccept} className="text-xs">
+                  {isPending ? 'Saving…' : 'Confirm'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button
             type="button"
             size="sm"

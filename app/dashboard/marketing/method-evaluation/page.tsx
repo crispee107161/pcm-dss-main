@@ -64,22 +64,25 @@ export default async function MarketingMethodEvaluationPage() {
       </div>
 
       <div className="mt-8 mb-2">
-        <h2 className="text-sm font-semibold text-gray-800">Ground truth (external codebook, mvp.md §9 item 3)</h2>
+        <h2 className="text-sm font-semibold text-gray-800">Ground truth (independent human review)</h2>
         <p className="text-xs text-gray-500 mt-0.5">
-          Two coders labelled a seeded random sample by hand, blind to the system&apos;s suggestions, following{' '}
-          <span className="font-medium">CODEBOOK_content_categories.md</span>. This is the authoritative FR-15
-          comparison — imported via <span className="font-mono">scripts/import-ground-truth.ts</span>, restricted to
-          posts where <span className="font-mono">category_final_source = MANUAL_GROUND_TRUTH</span>, so it can&apos;t
-          be contaminated by the circularity above.
+          Two coders labelled a seeded random sample by hand, blind to the system&apos;s suggestions, following the
+          project codebook. This is the authoritative comparison, restricted to posts confirmed through that
+          independent manual review, so it can&apos;t be contaminated by the circularity above.
         </p>
+        <MethodologyNote label="Where this data comes from" className="mt-1">
+          Coders&apos; labels follow <span className="font-medium">CODEBOOK_content_categories.md</span> and are
+          imported via <span className="font-mono">scripts/import-ground-truth.ts</span>, which sets{' '}
+          <span className="font-mono">category_final_source = MANUAL_GROUND_TRUTH</span> on each row.
+        </MethodologyNote>
       </div>
 
       {groundTruth.n === 0 ? (
         <div className="bg-card rounded-2xl card-shadow p-4 border-l-4 border-status-warning">
           <p className="text-xs text-gray-600">
-            No ground-truth sample has been imported yet — waiting on the two-coder codebook process
-            (Developer_Note_Ground_Truth_Labelling.md). Once the resolved CSV is ready, run
-            <span className="font-mono"> scripts/import-ground-truth.ts</span> against it.
+            No ground-truth sample has been imported yet — waiting on the two-coder codebook process. Once the
+            resolved CSV is ready, a developer runs the import script against it (see
+            Developer_Note_Ground_Truth_Labelling.md).
           </p>
         </div>
       ) : (

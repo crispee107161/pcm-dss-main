@@ -46,7 +46,7 @@ Three fixed roles (`MARKETING_TEAM` was added, `SALES_DIRECTOR` was removed, in 
 4. **AI features** — `actions/ai-insights.ts`, `actions/chat.ts`, and `actions/categorize.ts` (ALG-05 LLM categorisation) call the Groq API.
 
 ### Key Directories
-- `app/dashboard/{marketing,owner}/` — Role dashboards. Live sub-routes include `upload/`, `content/`, `categorize/`, `keywords/`, `method-evaluation/`, `analysis/`, `post-type-performance/`, `budget-reallocation/` and `ad-set-ranking/` (owner-only), `campaign-rankings/`, `audit-log/`, `report/`. `correlation/`, `regression/`, `simulation/`, and `trend-analysis/` also exist on disk (cut-feature legacy, see above) — some are unlinked from the nav; check before assuming a route is reachable or current.
+- `app/dashboard/{marketing,owner}/` — Role dashboards. Live sub-routes include `upload/`, `content/`, `categorize/`, `keywords/`, `method-evaluation/`, `analysis/`, `post-type-performance/`, `budget-reallocation/` and `ad-set-ranking/` (owner-only), `campaign-rankings/`, `audit-log/`, `report/`, and `trend-analysis/` (live — `TrendAnalysisView` + `computeTrendInsight`, unrelated to the cut `forecast.ts`/Holt-Winters code below despite the similar name). `correlation/`, `regression/`, and `simulation/` also exist on disk (cut-feature legacy, see above) and are unlinked from the nav; check before assuming one of those three is reachable or current.
 - `actions/` — All Server Actions (mutations). No separate API routes used for mutations (except `/api/reports/[role]/{csv,pdf}` exports).
 - `lib/stats/` — Pure statistical logic decoupled from UI.
 - `lib/csv/` — CSV parsing, column detection, and validation per file type.

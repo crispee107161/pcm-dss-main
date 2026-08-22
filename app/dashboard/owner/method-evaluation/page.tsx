@@ -62,11 +62,11 @@ export default async function OwnerMethodEvaluationPage() {
       </div>
 
       <div className="mt-8 mb-2">
-        <h2 className="text-sm font-semibold text-gray-800">Ground truth (external codebook, mvp.md §9 item 3)</h2>
+        <h2 className="text-sm font-semibold text-gray-800">Ground truth (independent human review)</h2>
         <p className="text-xs text-gray-500 mt-0.5">
           Two coders labelled a seeded random sample by hand, blind to the system&apos;s suggestions, following the
-          project codebook. This is the authoritative FR-15 comparison, restricted to posts where
-          category_final_source = MANUAL_GROUND_TRUTH — it can&apos;t be contaminated by the circularity above.
+          project codebook. This is the authoritative comparison, restricted to posts confirmed through that
+          independent manual review — it can&apos;t be contaminated by the circularity above.
         </p>
       </div>
 
