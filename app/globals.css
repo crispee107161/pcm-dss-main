@@ -308,16 +308,21 @@
   --chart-5: #946000;
 
   /* Extends the 5-slot chart palette above for categorical charts with more
-     series than TERRITORY_COLORS's core 5 (e.g. the territory pie chart) —
-     same values in both themes for now (not yet visually QA'd against a
-     white background at these specific hues; flip to a light-appropriate
-     set here if that turns out to need it, matching how chart-1..5 differ
-     between :root and .dark below). */
-  --chart-6: #36BFFA;
-  --chart-7: #66C61C;
-  --chart-8: #FF9C66;
-  --chart-9: #EE46BC;
-  --chart-10: #875BF7;
+     series than TERRITORY_COLORS's core 5 (e.g. the territory chart).
+     Validated against Claude Code's "dataviz" skill (validate_palette.js,
+     not vendored in this repo — re-run via the skill to re-check) as
+     chart-1..10 combined, --mode light --pairs adjacent (all 10 in fixed
+     slot order, the order TERRITORY_COLORS actually renders them in):
+     lightness band, chroma floor, adjacent CVD (deutan/protan/tritan) and
+     normal-vision floors, and >=3:1 contrast vs the light chart surface all
+     pass. Themed separately from .dark's chart-6..10 below (same hue per
+     slot, stepped for each surface) rather than shared, matching how
+     chart-1..5 differ. */
+  --chart-6: #0891B2;
+  --chart-7: #4D7C0F;
+  --chart-8: #C11574;
+  --chart-9: #3538CD;
+  --chart-10: #B93815;
   --radius: 0.5rem;
   --status-positive: #067347;
   --status-warning: #B54708;
@@ -391,16 +396,24 @@
   --border: var(--color-alpha-white-200);
   --input: var(--color-alpha-white-300);
   --ring: #D41135;
-  --chart-1: #12B76A;
-  --chart-2: #53B1FD;
-  --chart-3: #FD853A;
-  --chart-4: #A48AFB;
-  --chart-5: #FDB022;
-  --chart-6: #36BFFA;
-  --chart-7: #66C61C;
-  --chart-8: #FF9C66;
-  --chart-9: #EE46BC;
-  --chart-10: #875BF7;
+  /* Re-stepped for the dark surface — the previous values (#12B76A etc.)
+     sat at OKLCH L 0.69-0.81, above the dark-mode lightness band (0.48-0.67)
+     that Claude Code's "dataviz" skill checks (validate_palette.js, not
+     vendored in this repo — re-run via the skill to re-check), reading
+     washed out against the dark card surface. Validated as chart-1..10,
+     --mode dark --pairs adjacent: lightness band, chroma floor, adjacent
+     CVD/normal-vision floors, and >=3:1 contrast vs the dark surface all
+     pass. */
+  --chart-1: #0F9D5B;
+  --chart-2: #3987E5;
+  --chart-3: #E0701F;
+  --chart-4: #8B6DE0;
+  --chart-5: #C98500;
+  --chart-6: #1AA6B7;
+  --chart-7: #6B9425;
+  --chart-8: #D6499A;
+  --chart-9: #6172F3;
+  --chart-10: #D63F3F;
   --status-positive: #32D583;
   --status-warning: #FDB022;
   --status-negative: #FD853A;
@@ -475,11 +488,11 @@
   --chart-3: #B54708;
   --chart-4: #6927DA;
   --chart-5: #946000;
-  --chart-6: #36BFFA;
-  --chart-7: #66C61C;
-  --chart-8: #FF9C66;
-  --chart-9: #EE46BC;
-  --chart-10: #875BF7;
+  --chart-6: #0891B2;
+  --chart-7: #4D7C0F;
+  --chart-8: #C11574;
+  --chart-9: #3538CD;
+  --chart-10: #B93815;
   --status-positive: #067347;
   --status-warning: #B54708;
   --status-negative: #C4320A;
@@ -538,11 +551,11 @@
   --chart-3: #B54708;
   --chart-4: #6927DA;
   --chart-5: #946000;
-  --chart-6: #36BFFA;
-  --chart-7: #66C61C;
-  --chart-8: #FF9C66;
-  --chart-9: #EE46BC;
-  --chart-10: #875BF7;
+  --chart-6: #0891B2;
+  --chart-7: #4D7C0F;
+  --chart-8: #C11574;
+  --chart-9: #3538CD;
+  --chart-10: #B93815;
   --status-positive: #067347;
   --status-warning: #B54708;
   --status-negative: #C4320A;

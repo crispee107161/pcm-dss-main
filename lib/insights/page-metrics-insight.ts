@@ -235,7 +235,7 @@ export function computeTerritoryInsight(territoryData: TerritoryPoint[]): Metric
 
   return {
     headline: `${top.territory} is the top follower location at ${(top.distribution * 100).toFixed(0)}%`,
-    detail: `The other ${sorted.length - 1} location${sorted.length - 1 === 1 ? '' : 's'} shown make up the remaining ${(restShare * 100).toFixed(0)}%. This is a current snapshot and does not change with the date filter.`,
+    detail: `The other ${sorted.length - 1} location${sorted.length - 1 === 1 ? '' : 's'} make up the remaining ${(restShare * 100).toFixed(0)}%. This is a current snapshot and does not change with the date filter.`,
   }
 }
 

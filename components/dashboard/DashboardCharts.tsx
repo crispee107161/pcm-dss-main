@@ -5,7 +5,7 @@ import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, LabelList,
 } from 'recharts'
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { ChartTooltipRow } from '@/lib/chart-tooltip'
 import { CHART_COLORS, formatCompactCount } from '@/lib/chart-axis'
 import { median, iqr } from '@/lib/stats/descriptive'
@@ -143,33 +143,58 @@ export function CategoryPerformanceChart({ data }: { data: CategoryBarDatum[] })
 
 interface ReachViewsPoint { period: string; total_reach: number; total_views: number }
 
+// Reach and views are both counts but differ in scale (views typically
+// outnumber reach several-fold on video posts), so — same reasoning as
+// TrendCharts.tsx's small multiples — this renders as two single-axis
+// charts sharing a period axis instead of one dual-axis chart.
 export function PostReachViewsTrendChart({ data }: { data: ReachViewsPoint[] }) {
   if (data.length === 0) {
     return <p className="text-sm text-muted-foreground py-10 text-center">No organic post data in the last 3 months.</p>
   }
 
   return (
-    <ChartContainer config={REACH_VIEWS_CONFIG} className="aspect-auto h-full w-full" style={{ minHeight: 240 }}>
-      <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis yAxisId="reach" tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis yAxisId="views" orientation="right" tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
-        <ChartTooltip
-          cursor={false}
-          content={
-            <ChartTooltipContent
-              formatter={(value, name, item) => (
-                <ChartTooltipRow color={item.color ?? CHART_COLORS.blue} label={name} value={Number(value).toLocaleString()} />
-              )}
-            />
-          }
-        />
-        <ChartLegend content={<ChartLegendContent />} />
-        <Line yAxisId="reach" dataKey="total_reach" name="Total Reach" type="monotone" stroke="var(--color-total_reach)" dot={false} strokeWidth={2} />
-        <Line yAxisId="views" dataKey="total_views" name="Total Views" type="monotone" stroke="var(--color-total_views)" dot={false} strokeWidth={2} />
-      </LineChart>
-    </ChartContainer>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
+      <div className="flex flex-col">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.blue }} />
+          Total Reach
+        </div>
+        <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
+          <ChartContainer config={REACH_VIEWS_CONFIG} className="aspect-auto h-full w-full">
+            <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel formatter={v => <ChartTooltipRow color={CHART_COLORS.blue} label="Total Reach" value={Number(v).toLocaleString()} />} />}
+              />
+              <Line dataKey="total_reach" name="Total Reach" type="monotone" stroke="var(--color-total_reach)" dot={false} strokeWidth={2} />
+            </LineChart>
+          </ChartContainer>
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.violet }} />
+          Total Views
+        </div>
+        <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
+          <ChartContainer config={REACH_VIEWS_CONFIG} className="aspect-auto h-full w-full">
+            <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel formatter={v => <ChartTooltipRow color={CHART_COLORS.violet} label="Total Views" value={Number(v).toLocaleString()} />} />}
+              />
+              <Line dataKey="total_views" name="Total Views" type="monotone" stroke="var(--color-total_views)" dot={false} strokeWidth={2} />
+            </LineChart>
+          </ChartContainer>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -177,6 +202,10 @@ export function PostReachViewsTrendChart({ data }: { data: ReachViewsPoint[] }) 
 
 interface PageFunnelPoint { period: string; visits: number; follows: number; ratioPer100: number | null }
 
+// Visits and follows are different scales of the same unit (follows are a
+// small fraction of visits), so — same reasoning as PostReachViewsTrendChart
+// above — this renders as two single-axis charts instead of one dual-axis
+// chart.
 export function PageFunnelChart({ data }: { data: PageFunnelPoint[] }) {
   if (data.length === 0) {
     return <p className="text-sm text-muted-foreground py-10 text-center">No page metrics uploaded yet.</p>
@@ -184,27 +213,44 @@ export function PageFunnelChart({ data }: { data: PageFunnelPoint[] }) {
 
   return (
     <div className="space-y-4">
-      <ChartContainer config={PAGE_FUNNEL_CONFIG} className="aspect-auto h-[200px] w-full">
-        <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
-          <CartesianGrid vertical={false} />
-          <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
-          <YAxis yAxisId="visits" tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
-          <YAxis yAxisId="follows" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
-          <ChartTooltip
-            cursor={false}
-            content={
-              <ChartTooltipContent
-                formatter={(value, name, item) => (
-                  <ChartTooltipRow color={item.color ?? CHART_COLORS.green} label={name} value={Number(value).toLocaleString()} />
-                )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.green }} />
+            Page Visits
+          </div>
+          <ChartContainer config={PAGE_FUNNEL_CONFIG} className="aspect-auto h-[180px] w-full">
+            <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+              <YAxis tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent formatter={v => <ChartTooltipRow color={CHART_COLORS.green} label="Page Visits" value={Number(v).toLocaleString()} />} />}
               />
-            }
-          />
-          <ChartLegend content={<ChartLegendContent />} />
-          <Line yAxisId="visits" dataKey="visits" name="Page Visits" type="monotone" stroke="var(--color-visits)" dot={false} strokeWidth={2} />
-          <Line yAxisId="follows" dataKey="follows" name="New Follows" type="monotone" stroke="var(--color-follows)" dot={false} strokeWidth={2} />
-        </LineChart>
-      </ChartContainer>
+              <Line dataKey="visits" name="Page Visits" type="monotone" stroke="var(--color-visits)" dot={false} strokeWidth={2} />
+            </LineChart>
+          </ChartContainer>
+        </div>
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.blue }} />
+            New Follows
+          </div>
+          <ChartContainer config={PAGE_FUNNEL_CONFIG} className="aspect-auto h-[180px] w-full">
+            <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+              <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent formatter={v => <ChartTooltipRow color={CHART_COLORS.blue} label="New Follows" value={Number(v).toLocaleString()} />} />}
+              />
+              <Line dataKey="follows" name="New Follows" type="monotone" stroke="var(--color-follows)" dot={false} strokeWidth={2} />
+            </LineChart>
+          </ChartContainer>
+        </div>
+      </div>
       <ChartContainer config={PAGE_FUNNEL_RATIO_CONFIG} className="aspect-auto h-[120px] w-full">
         <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
           <CartesianGrid vertical={false} />

@@ -270,7 +270,7 @@ export default async function PageMetricsPage({
               </div>
               <div className="bg-card rounded-2xl card-shadow p-6">
                 <h3 className="font-medium text-foreground mb-1 text-sm">Page Views & Link Clicks</h3>
-                <p className="text-xs text-muted-foreground mb-4">Views (left axis) vs. link clicks (right axis)</p>
+                <p className="text-xs text-muted-foreground mb-4">Page views and link clicks, shown separately since clicks are a fraction of views</p>
                 {viewsClicksInsight && (
                   <InsightHeader headline={viewsClicksInsight.headline} detail={viewsClicksInsight.detail} />
                 )}
@@ -309,7 +309,7 @@ export default async function PageMetricsPage({
             </div>
             <div className="bg-card rounded-2xl card-shadow p-6">
               <h3 className="font-medium text-foreground mb-1 text-sm">Follower Count & Daily Change</h3>
-              <p className="text-xs text-muted-foreground mb-4">Total followers (left) and day-over-day change (right)</p>
+              <p className="text-xs text-muted-foreground mb-4">Total followers and day-over-day change, shown separately since they're different scales</p>
               {followerGrowthInsight && (
                 <InsightHeader headline={followerGrowthInsight.headline} detail={followerGrowthInsight.detail} />
               )}

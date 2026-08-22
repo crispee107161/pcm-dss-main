@@ -63,29 +63,50 @@ export function DailyMetricsChart({ data }: { data: DailyMetricPoint[] }) {
   )
 }
 
+// Views and clicks share a unit (a count) but differ in scale by an order
+// of magnitude or more, so a shared axis would flatten clicks to a near-flat
+// line at the bottom — same reasoning as TrendCharts.tsx's small multiples:
+// two single-axis charts sharing a period axis instead of one dual-axis chart.
 export function ViewsClicksChart({ data }: { data: DailyMetricPoint[] }) {
   return (
-    <ChartContainer config={VIEWS_CLICKS_CONFIG} className="aspect-auto h-[280px] w-full">
-      <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
-        <YAxis yAxisId="views"  tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis yAxisId="clicks" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
-        <ChartTooltip
-          cursor={false}
-          content={
-            <ChartTooltipContent
-              formatter={(value, name, item) => (
-                <ChartTooltipRow color={item.color ?? CHART_COLORS.violet} label={name} value={Number(value).toLocaleString()} />
-              )}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.violet }} />
+          Page Views
+        </div>
+        <ChartContainer config={VIEWS_CLICKS_CONFIG} className="aspect-auto h-[240px] w-full">
+          <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+            <YAxis tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent formatter={value => <ChartTooltipRow color={CHART_COLORS.violet} label="Page Views" value={Number(value).toLocaleString()} />} />}
             />
-          }
-        />
-        <ChartLegend content={<ChartLegendContent />} />
-        <Line yAxisId="views"  dataKey="views"       name="Page Views"  type="monotone" stroke="var(--color-views)"       dot={false} strokeWidth={2} />
-        <Line yAxisId="clicks" dataKey="link_clicks" name="Link Clicks" type="monotone" stroke="var(--color-link_clicks)" dot={false} strokeWidth={2} />
-      </LineChart>
-    </ChartContainer>
+            <Line dataKey="views" name="Page Views" type="monotone" stroke="var(--color-views)" dot={false} strokeWidth={2} />
+          </LineChart>
+        </ChartContainer>
+      </div>
+      <div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.red }} />
+          Link Clicks
+        </div>
+        <ChartContainer config={VIEWS_CLICKS_CONFIG} className="aspect-auto h-[240px] w-full">
+          <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+            <YAxis tickFormatter={formatCompactCount} tickLine={false} axisLine={false} tickMargin={8} />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent formatter={value => <ChartTooltipRow color={CHART_COLORS.red} label="Link Clicks" value={Number(value).toLocaleString()} />} />}
+            />
+            <Line dataKey="link_clicks" name="Link Clicks" type="monotone" stroke="var(--color-link_clicks)" dot={false} strokeWidth={2} />
+          </LineChart>
+        </ChartContainer>
+      </div>
+    </div>
   )
 }
 
@@ -97,20 +118,50 @@ interface FollowerPoint {
   daily_change: number
 }
 
+// Total followers (tens of thousands) and daily change (single/double
+// digits) are different scales of the same unit, so — same reasoning as
+// ViewsClicksChart above — this renders as two single-axis charts rather
+// than one dual-axis chart.
 export function FollowerHistoryChart({ data }: { data: FollowerPoint[] }) {
   return (
-    <ChartContainer config={FOLLOWER_HISTORY_CONFIG} className="aspect-auto h-[280px] w-full">
-      <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
-        <YAxis yAxisId="total"  domain={['auto', 'auto']} tickLine={false} axisLine={false} tickMargin={8} />
-        <YAxis yAxisId="change" orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
-        <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-        <ChartLegend content={<ChartLegendContent />} />
-        <Line yAxisId="total"  dataKey="followers"    name="Total Followers" type="monotone" stroke="var(--color-followers)"    dot={false} strokeWidth={2} />
-        <Line yAxisId="change" dataKey="daily_change" name="Daily Change"    type="monotone" stroke="var(--color-daily_change)" dot={false} strokeWidth={1} />
-      </LineChart>
-    </ChartContainer>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.blue }} />
+          Total Followers
+        </div>
+        <ChartContainer config={FOLLOWER_HISTORY_CONFIG} className="aspect-auto h-[240px] w-full">
+          <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+            <YAxis domain={['auto', 'auto']} tickLine={false} axisLine={false} tickMargin={8} />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent formatter={value => <ChartTooltipRow color={CHART_COLORS.blue} label="Total Followers" value={Number(value).toLocaleString()} />} />}
+            />
+            <Line dataKey="followers" name="Total Followers" type="monotone" stroke="var(--color-followers)" dot={false} strokeWidth={2} />
+          </LineChart>
+        </ChartContainer>
+      </div>
+      <div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.green }} />
+          Daily Change
+        </div>
+        <ChartContainer config={FOLLOWER_HISTORY_CONFIG} className="aspect-auto h-[240px] w-full">
+          <LineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent formatter={value => <ChartTooltipRow color={CHART_COLORS.green} label="Daily Change" value={Number(value).toLocaleString()} />} />}
+            />
+            <Line dataKey="daily_change" name="Daily Change" type="monotone" stroke="var(--color-daily_change)" dot={false} strokeWidth={1} />
+          </LineChart>
+        </ChartContainer>
+      </div>
+    </div>
   )
 }
 
@@ -156,10 +207,17 @@ interface TerritorySlice { territory: string; distribution: number }
 const GENDER_COLORS: Record<string, string> = {
   Male: CHART_COLORS.blue, Female: CHART_COLORS.violet, Other: CHART_TICK_FILL,
 }
+// The 10 validated categorical slots (chart-1..10 in globals.css), in the
+// fixed order they were validated in (see globals.css's chart-6..10 comment
+// for how) — never cycled.
+// A territory past the 10th folds into "Other" (see TerritoryChart) rather
+// than reusing a hue, which would make a filtered/refreshed dataset repaint
+// an existing territory's color out from under it.
 const TERRITORY_COLORS = [
   CHART_COLORS.blue, CHART_COLORS.green, CHART_COLORS.orange, CHART_COLORS.red, CHART_COLORS.violet,
-  'var(--chart-6)', 'var(--chart-7)', 'var(--chart-8)', 'var(--chart-9)', CHART_TICK_FILL, 'var(--chart-10)',
+  'var(--chart-6)', 'var(--chart-7)', 'var(--chart-8)', 'var(--chart-9)', 'var(--chart-10)',
 ]
+const TERRITORY_OTHER_COLOR = CHART_TICK_FILL
 
 // Donut (chart-pie-donut) instead of a solid pie — reads cleaner than
 // cramming "Male 62%" text onto thin slices, especially for the smallest
@@ -191,8 +249,28 @@ export function GenderPieChart({ data }: { data: GenderSlice[] }) {
   )
 }
 
+// Territory names come straight from an uploaded CSV column (see
+// lib/csv/validate-demographics.ts) with no reserved-word check, so a real
+// territory can legitimately be named "Other" — folding by name collision
+// would silently repaint it gray, or (once overflow also exists) paint two
+// different bars the same gray with duplicate React/axis keys. `isOther`
+// tags the synthetic bucket structurally instead.
+interface FoldedTerritorySlice extends TerritorySlice { isOther?: boolean }
+
+// Territories beyond the 10 validated color slots fold into a single
+// "Other" bucket (summed, not dropped) rather than cycling back through
+// TERRITORY_COLORS — see the non-negotiable in the dataviz skill: a color
+// must never be reused for a second entity on screen at once.
+function foldTerritoryOverflow(sorted: TerritorySlice[]): FoldedTerritorySlice[] {
+  if (sorted.length <= TERRITORY_COLORS.length) return sorted
+  const kept = sorted.slice(0, TERRITORY_COLORS.length)
+  const overflow = sorted.slice(TERRITORY_COLORS.length)
+  const otherTotal = overflow.reduce((sum, t) => sum + t.distribution, 0)
+  return [...kept, { territory: `Other (${overflow.length})`, distribution: otherTotal, isOther: true }]
+}
+
 export function TerritoryChart({ data }: { data: TerritorySlice[] }) {
-  const sorted = [...data].sort((a, b) => b.distribution - a.distribution)
+  const sorted = foldTerritoryOverflow([...data].sort((a, b) => b.distribution - a.distribution))
   return (
     <ChartContainer config={NO_CHART_CONFIG} className="aspect-auto h-[260px] w-full">
       <BarChart
@@ -209,7 +287,7 @@ export function TerritoryChart({ data }: { data: TerritorySlice[] }) {
         />
         <Bar dataKey="distribution" name="Distribution" radius={[0, 4, 4, 0]}>
           {sorted.map((entry, i) => (
-            <Cell key={entry.territory} fill={TERRITORY_COLORS[i % TERRITORY_COLORS.length]} />
+            <Cell key={`${entry.territory}-${i}`} fill={entry.isOther ? TERRITORY_OTHER_COLOR : TERRITORY_COLORS[i]} />
           ))}
         </Bar>
       </BarChart>
