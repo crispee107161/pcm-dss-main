@@ -267,12 +267,14 @@ function TeamProposeCell({ post }: { post: ReviewPostRow }) {
 // override as the deliberate exception — showing both a full Select+button
 // form and Accept/Reject side by side left every row asking the Manager to
 // re-parse "am I accepting, or overriding?" (impeccable critique, P2).
-// Accept and Override both now confirm before writing, matching the
+// Accept, Reject, and Override all confirm before writing, matching the
 // confirmation gate on the two bulk actions (though not their close timing —
-// the bulk dialogs close before the transition, these close after) — all
-// four paths perform the identical category-finalizing write, so none
-// should be a single unconfirmed click (evaluate audit, P1: Accept had been
-// the one path left with no safety net).
+// the bulk dialogs close before the transition, these close after). Reject
+// doesn't write category_final like the other three (it only clears the
+// pending proposal), but it still discards a teammate's proposed label with
+// no undo, so it gets the same gate — none of the three should be a single
+// unconfirmed click (evaluate audit, P1: Accept had been the one path left
+// with no safety net; Reject was found missing the same gate later).
 function ManagerActionCell({ post }: { post: ReviewPostRow }) {
   const [isPending, startTransition] = useTransition()
   const [rowError, setRowError] = useState<string | null>(null)
@@ -285,7 +287,22 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
   const [overrideExpanded, setOverrideExpanded] = useState(false)
   const showOverrideForm = overrideExpanded || post.category_pending === null
   const [confirmAcceptOpen, setConfirmAcceptOpen] = useState(false)
+  const [confirmRejectOpen, setConfirmRejectOpen] = useState(false)
   const [confirmOverrideOpen, setConfirmOverrideOpen] = useState(false)
+  // Same "survives across a revalidate" hazard as overrideExpanded above,
+  // for the three confirm dialogs: a dialog left open (e.g. Manager opens
+  // Reject, then a bulk action elsewhere revalidates this row and clears
+  // category_pending) is never told to close — the Accept/Reject block just
+  // unmounts around it. If category_pending then goes non-null again (a new
+  // proposal), the block remounts with the stale `true` still on this
+  // instance's state and the dialog pops back open unprompted, referring to
+  // a proposal the Manager never clicked on. Reset on any change to the
+  // value a dialog's copy is actually about.
+  useEffect(() => {
+    setConfirmAcceptOpen(false)
+    setConfirmRejectOpen(false)
+    setConfirmOverrideOpen(false)
+  }, [post.category_pending])
 
   function handleAccept() {
     setRowError(null)
@@ -300,6 +317,7 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
     setRowError(null)
     startTransition(async () => {
       const res = await rejectPendingCategory(post.id)
+      setConfirmRejectOpen(false)
       if (res.error) setRowError(res.error)
     })
   }
@@ -341,16 +359,30 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            onClick={handleReject}
-            className="text-xs h-7 px-3"
-          >
-            Reject
-          </Button>
+          <Dialog open={confirmRejectOpen} onOpenChange={setConfirmRejectOpen}>
+            <DialogTrigger
+              disabled={isPending}
+              render={<Button type="button" size="sm" variant="outline" className="text-xs h-7 px-3" />}
+            >
+              Reject
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Discard the proposed &ldquo;{categorySelectLabel(post.category_pending)}&rdquo; category?</DialogTitle>
+                <DialogDescription>
+                  This clears the pending proposal and sends the post back to needing review. It can&apos;t be undone from here.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setConfirmRejectOpen(false)} className="text-xs">
+                  Cancel
+                </Button>
+                <Button type="button" disabled={isPending} onClick={handleReject} className="text-xs">
+                  {isPending ? 'Saving…' : 'Confirm'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           {!showOverrideForm && (
             <button
               type="button"
