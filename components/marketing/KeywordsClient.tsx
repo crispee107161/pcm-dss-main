@@ -41,7 +41,7 @@ function KeywordChip({ kw }: { kw: Keyword }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1 bg-muted text-foreground rounded-full px-3 py-1 text-xs font-medium">
+    <span className="inline-flex items-center gap-1 bg-muted border border-border text-foreground rounded-full px-3 py-1 text-xs font-medium">
       {kw.word}
       {confirming ? (
         <span
