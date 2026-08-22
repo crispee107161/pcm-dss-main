@@ -898,10 +898,22 @@ export default function CategorizeClient({ posts, role }: Props) {
             className="h-8 max-w-xs text-xs"
           />
           <Select value={flagFilter} onValueChange={(v) => updateFlagFilter(v as FlagFilter)}>
-            <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-56 h-8" size="sm">
+            {/* w-64 (not w-56): at text-xs the longest label ("Needs judgment —
+                couldn't classify") needs ~189px against ~182px of content box
+                at w-56, so a selected long value was ellipsizing by a
+                character or two in the closed trigger. */}
+            <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-64 h-8" size="sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent align="start">
+            {/* Wider than the trigger — SelectContent otherwise matches the
+                trigger's width exactly (components/ui/select.tsx's
+                w-(--anchor-width); cn()'s tailwind-merge drops that base
+                class in favor of this one since both are `w-*` utilities).
+                The longest label here needs ~260px (label + pl-1.5 + the
+                pr-8 reserved for the checkmark indicator) — doesn't fit on
+                one line at the trigger's width, so it was clipping under
+                the checkmark. w-80 leaves ~60px of headroom above that. */}
+            <SelectContent align="start" alignItemWithTrigger={false} className="w-80">
               {FLAG_FILTER_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value} label={opt.label}>{opt.label}</SelectItem>
               ))}
