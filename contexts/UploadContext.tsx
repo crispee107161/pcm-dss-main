@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { uploadCSV, revalidateDashboards } from '@/actions/upload'
 import type { UploadResult } from '@/types/index'
 
-type FileStatus = 'pending' | 'uploading' | 'success' | 'failed'
+type FileStatus = 'pending' | 'uploading' | 'success' | 'failed' | 'needs-confirmation'
 
 export interface QueuedFile {
   id: string
@@ -22,6 +22,7 @@ interface UploadContextValue {
   clearAll: () => void
   runBatchUpload: () => void
   retryFile: (id: string) => void
+  confirmFile: (id: string) => void
 }
 
 const UploadContext = createContext<UploadContextValue | null>(null)
@@ -49,6 +50,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setQueue([])
   }
 
+  function statusFromResult(result: UploadResult): FileStatus {
+    if (result.status === 'SUCCESS') return 'success'
+    if (result.status === 'NEEDS_CONFIRMATION') return 'needs-confirmation'
+    return 'failed'
+  }
+
   async function runBatchUpload() {
     const pending = queue.filter((f) => f.status === 'pending')
     if (pending.length === 0) return
@@ -64,11 +71,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         formData.append('file', entry.file)
         const result = await uploadCSV(null, formData)
         setQueue((prev) =>
-          prev.map((f) =>
-            f.id === entry.id
-              ? { ...f, status: result.status === 'SUCCESS' ? 'success' : 'failed', result }
-              : f
-          )
+          prev.map((f) => (f.id === entry.id ? { ...f, status: statusFromResult(result), result } : f))
         )
       })
     )
@@ -88,9 +91,29 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     formData.append('file', entry.file)
     const result = await uploadCSV(null, formData)
     setQueue((prev) =>
-      prev.map((f) =>
-        f.id === id ? { ...f, status: result.status === 'SUCCESS' ? 'success' : 'failed', result } : f
-      )
+      prev.map((f) => (f.id === id ? { ...f, status: statusFromResult(result), result } : f))
+    )
+
+    await revalidateDashboards()
+    setIsPending(false)
+  }
+
+  // The user reviewed the existing-vs-incoming totals shown for a
+  // NEEDS_CONFIRMATION file and chose to proceed — re-submit with the
+  // confirmed flag so the server action skips the overlap check this time.
+  async function confirmFile(id: string) {
+    const entry = queue.find((f) => f.id === id)
+    if (!entry) return
+
+    setIsPending(true)
+    setQueue((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'uploading' } : f)))
+
+    const formData = new FormData()
+    formData.append('file', entry.file)
+    formData.append('confirmed', 'true')
+    const result = await uploadCSV(null, formData)
+    setQueue((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, status: statusFromResult(result), result } : f))
     )
 
     await revalidateDashboards()
@@ -98,7 +121,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UploadContext.Provider value={{ queue, isPending, addFiles, removeFile, clearAll, runBatchUpload, retryFile }}>
+    <UploadContext.Provider value={{ queue, isPending, addFiles, removeFile, clearAll, runBatchUpload, retryFile, confirmFile }}>
       {children}
     </UploadContext.Provider>
   )

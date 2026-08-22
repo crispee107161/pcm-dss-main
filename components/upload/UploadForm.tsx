@@ -18,11 +18,16 @@ import { Loading01Icon } from '@animateicons/react/huge'
 import { DatabaseIcon, CircleCheckIcon, type CircleCheckIconHandle } from 'lucide-animated'
 import { ClockIcon, CheckIcon, FileWarningIcon, RefreshCwIcon, XIcon } from 'lucide-react'
 
-const ATTACHMENT_STATE: Record<QueuedFile['status'], 'idle' | 'uploading' | 'done' | 'error'> = {
+const ATTACHMENT_STATE: Record<QueuedFile['status'], 'idle' | 'uploading' | 'processing' | 'done' | 'error'> = {
   pending: 'idle',
   uploading: 'uploading',
   success: 'done',
   failed: 'error',
+  'needs-confirmation': 'processing',
+}
+
+function formatPHP(amount: number): string {
+  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 const UPLOAD_TYPE_LABELS: Record<string, string> = {
@@ -38,7 +43,7 @@ export default function UploadForm() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const successIconRef = useRef<CircleCheckIconHandle>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const { queue, isPending, addFiles, removeFile, clearAll, runBatchUpload, retryFile } = useUpload()
+  const { queue, isPending, addFiles, removeFile, clearAll, runBatchUpload, retryFile, confirmFile } = useUpload()
 
   function handleClearAll() {
     clearAll()
@@ -129,6 +134,7 @@ export default function UploadForm() {
                   {entry.status === 'uploading' && <Spinner />}
                   {entry.status === 'success' && <CheckIcon />}
                   {entry.status === 'failed' && <FileWarningIcon />}
+                  {entry.status === 'needs-confirmation' && <FileWarningIcon />}
                 </AttachmentMedia>
 
                 <AttachmentContent>
@@ -138,6 +144,45 @@ export default function UploadForm() {
                   )}
                   {entry.status === 'uploading' && (
                     <AttachmentDescription>Uploading…</AttachmentDescription>
+                  )}
+                  {entry.result?.status === 'NEEDS_CONFIRMATION' && entry.result.existing && entry.result.incoming && (
+                    <div className="mt-1.5 rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-xs text-foreground">
+                      <p className="font-medium">This period is already loaded — {entry.result.periodLabel}</p>
+                      <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground">
+                        <span>Currently held:</span>
+                        <span className="tabular">
+                          {entry.result.existing.count.toLocaleString()} {entry.result.existing.count === 1 ? 'record' : 'records'}
+                          {entry.result.existing.totalSpend !== undefined && `, ${formatPHP(entry.result.existing.totalSpend)} total spend`}
+                        </span>
+                        <span>This file contains:</span>
+                        <span className="tabular">
+                          {entry.result.incoming.count.toLocaleString()} {entry.result.incoming.count === 1 ? 'record' : 'records'}
+                          {entry.result.incoming.totalSpend !== undefined && `, ${formatPHP(entry.result.incoming.totalSpend)} total spend`}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-muted-foreground">Continuing will update matching records and add new ones. Existing records not present in this file are kept as-is.</p>
+                      <div className="mt-2 flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() => confirmFile(entry.id)}
+                          className="h-7 px-3 text-xs bg-primary hover:bg-primary/90 text-white"
+                        >
+                          Continue
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isPending}
+                          onClick={() => removeFile(entry.id)}
+                          className="h-7 px-3 text-xs"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
                   )}
                   {entry.result?.status === 'SUCCESS' && (
                     <div className="flex flex-wrap gap-1.5 mt-1 items-center">

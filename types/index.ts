@@ -8,13 +8,24 @@ export type UploadType =
   | 'PAGE_VIEWERS_CSV'
   | 'DEMOGRAPHICS_CSV'
 
+export interface UploadPeriodTotals {
+  count: number
+  totalSpend?: number
+}
+
 export interface UploadResult {
-  status: 'SUCCESS' | 'FAILED'
+  status: 'SUCCESS' | 'FAILED' | 'NEEDS_CONFIRMATION'
   upload_type: UploadType
   records_inserted: number
   records_updated: number
   records_unchanged: number
   error_message?: string
+  // NEEDS_CONFIRMATION only — the period the incoming file covers already has
+  // records on file; nothing was written yet. Re-submit with confirmed=true
+  // to proceed and replace the existing figures with the incoming ones.
+  periodLabel?: string
+  existing?: UploadPeriodTotals
+  incoming?: UploadPeriodTotals
 }
 
 export interface SpearmanRow {

@@ -49,6 +49,26 @@ enum CategoryFinalSource {
   MANUAL_OVERRIDE
 }
 
+/// docs/raven/S4_Categorisation_Review_UI_Change.md §2.1/§3.2 — S4's triage
+/// signal. Specific condition(s), not a boolean, so Chapter 4 can report a
+/// per-condition breakdown ("X flagged for disagreement, Y for..."). The
+/// review screen shows generic wording built from this set; it never names
+/// which method (category_keyword vs category_llm) produced which value —
+/// see lib/categorize/flag-reasons.ts.
+enum CategoryFlagReason {
+  DISAGREEMENT
+  UNCLASSIFIED
+  /// docs/raven/S4_Flag_Thresholds_Answers.md §2 — unconditional, not a
+  /// rarity computation. Entertainment is defined partly by visual features
+  /// a caption can't convey, and FR-08's n=200 ground-truth run showed the
+  /// LLM over-assigns it (38 predicted vs. 12 actual, ~29% precision). A
+  /// dynamic rarity threshold was rejected: circular (computed from the
+  /// review it's meant to guide), order-dependent, and irreproducible for
+  /// the Chapter 4 breakdown.
+  ENTERTAINMENT_SUGGESTED
+  SHORT_CAPTION
+}
+
 // FR-24 audit trail — the "manual category assignment" half. UploadLog
 // (above) already covers uploads; this covers every human decision made on
 // S4 Categorisation Review. Deliberately excludes ALG-04's autoCategorizeAll
@@ -59,6 +79,10 @@ enum CategoryAuditAction {
   REJECT
   OVERRIDE
   BULK_ACCEPT
+  /// docs/raven/S4_Categorisation_Review_UI_Change.md §2.2 — a Manager
+  /// batch-confirming every unflagged, both-methods-agreed post at once.
+  /// Distinct from BULK_ACCEPT, which finalises MARKETING_TEAM proposals.
+  BATCH_CONFIRM
 }
 
 model User {
@@ -164,6 +188,15 @@ model FacebookPost {
   category_pending              CategoryLabel?
   category_pending_by           Int?
   pending_by                    User?                @relation(fields: [category_pending_by], references: [id])
+  /// docs/raven/S4_Categorisation_Review_UI_Change.md §3.2 — computed and
+  /// persisted by lib/data/category-flags.ts whenever category_keyword or
+  /// category_llm changes. Every condition is a pure function of one post's
+  /// own fields (ENTERTAINMENT_SUGGESTED's doc comment above explains why a
+  /// cross-post rarity baseline was rejected), so the manuscript breakdown
+  /// can't drift as later review activity finalises other posts. Empty
+  /// while category_final is null and no condition has fired; meaningless
+  /// (and left stale) once category_final is set — the post has left the queue.
+  category_flag_reasons         CategoryFlagReason[] @default([])
   created_at                    DateTime             @default(now())
 }
 

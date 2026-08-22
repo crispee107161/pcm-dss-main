@@ -8,8 +8,9 @@ export default function UploadStatusBar() {
   const { queue, isPending } = useUpload()
   const pathname = usePathname()
 
-  const isOnUploadPage = pathname === '/dashboard/marketing/upload'
+  const isOnUploadPage = pathname === '/dashboard/marketing/upload' || pathname === '/dashboard/owner/upload'
   const doneCount = queue.filter((f) => f.status === 'success' || f.status === 'failed').length
+  const needsConfirmation = queue.filter((f) => f.status === 'needs-confirmation').length
   const inFlight  = queue.filter((f) => f.status === 'uploading' || f.status === 'pending').length
   const total     = queue.length
 
@@ -27,6 +28,9 @@ export default function UploadStatusBar() {
         Uploading{' '}
         <span className="font-semibold text-primary tabular">{doneCount}/{total}</span>{' '}
         file{total !== 1 ? 's' : ''}
+        {needsConfirmation > 0 && (
+          <span className="text-status-warning"> — {needsConfirmation} need{needsConfirmation !== 1 ? '' : 's'} confirmation</span>
+        )}
         {inFlight > 0 && <span className="text-muted-foreground"> — {inFlight} remaining</span>}
       </span>
     </div>

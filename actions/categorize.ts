@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { detectCategoryFromText } from '@/lib/keywords/detect'
 import { resolveCaption } from '@/lib/keywords/caption'
 import { CATEGORY_NAME_TO_LABEL } from '@/lib/category-label'
+import { recomputeQueueFlagReasons, isUnflaggedAgreed } from '@/lib/data/category-flags'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
 
 // Ads no longer carry a category (mvp.md §5.1 — content category → ad
@@ -274,9 +275,67 @@ export async function autoCategorizeAll(): Promise<AutoCategorizeResult> {
         return prisma.facebookPost.update({ where: { id: post.id }, data: { category_keyword: label } })
       })
     )
+    await recomputeQueueFlagReasons()
 
     revalidateCategoryScreens()
     return { ok: true, posts: posts.length }
+  } catch {
+    return { ok: false, reason: GENERIC_ERROR }
+  }
+}
+
+export type BatchConfirmResult = { ok: true; confirmed: number } | { ok: false; reason: string }
+
+// docs/raven/S4_Categorisation_Review_UI_Change.md §2.2 — "the agreed label
+// IS the batch-confirm value" for posts where both methods agree and no
+// other flag condition fired. category_pending is excluded even when it
+// happens to equal the agreed label — accept/reject already own that path,
+// and finalising it here too would double-write the audit trail.
+export async function batchConfirmAgreed(): Promise<BatchConfirmResult> {
+  const session = await auth()
+  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
+    return { ok: false, reason: 'Unauthorized' }
+  }
+
+  try {
+    const candidates = await prisma.facebookPost.findMany({
+      where: { category_final: null, category_pending: null },
+      select: { id: true, category_keyword: true, category_llm: true, category_flag_reasons: true },
+    })
+    const toConfirm = candidates.filter(isUnflaggedAgreed)
+
+    const userId = parseInt(session.user.id, 10)
+    const confirmedAt = new Date()
+
+    await prisma.$transaction([
+      ...toConfirm.map((post) =>
+        prisma.facebookPost.update({
+          where: { id: post.id },
+          data: {
+            category_final: post.category_keyword,
+            category_final_source: 'ACCEPTED_SUGGESTION',
+            category_final_assigned_by_id: userId,
+            category_final_assigned_at: confirmedAt,
+          },
+        })
+      ),
+      ...(toConfirm.length > 0
+        ? [
+            prisma.categoryAuditLog.createMany({
+              data: toConfirm.map((post) => ({
+                user_id: userId, action: 'BATCH_CONFIRM' as const, facebook_post_id: post.id,
+                // Query above filters on category_final: null, so every candidate's
+                // previous value is always null here — stated explicitly rather than
+                // read off the row so it doesn't read as if it might carry a value.
+                previous_category: null, new_category: post.category_keyword,
+              })),
+            }),
+          ]
+        : []),
+    ])
+
+    revalidateCategoryScreens()
+    return { ok: true, confirmed: toConfirm.length }
   } catch {
     return { ok: false, reason: GENERIC_ERROR }
   }

@@ -25,6 +25,7 @@ export default async function CategorizePage() {
       category_keyword: true,
       category_llm: true,
       category_pending: true,
+      category_flag_reasons: true,
       pending_by: { select: { email: true } },
     },
   })
@@ -37,6 +38,7 @@ export default async function CategorizePage() {
     keywordSuggestion: p.category_keyword,
     llmSuggestion: p.category_llm,
     category_pending: p.category_pending,
+    flagReasons: p.category_flag_reasons,
     pendingByEmail: p.pending_by?.email ?? null,
   }))
 

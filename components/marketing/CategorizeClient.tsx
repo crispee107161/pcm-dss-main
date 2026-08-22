@@ -7,16 +7,18 @@ import {
   acceptPendingCategory,
   rejectPendingCategory,
   bulkAcceptPendingCategories,
+  batchConfirmAgreed,
   autoCategorizeAll,
 } from '@/actions/categorize'
 import { runLlmClassification } from '@/actions/classify-posts'
 import { CATEGORY_LABEL_DISPLAY, categorySelectLabel } from '@/lib/category-label'
+import { FLAG_REASON_SHORT } from '@/lib/categorize/flag-reasons'
 import { useCooldown } from '@/hooks/useCooldown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import type { CategoryLabel, Role } from '@/app/generated/prisma/client'
+import type { CategoryLabel, CategoryFlagReason, Role } from '@/app/generated/prisma/client'
 
 // FR-13: only Product Showcase / Promotional Offer / Testimonial /
 // Entertainment are assignable manually. UNCLASSIFIED is a system-set
@@ -48,22 +50,44 @@ export interface ReviewPostRow {
   keywordSuggestion: CategoryLabel | null
   llmSuggestion: CategoryLabel | null
   category_pending: CategoryLabel | null
+  // docs/raven/S4_Categorisation_Review_UI_Change.md §2.1/§3.2 — specific
+  // condition(s), rendered via FLAG_REASON_MESSAGE. Empty = unflagged.
+  flagReasons: CategoryFlagReason[]
   pendingByEmail: string | null
 }
 
 // A suggestion usable as a select default must be one of the four assignable
-// labels — UNCLASSIFIED means "the method found nothing," not a category choice.
+// labels — UNCLASSIFIED means "the method found nothing," not a category
+// choice, and UNCLEAR is ground-truth-only. Mirrors isUnflaggedAgreed's
+// ASSIGNABLE_LABELS membership check (lib/data/category-flags.ts) so
+// isBatchConfirmEligible below can't diverge from what the server actually
+// confirms.
 function assignableSuggestion(label: CategoryLabel | null): CategoryLabel | undefined {
-  return label && label !== 'UNCLASSIFIED' ? label : undefined
+  return label && ASSIGNABLE_LABELS.includes(label) ? label : undefined
+}
+
+// Docs/raven/S4_Categorisation_Review_UI_Change.md §2.2: pre-select only when
+// there's nothing to referee — a human proposal, or both methods already
+// agreeing. A disagreement or a single-method suggestion must NOT be
+// pre-selected, or the Manager is nudged toward one method's answer.
+function agreedSuggestion(post: ReviewPostRow): CategoryLabel | undefined {
+  const keyword = assignableSuggestion(post.keywordSuggestion)
+  const llm = assignableSuggestion(post.llmSuggestion)
+  return keyword && llm && keyword === llm ? keyword : undefined
 }
 
 function defaultSelection(post: ReviewPostRow): CategoryLabel | '' {
-  return (
-    post.category_pending ??
-    assignableSuggestion(post.keywordSuggestion) ??
-    assignableSuggestion(post.llmSuggestion) ??
-    ''
-  )
+  return post.category_pending ?? agreedSuggestion(post) ?? ''
+}
+
+// Mirrors lib/data/category-flags.ts's isUnflaggedAgreed (server-only, can't
+// be imported into a client bundle) — kept in sync by both reading the same
+// three fields the same way, and by assignableSuggestion sharing its
+// ASSIGNABLE_LABELS membership check. Used only to size the "Batch confirm"
+// button; the action itself re-derives eligibility server-side before
+// writing.
+function isBatchConfirmEligible(post: ReviewPostRow): boolean {
+  return post.flagReasons.length === 0 && post.category_pending === null && agreedSuggestion(post) !== undefined
 }
 
 interface Props {
@@ -135,23 +159,20 @@ function PendingCell({ post }: { post: ReviewPostRow }) {
       </span>
     )
   }
-  if (!post.keywordSuggestion && !post.llmSuggestion) {
+  // Docs/raven/S4_Categorisation_Review_UI_Change.md §2.2: show suggestions
+  // as unlabelled candidates, deduped (agreement collapses to one badge) and
+  // in a consistent alphabetical order — never which method produced which.
+  const suggestions = Array.from(
+    new Set([post.keywordSuggestion, post.llmSuggestion].filter((v): v is CategoryLabel => v !== null))
+  ).sort((a, b) => CATEGORY_LABEL_DISPLAY[a].localeCompare(CATEGORY_LABEL_DISPLAY[b]))
+  if (suggestions.length === 0) {
     return <span className="text-muted-foreground text-xs">Uncategorized</span>
   }
   return (
     <div className="flex flex-col gap-1">
-      {post.keywordSuggestion && (
-        <span className="flex items-center gap-1.5">
-          <CategoryBadge label={post.keywordSuggestion} />
-          <span className="text-xs text-muted-foreground">keyword</span>
-        </span>
-      )}
-      {post.llmSuggestion && (
-        <span className="flex items-center gap-1.5">
-          <CategoryBadge label={post.llmSuggestion} />
-          <span className="text-xs text-muted-foreground">LLM</span>
-        </span>
-      )}
+      {suggestions.map((label) => (
+        <CategoryBadge key={label} label={label} />
+      ))}
     </div>
   )
 }
@@ -288,6 +309,22 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
   )
 }
 
+function FlagReasonCell({ post }: { post: ReviewPostRow }) {
+  if (post.flagReasons.length === 0) {
+    return <span className="text-muted-foreground text-xs">—</span>
+  }
+  return (
+    <ul className="flex flex-col gap-1">
+      {post.flagReasons.map((reason) => (
+        <li key={reason} className="text-xs text-status-warning flex items-start gap-1">
+          <span aria-hidden="true">⚠</span>
+          <span>{FLAG_REASON_SHORT[reason]}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
   if (role === 'BUSINESS_OWNER') {
     return <span className="text-muted-foreground text-xs">View only</span>
@@ -314,6 +351,7 @@ function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
           <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Post Details</TableHead>
           <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</TableHead>
           <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Suggested / Pending</TableHead>
+          <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Review reason(s)</TableHead>
           <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -333,6 +371,7 @@ function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
             </TableCell>
             <TableCell className="px-4 py-3"><TypeBadge type={post.post_type} /></TableCell>
             <TableCell className="px-4 py-3"><PendingCell post={post} /></TableCell>
+            <TableCell className="px-4 py-3 max-w-[220px]"><FlagReasonCell post={post} /></TableCell>
             <TableCell className="px-4 py-3"><ActionCell post={post} role={role} /></TableCell>
           </TableRow>
         ))}
@@ -347,6 +386,8 @@ export default function CategorizeClient({ posts, role }: Props) {
   const [autoError, setAutoError] = useState<string | null>(null)
   const [bulkResult, setBulkResult] = useState<{ accepted: number } | null>(null)
   const [bulkError, setBulkError] = useState<string | null>(null)
+  const [batchConfirmResult, setBatchConfirmResult] = useState<{ confirmed: number } | null>(null)
+  const [batchConfirmError, setBatchConfirmError] = useState<string | null>(null)
   const [llmResult, setLlmResult] = useState<string | null>(null)
   const [llmIsError, setLlmIsError] = useState(false)
   // Gates the live countdown suffix — only true while a cooldown started by
@@ -358,6 +399,7 @@ export default function CategorizeClient({ posts, role }: Props) {
   const { secondsLeft: llmCooldown, begin: beginLlmCooldown } = useCooldown(LLM_COOLDOWN_STORAGE_KEY)
 
   const pendingCount = posts.filter((p) => p.category_pending !== null).length
+  const batchConfirmCount = posts.filter(isBatchConfirmEligible).length
   const pageCount = Math.max(1, Math.ceil(posts.length / PAGE_SIZE))
   const clampedPage = Math.min(page, pageCount)
   const pagedPosts = posts.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE)
@@ -379,6 +421,16 @@ export default function CategorizeClient({ posts, role }: Props) {
       const res = await bulkAcceptPendingCategories()
       if (res.ok) setBulkResult({ accepted: res.accepted })
       else setBulkError(res.reason)
+    })
+  }
+
+  function handleBatchConfirm() {
+    setBatchConfirmResult(null)
+    setBatchConfirmError(null)
+    startTransition(async () => {
+      const res = await batchConfirmAgreed()
+      if (res.ok) setBatchConfirmResult({ confirmed: res.confirmed })
+      else setBatchConfirmError(res.reason)
     })
   }
 
@@ -448,10 +500,20 @@ export default function CategorizeClient({ posts, role }: Props) {
               {bulkError}
             </p>
           )}
+          {batchConfirmResult && (
+            <p className="animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
+              Confirmed {batchConfirmResult.confirmed} post{batchConfirmResult.confirmed !== 1 ? 's' : ''}
+            </p>
+          )}
+          {batchConfirmError && (
+            <p role="alert" className="animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
+              {batchConfirmError}
+            </p>
+          )}
           {llmResult && (
             <p className={`animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
               llmIsError
-                ? 'text-yellow-700 dark:text-yellow-300 bg-yellow-500/10 border-yellow-500/30'
+                ? 'text-status-warning bg-status-warning/10 border-status-warning/30'
                 : 'text-status-positive bg-green-500/10 border-green-500/30'
             }`}>
               {llmResult}{llmCoolingDown && llmCooldown > 0 ? ` Try again in ${llmCooldown}s.` : ''}
@@ -470,13 +532,26 @@ export default function CategorizeClient({ posts, role }: Props) {
             </Button>
           )}
 
+          {role === 'MARKETING_MANAGER' && batchConfirmCount > 0 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isPending}
+              onClick={handleBatchConfirm}
+              className="text-xs h-8 px-3"
+            >
+              Batch confirm agreed ({batchConfirmCount})
+            </Button>
+          )}
+
           {role === 'MARKETING_MANAGER' && (
             <button
               onClick={handleAutoCategorize}
               disabled={isPending || posts.length === 0}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
-              {isPending ? 'Categorizing…' : 'Auto-Categorize (keyword baseline)'}
+              {isPending ? 'Categorizing…' : 'Generate suggestions'}
             </button>
           )}
 
@@ -486,7 +561,7 @@ export default function CategorizeClient({ posts, role }: Props) {
               disabled={llmPending || posts.length === 0 || llmCooldown > 0}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
-              {llmPending ? 'Classifying…' : llmCooldown > 0 ? `Wait ${llmCooldown}s` : 'Classify with AI (LLM)'}
+              {llmPending ? 'Classifying…' : llmCooldown > 0 ? `Wait ${llmCooldown}s` : 'Generate AI suggestions'}
             </button>
           )}
         </div>

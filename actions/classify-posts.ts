@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 import { resolveCaption } from '@/lib/keywords/caption'
+import { recomputeQueueFlagReasons } from '@/lib/data/category-flags'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
 
 // ALG-05 — LLM-assisted classification (FR-12, method B). Writes only
@@ -184,6 +185,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
         outcome = await classifyBatch(apiKey, batch)
       } catch (error) {
         if (error instanceof GroqRateLimitError) {
+          await recomputeQueueFlagReasons()
           revalidatePath('/dashboard/marketing/categorize')
           revalidatePath('/dashboard/owner/categorize')
           return {
@@ -223,6 +225,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
       batchesRun++
     }
 
+    await recomputeQueueFlagReasons()
     revalidatePath('/dashboard/marketing/categorize')
     revalidatePath('/dashboard/owner/categorize')
     return { ok: true, classified, unclassified, batchesRun, batchesRemaining: batches.length - batchesRun }

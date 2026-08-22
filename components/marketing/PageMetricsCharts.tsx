@@ -4,7 +4,6 @@ import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid,
   PieChart, Pie, Cell,
-  ComposedChart, Area,
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'
 import { ChartTooltipRow } from '@/lib/chart-tooltip'
@@ -29,12 +28,6 @@ const FOLLOWER_HISTORY_CONFIG = {
 const VIEWERS_CONFIG = {
   new_viewers: { label: 'New Viewers', color: 'var(--chart-2)' },
   returning_viewers: { label: 'Returning Viewers', color: 'var(--chart-1)' },
-} satisfies ChartConfig
-
-const FORECAST_CONFIG = {
-  value: { label: 'Daily Views', color: 'var(--chart-2)' },
-  ma: { label: 'Model Fit', color: 'var(--chart-3)' },
-  forecast: { label: 'Projected', color: 'var(--chart-5)' },
 } satisfies ChartConfig
 
 // GenderPieChart / TerritoryChart color each Cell individually (dynamic,
@@ -194,76 +187,6 @@ export function GenderPieChart({ data }: { data: GenderSlice[] }) {
           content={<ChartTooltipContent hideLabel nameKey="gender" formatter={(value, name, item) => <ChartTooltipRow color={(item.payload as { fill?: string })?.fill ?? item.color ?? CHART_COLORS.blue} label={name} value={`${(Number(value) * 100).toFixed(1)}%`} />} />}
         />
       </PieChart>
-    </ChartContainer>
-  )
-}
-
-// ── Moving Average Forecast ────────────────────────────────────────────────
-
-interface ForecastChartPoint {
-  date: string
-  value?: number
-  ma?: number | null
-  forecast?: number
-}
-
-export function MovingAverageForecastChart({ data }: { data: ForecastChartPoint[] }) {
-  return (
-    <ChartContainer config={FORECAST_CONFIG} className="aspect-auto h-[300px] w-full">
-      <ComposedChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
-        <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-        <ChartTooltip
-          cursor={false}
-          content={
-            <ChartTooltipContent
-              formatter={(value, name, item) => (
-                <ChartTooltipRow color={item.color ?? CHART_COLORS.blue} label={name} value={Number(value).toLocaleString()} />
-              )}
-            />
-          }
-        />
-        <ChartLegend content={<ChartLegendContent />} />
-        {/* Gradient fill (chart-area-gradient) — the underlying actual-views
-            layer reads as a soft backdrop, so the two overlaid model lines
-            (fit + forecast) stay the visual focus. */}
-        <defs>
-          <linearGradient id="fillDailyViews" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.8} />
-            <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0.1} />
-          </linearGradient>
-        </defs>
-        <Area
-          dataKey="value"
-          name="Daily Views"
-          type="natural"
-          fill="url(#fillDailyViews)"
-          fillOpacity={0.4}
-          stroke="var(--color-value)"
-          strokeWidth={1.5}
-          dot={false}
-          connectNulls
-        />
-        <Line
-          dataKey="ma"
-          name="Model Fit"
-          type="monotone"
-          stroke="var(--color-ma)"
-          strokeWidth={2}
-          dot={false}
-          connectNulls
-        />
-        <Line
-          dataKey="forecast"
-          name="Projected"
-          type="monotone"
-          stroke="var(--color-forecast)"
-          strokeWidth={2}
-          strokeDasharray="6 3"
-          dot={{ fill: CHART_COLORS.orange, r: 4 }}
-        />
-      </ComposedChart>
     </ChartContainer>
   )
 }

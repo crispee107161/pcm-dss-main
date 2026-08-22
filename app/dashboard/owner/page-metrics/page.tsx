@@ -10,10 +10,7 @@ import {
   ViewersChart,
   GenderPieChart,
   TerritoryChart,
-  MovingAverageForecastChart,
 } from '@/components/marketing/PageMetricsCharts'
-import { computeHoltWintersForecast } from '@/lib/stats/forecast'
-import { computeForecastInsight } from '@/lib/insights/forecast-insight'
 import {
   computeDailyActivityInsight,
   computeViewsClicksInsight,
@@ -71,7 +68,6 @@ export default async function OwnerPageMetricsPage({
 
   const [
     dailyMetrics,
-    dailyMetricsAll,
     followerHistory,
     pageViewers,
     genderData,
@@ -81,8 +77,6 @@ export default async function OwnerPageMetricsPage({
     typeBreakdown,
   ] = await Promise.all([
     prisma.pageMetricDaily.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
-    // Unfiltered — the forecast always trains on the full uploaded history.
-    prisma.pageMetricDaily.findMany({ orderBy: { date: 'asc' }, select: { date: true, views: true } }),
     prisma.followerHistory.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
     prisma.pageViewers.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
     // No date column on these snapshot tables — always all-time.
@@ -127,26 +121,6 @@ export default async function OwnerPageMetricsPage({
   const genderInsight        = computeGenderInsight(genderData)
   const territoryInsight     = computeTerritoryInsight(territoryData)
   const postTypeInsight      = computePostTypeInsight(typeBreakdown)
-
-  const viewsForecast = computeHoltWintersForecast(
-    dailyMetricsAll.map(d => ({ date: d.date, value: d.views })),
-    7, 7
-  )
-  const viewsForecastInsight = computeForecastInsight(viewsForecast, 'Page views')
-  const forecastChartData = [
-    ...viewsForecast.history.slice(-21).map(h => ({
-      date: h.date.slice(5),
-      value: h.value,
-      ma: h.ma,
-      forecast: undefined as number | undefined,
-    })),
-    ...viewsForecast.forecast.map(f => ({
-      date: f.date.slice(5),
-      value: undefined as number | undefined,
-      ma: undefined as number | undefined,
-      forecast: f.forecastValue,
-    })),
-  ]
 
   const dailyChartData = dailyMetrics.map(d => ({
     date: fmt(d.date),
@@ -260,32 +234,6 @@ export default async function OwnerPageMetricsPage({
           <EmptyCard message={noDataMessage ?? 'No data yet — ask your Marketing Manager to upload daily page activity data.'} />
         )}
       </section>
-
-      {/* ── SECTION 2b: Page Views Forecast ── */}
-      {dailyMetricsAll.length >= 7 && viewsForecastInsight && (
-        <section className="mb-10">
-          <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-border rounded-full inline-block" />
-            Page Views — Next 7 Days
-          </h2>
-          <div className="bg-card rounded-2xl card-shadow p-6">
-            <InsightHeader
-              headline={viewsForecastInsight.headline}
-              detail={viewsForecastInsight.detail}
-            >
-              <p className="text-xs text-muted-foreground">
-                Model: {viewsForecast.method === 'holt-winters' ? 'Holt-Winters triple exponential smoothing (α=0.3, β=0.1, γ=0.3; captures trend + weekly seasonality)' : 'Holt linear (double exponential smoothing) — upload more data to enable the full seasonal model'}.
-                Current level: {viewsForecast.lastLevel.toLocaleString()} views/day.
-                Trained on all uploaded history, not the selected date range.
-              </p>
-            </InsightHeader>
-            <div className="mt-5">
-              <p className="text-xs text-muted-foreground mb-2">Blue = actual daily views · Red = model fit · Orange dots = projected</p>
-              <MovingAverageForecastChart data={forecastChartData} />
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── SECTION 3: Follower Growth ── */}
       <section className="mb-10">

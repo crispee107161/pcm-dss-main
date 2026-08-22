@@ -18,10 +18,79 @@ import { upsertDemographics } from '@/lib/db/upsert-demographics'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import type { UploadResult, UploadType } from '@/types/index'
+import type { AdRecord } from '@/lib/csv/validate-ads'
+import type { PostRecord } from '@/lib/csv/validate-posts'
 
 export async function revalidateDashboards() {
   revalidatePath('/dashboard/marketing', 'layout')
   revalidatePath('/dashboard/owner', 'layout')
+}
+
+// FR-04/FR-05: both the Owner and the Marketing Manager have Ads Manager +
+// Page access and both pull exports in practice — routing every upload
+// through one role would just add a pointless hop (see
+// docs/raven/Response_Forecast_Upload_Sidebar.md §2.1). MARKETING_TEAM stays
+// excluded.
+const UPLOAD_ALLOWED_ROLES = new Set(['MARKETING_MANAGER', 'BUSINESS_OWNER'])
+
+function formatPeriodLabel(min: Date, max: Date): string {
+  const fmt = new Intl.DateTimeFormat('en-PH', { month: 'long', year: 'numeric', day: 'numeric' })
+  return min.toDateString() === max.toDateString() ? fmt.format(min) : `${fmt.format(min)} – ${fmt.format(max)}`
+}
+
+// FR-05 (Response_Forecast_Upload_Sidebar.md §2.3): with two roles able to
+// upload, warn before silently replacing a period someone already loaded.
+// Returns a NEEDS_CONFIRMATION result (nothing written yet) when the
+// incoming file's date range already has records on file, or null to
+// proceed straight to the upsert.
+async function checkAdPeriodOverlap(records: AdRecord[]): Promise<UploadResult | null> {
+  if (records.length === 0) return null
+  const dates = records.map((r) => r.reporting_starts.getTime())
+  const min = new Date(dates.reduce((a, b) => Math.min(a, b)))
+  const max = new Date(dates.reduce((a, b) => Math.max(a, b)))
+
+  const existing = await prisma.ad.aggregate({
+    where: { reporting_starts: { gte: min, lte: max } },
+    _count: { id: true },
+    _sum: { amount_spent: true },
+  })
+  if (existing._count.id === 0) return null
+
+  const incomingSpend = records.reduce((s, r) => s + r.amount_spent, 0)
+
+  return {
+    status: 'NEEDS_CONFIRMATION',
+    upload_type: 'ADS_CSV',
+    records_inserted: 0,
+    records_updated: 0,
+    records_unchanged: 0,
+    periodLabel: formatPeriodLabel(min, max),
+    existing: { count: existing._count.id, totalSpend: existing._sum.amount_spent ?? 0 },
+    incoming: { count: records.length, totalSpend: incomingSpend },
+  }
+}
+
+async function checkPostPeriodOverlap(records: PostRecord[]): Promise<UploadResult | null> {
+  if (records.length === 0) return null
+  const dates = records.map((r) => r.publish_time.getTime())
+  const min = new Date(dates.reduce((a, b) => Math.min(a, b)))
+  const max = new Date(dates.reduce((a, b) => Math.max(a, b)))
+
+  const existingCount = await prisma.facebookPost.count({
+    where: { publish_time: { gte: min, lte: max } },
+  })
+  if (existingCount === 0) return null
+
+  return {
+    status: 'NEEDS_CONFIRMATION',
+    upload_type: 'POSTS_CSV',
+    records_inserted: 0,
+    records_updated: 0,
+    records_unchanged: 0,
+    periodLabel: formatPeriodLabel(min, max),
+    existing: { count: existingCount },
+    incoming: { count: records.length },
+  }
 }
 
 export async function uploadCSV(
@@ -41,14 +110,14 @@ export async function uploadCSV(
     }
   }
 
-  if (session.user.role !== 'MARKETING_MANAGER') {
+  if (!UPLOAD_ALLOWED_ROLES.has(session.user.role)) {
     return {
       status: 'FAILED',
       upload_type: 'ADS_CSV',
       records_inserted: 0,
       records_updated: 0,
       records_unchanged: 0,
-      error_message: 'Forbidden: only Marketing Managers can upload CSV files',
+      error_message: 'Forbidden: only the Business Owner or Marketing Manager can upload CSV files',
     }
   }
 
@@ -78,6 +147,7 @@ export async function uploadCSV(
 
   const filename = file.name
   const userId = parseInt(session.user.id, 10)
+  const confirmed = formData.get('confirmed') === 'true'
   let detectedType: UploadType = 'ADS_CSV'
 
   try {
@@ -108,6 +178,11 @@ export async function uploadCSV(
         const parsedAdRecords = validateAdsRows(rows)
         assertNoDuplicateKeys(parsedAdRecords)
 
+        if (!confirmed) {
+          const overlap = await checkAdPeriodOverlap(parsedAdRecords)
+          if (overlap) return overlap
+        }
+
         const counts = await prisma.$transaction(
           (tx) => upsertAds(parsedAdRecords, tx),
           { timeout: 120_000, maxWait: 15_000 }
@@ -118,6 +193,12 @@ export async function uploadCSV(
 
       } else if (csvType === 'POSTS_CSV') {
         const postRecords = validatePostsRows(rows)
+
+        if (!confirmed) {
+          const overlap = await checkPostPeriodOverlap(postRecords)
+          if (overlap) return overlap
+        }
+
         const { inserted, updated, unchanged } = await upsertPosts(postRecords)
         records_inserted  = inserted
         records_updated   = updated
