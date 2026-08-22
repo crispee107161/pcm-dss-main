@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { rateLimit } from '@/lib/rate-limit'
+import { resolveGroqModel } from '@/lib/groq-model'
 
 export interface ChatMessage {
   role: 'user' | 'model'
@@ -107,6 +108,7 @@ Current followers: ${followerHistory[0]?.followers?.toLocaleString() ?? 'N/A'}
   ]
 
   try {
+    const model = await resolveGroqModel(apiKey)
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -114,9 +116,10 @@ Current followers: ${followerHistory[0]?.followers?.toLocaleString() ?? 'N/A'}
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model,
         messages,
-        max_tokens: 400,
+        max_tokens: 600,
+        reasoning_effort: 'low',
         temperature: 0.4,
       }),
     })

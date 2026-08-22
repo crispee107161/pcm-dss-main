@@ -6,13 +6,13 @@ import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 import { resolveCaption } from '@/lib/keywords/caption'
 import { recomputeQueueFlagReasons } from '@/lib/data/category-flags'
+import { resolveGroqModel } from '@/lib/groq-model'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
 
 // ALG-05 — LLM-assisted classification (FR-12, method B). Writes only
 // `category_llm`, never `category_final` — same FR-15 separation as ALG-04's
 // autoCategorizeAll (see actions/categorize.ts). Async to ingestion by
 // construction: this is a manager-triggered action, never called from upload.
-const MODEL_NAME = 'llama-3.1-8b-instant'
 const BATCH_SIZE = 15
 const CLASSIFY_LIMIT = 5
 const CLASSIFY_WINDOW_MS = 5 * 60 * 1000
@@ -82,14 +82,15 @@ Return ONLY this JSON object, no prose, no markdown fences:
 {"results":[{"post_id":"...","category":"...","confidence":0.0}]}`
 }
 
-async function callGroq(apiKey: string, prompt: string): Promise<string> {
+async function callGroq(apiKey: string, model: string, prompt: string): Promise<string> {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: MODEL_NAME,
+      model,
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1500,
+      max_tokens: 2000,
+      reasoning_effort: 'low',
       temperature: 0,
       response_format: { type: 'json_object' },
     }),
@@ -115,7 +116,7 @@ interface BatchOutcome {
 
 // Retries the whole batch once on a parse failure, then marks every post in
 // it UNCLASSIFIED and logs the raw response, per ALG-05.
-async function classifyBatch(apiKey: string, batch: BatchPost[]): Promise<BatchOutcome> {
+async function classifyBatch(apiKey: string, model: string, batch: BatchPost[]): Promise<BatchOutcome> {
   const prompt = buildPrompt(batch)
   const byPostId = new Map(batch.map((b) => [b.post_id, b.id]))
 
@@ -123,7 +124,7 @@ async function classifyBatch(apiKey: string, batch: BatchPost[]): Promise<BatchO
   let parsed: { results: Array<{ post_id: string; category: string }> } | null = null
 
   for (let attempt = 0; attempt < 2 && parsed === null; attempt++) {
-    rawResponse = await callGroq(apiKey, prompt)
+    rawResponse = await callGroq(apiKey, model, prompt)
     parsed = parseClassificationResponse(rawResponse)
   }
 
@@ -155,6 +156,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
 
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return { ok: false, reason: 'AI classification is not configured for this deployment.', retryable: false }
+  const model = await resolveGroqModel(apiKey)
 
   // Wraps the DB calls below (findMany, per-batch update/create) so a
   // genuine infra failure (lost connection mid-run) returns a result this
@@ -182,7 +184,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
     for (const batch of batches) {
       let outcome: BatchOutcome
       try {
-        outcome = await classifyBatch(apiKey, batch)
+        outcome = await classifyBatch(apiKey, model, batch)
       } catch (error) {
         if (error instanceof GroqRateLimitError) {
           await recomputeQueueFlagReasons()
@@ -211,7 +213,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
       )
       await prisma.llmClassificationRun.create({
         data: {
-          model_name: MODEL_NAME,
+          model_name: model,
           post_ids: batch.map((b) => b.id),
           raw_response: outcome.rawResponse,
           succeeded: outcome.succeeded,

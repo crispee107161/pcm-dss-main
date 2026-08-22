@@ -244,7 +244,7 @@ export default function KeywordsClient({ categories }: Props) {
 
         {/* Error */}
         {analyzeError && (
-          <Alert className="animate-fade-slide-up mx-6 mt-5 bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-300">
+          <Alert className="animate-fade-slide-up mx-6 my-5 bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-300">
             <svg className="w-4 h-4 text-yellow-700 dark:text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>

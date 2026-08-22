@@ -6,6 +6,7 @@ import { Prisma } from '@/app/generated/prisma/client'
 import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 import { CATEGORY_NAME_TO_LABEL } from '@/lib/category-label'
+import { resolveGroqModel } from '@/lib/groq-model'
 
 const SUGGEST_KEYWORDS_LIMIT = 10
 const SUGGEST_KEYWORDS_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
@@ -177,13 +178,15 @@ Return ONLY valid JSON, no explanation:
 
   let res: Response
   try {
+    const model = await resolveGroqModel(apiKey)
     res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model,
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 600,
+        max_tokens: 900,
+        reasoning_effort: 'low',
         temperature: 0.3,
         response_format: { type: 'json_object' },
       }),

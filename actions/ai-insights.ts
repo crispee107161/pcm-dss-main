@@ -2,6 +2,7 @@
 
 import { auth } from '@/lib/auth'
 import { rateLimit } from '@/lib/rate-limit'
+import { resolveGroqModel } from '@/lib/groq-model'
 
 export interface InsightData {
   totalSpend: number
@@ -62,6 +63,7 @@ export async function generateAIInsights(data: InsightData): Promise<AIInsightRe
   ].filter(Boolean).join('\n')
 
   try {
+    const model = await resolveGroqModel(apiKey)
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -69,12 +71,13 @@ export async function generateAIInsights(data: InsightData): Promise<AIInsightRe
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: userPrompt },
         ],
-        max_tokens: 320,
+        max_tokens: 500,
+        reasoning_effort: 'low',
         temperature: 0.4,
       }),
     })
