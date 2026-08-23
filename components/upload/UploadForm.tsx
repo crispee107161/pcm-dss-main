@@ -37,6 +37,7 @@ const UPLOAD_TYPE_LABELS: Record<string, string> = {
   FOLLOWER_HISTORY_CSV: 'Follower History',
   PAGE_VIEWERS_CSV: 'Page Viewers',
   DEMOGRAPHICS_CSV: 'Demographics',
+  AUDIENCE_CSV: 'Audience',
 }
 
 export default function UploadForm() {

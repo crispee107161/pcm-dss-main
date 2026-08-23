@@ -7,6 +7,7 @@ export type UploadType =
   | 'FOLLOWER_HISTORY_CSV'
   | 'PAGE_VIEWERS_CSV'
   | 'DEMOGRAPHICS_CSV'
+  | 'AUDIENCE_CSV'
 
 export interface UploadPeriodTotals {
   count: number

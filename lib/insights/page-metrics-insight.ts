@@ -231,11 +231,76 @@ export function computeTerritoryInsight(territoryData: TerritoryPoint[]): Metric
   if (territoryData.length === 0) return null
   const sorted = [...territoryData].sort((a, b) => b.distribution - a.distribution)
   const top = sorted[0]
-  const restShare = sorted.slice(1).reduce((s, t) => s + t.distribution, 0)
+  // This is a top-N list, not necessarily every location — the listed shares
+  // may not sum to 100%, so "the rest make up the remaining X%" would assert
+  // a completeness the data doesn't have. State what these rows sum to
+  // instead of what's implicitly left over.
+  const total = sorted.reduce((s, t) => s + t.distribution, 0)
 
   return {
     headline: `${top.territory} is the top follower location at ${(top.distribution * 100).toFixed(0)}%`,
-    detail: `The other ${sorted.length - 1} location${sorted.length - 1 === 1 ? '' : 's'} make up the remaining ${(restShare * 100).toFixed(0)}%. This is a current snapshot and does not change with the date filter.`,
+    detail: `Together with the other ${sorted.length - 1} location${sorted.length - 1 === 1 ? '' : 's'} shown, these account for ${(total * 100).toFixed(0)}% of the audience. This is a current snapshot and does not change with the date filter.`,
+  }
+}
+
+export interface AgeGenderPoint {
+  age_bracket: string
+  men_distribution: number
+  women_distribution: number
+}
+
+/** Age & Gender chart: which gender leads overall and which bracket is biggest. */
+export function computeAgeGenderInsight(data: AgeGenderPoint[]): MetricInsight | null {
+  if (data.length === 0) return null
+
+  const menTotal = data.reduce((s, d) => s + d.men_distribution, 0)
+  const womenTotal = data.reduce((s, d) => s + d.women_distribution, 0)
+  const leadGender = menTotal >= womenTotal ? 'Men' : 'Women'
+  const leadShare = Math.max(menTotal, womenTotal)
+
+  const top = [...data].sort((a, b) => (b.men_distribution + b.women_distribution) - (a.men_distribution + a.women_distribution))[0]
+  const topShare = top.men_distribution + top.women_distribution
+
+  return {
+    headline: `${leadGender} make up the larger share of the audience overall, at ${(leadShare * 100).toFixed(0)}%`,
+    detail: `The ${top.age_bracket} bracket is the single largest audience segment at ${(topShare * 100).toFixed(0)}%. This is a current snapshot and does not change with the date filter.`,
+  }
+}
+
+export interface AudienceRankPoint {
+  label: string
+  distribution: number
+}
+
+/** Top Cities chart: which location leads, framed as a share of the audience. */
+export function computeAudienceLocationInsight(data: AudienceRankPoint[], noun: 'city'): MetricInsight | null {
+  if (data.length === 0) return null
+  const sorted = [...data].sort((a, b) => b.distribution - a.distribution)
+  const top = sorted[0]
+  // Top 10 of many, not every city — see computeTerritoryInsight's comment
+  // on why "remaining %" would misstate a list that doesn't sum to 100%.
+  const total = sorted.reduce((s, t) => s + t.distribution, 0)
+
+  return {
+    headline: `${top.label} is the top ${noun} at ${(top.distribution * 100).toFixed(0)}% of the audience`,
+    detail: `Together with the other ${sorted.length - 1} ${sorted.length - 1 === 1 ? noun : `${noun}s`} shown, these account for ${(total * 100).toFixed(0)}% of the audience. This is a current snapshot and does not change with the date filter.`,
+  }
+}
+
+// Top pages is a Meta "audience also likes" affinity score, not a share of
+// the audience — the values don't sum to 100%, so this deliberately avoids
+// computeAudienceLocationInsight's "remaining X%" framing, which would
+// misstate the numbers here.
+export function computeTopPagesInsight(data: AudienceRankPoint[]): MetricInsight | null {
+  if (data.length === 0) return null
+  const top = [...data].sort((a, b) => b.distribution - a.distribution)[0]
+
+  return {
+    // Deliberately not a "%" — an affinity score of 168 isn't a percentage,
+    // and rendering it with a % sign would misstate it as one even though
+    // the detail line explains otherwise (see AudienceRankChart's isPercent prop).
+    headline: `${top.label} has the strongest audience affinity, scoring ${(top.distribution * 100).toFixed(0)}`,
+    detail: `Meta measures this as how much more likely your audience is to also follow each Page, compared to the general population — not a share of your audience. This is a current snapshot and does not change with the date filter.`,
   }
 }
 

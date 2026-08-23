@@ -5,6 +5,7 @@ export type CsvType =
   | 'FOLLOWER_HISTORY_CSV'
   | 'PAGE_VIEWERS_CSV'
   | 'DEMOGRAPHICS_CSV'
+  | 'AUDIENCE_CSV'
 
 // 93-column monthly export (data/New_FB_Ads_Data/) — the system's sole ads input
 // (mvp.md §4.7). Keyed on `Ad ID` + `Amount spent (PHP)` per data_catalog.md §5.1 —
@@ -53,14 +54,25 @@ export function detectCsvType(headers: string[]): CsvType {
   )
 }
 
+// Audience.csv's block labels — checked as a set (not just "Age & gender")
+// so detection survives Meta reordering the blocks in a future export.
+const AUDIENCE_BLOCK_LABELS = new Set(['Age & gender', 'Top cities', 'Top countries', 'Top pages'])
+
 /**
  * Pre-checks the raw buffer for UTF-16 LE page metric files BEFORE standard parsing.
- * Returns 'PAGE_METRIC_CSV' if the buffer is UTF-16 LE with the "sep=," + metric name pattern,
- * otherwise returns null (proceed with standard detection).
+ * Returns true if the buffer is UTF-16 LE with the "sep=," + metric name pattern,
+ * otherwise false (proceed with standard detection).
+ *
+ * Structurally excludes Audience.csv (delegates to detectIfAudienceBuffer)
+ * rather than relying on call-order in actions/upload.ts — both functions
+ * match the same UTF-16LE+sep=, shape, so if this returned true for an
+ * Audience.csv buffer too, correctness would silently depend on which
+ * branch a future refactor happened to check first.
  */
 export function detectIfPageMetricBuffer(buffer: Buffer): boolean {
   const bytes = new Uint8Array(buffer)
   if (!(bytes[0] === 0xff && bytes[1] === 0xfe)) return false
+  if (detectIfAudienceBuffer(buffer)) return false
 
   // Decode first ~100 bytes and check for sep=, pattern
   const decoder = new TextDecoder('utf-16le')
@@ -68,4 +80,25 @@ export function detectIfPageMetricBuffer(buffer: Buffer): boolean {
   const stripped = preview.charCodeAt(0) === 0xfeff ? preview.slice(1) : preview
   const firstLine = stripped.split('\n')[0].replace(/\r$/, '').trim()
   return firstLine === 'sep=,'
+}
+
+/**
+ * Audience.csv shares the same UTF-16 LE `sep=,` preamble as the single-metric
+ * page-level files, but line 2 is a block label (e.g. "Age & gender") rather
+ * than a metric name from METRIC_NAME_MAP — check this BEFORE falling back to
+ * parsePageMetricBuffer, which would otherwise reject it with "Unknown page
+ * metric name".
+ */
+export function detectIfAudienceBuffer(buffer: Buffer): boolean {
+  const bytes = new Uint8Array(buffer)
+  if (!(bytes[0] === 0xff && bytes[1] === 0xfe)) return false
+
+  const decoder = new TextDecoder('utf-16le')
+  const preview = decoder.decode(buffer.slice(0, 400))
+  const stripped = preview.charCodeAt(0) === 0xfeff ? preview.slice(1) : preview
+  const lines = stripped.split('\n').map(l => l.replace(/\r$/, '').trim())
+  if (lines[0] !== 'sep=,') return false
+
+  const secondLine = (lines[1] ?? '').replace(/^"|"$/g, '').trim()
+  return AUDIENCE_BLOCK_LABELS.has(secondLine)
 }

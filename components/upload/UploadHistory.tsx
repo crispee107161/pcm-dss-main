@@ -30,6 +30,7 @@ const TYPE_LABELS: Record<UploadType, { label: string; cls: string }> = {
   FOLLOWER_HISTORY_CSV: { label: 'Follower History',cls: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30' },
   PAGE_VIEWERS_CSV:     { label: 'Page Viewers',    cls: 'bg-green-500/10  text-green-700 dark:text-green-300  border-green-500/30'  },
   DEMOGRAPHICS_CSV:     { label: 'Demographics',    cls: 'bg-red-500/10    text-red-700 dark:text-red-300    border-red-500/30'    },
+  AUDIENCE_CSV:         { label: 'Audience',        cls: 'bg-teal-500/10   text-teal-700 dark:text-teal-300   border-teal-500/30'   },
 }
 
 function TypeBadge({ type }: { type: UploadType }) {

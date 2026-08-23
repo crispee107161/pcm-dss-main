@@ -36,7 +36,7 @@ export async function getUploadCoverage(): Promise<CoverageRow[]> {
     prisma.pageMetricDaily.aggregate({ _min: { date: true }, _max: { date: true } }),
     latestUpload(['ADS_CSV']),
     latestUpload(['POSTS_CSV']),
-    latestUpload(['PAGE_METRIC_CSV', 'FOLLOWER_HISTORY_CSV', 'PAGE_VIEWERS_CSV', 'DEMOGRAPHICS_CSV']),
+    latestUpload(['PAGE_METRIC_CSV', 'FOLLOWER_HISTORY_CSV', 'PAGE_VIEWERS_CSV', 'DEMOGRAPHICS_CSV', 'AUDIENCE_CSV']),
   ])
 
   function monthsLoaded(min: Date | null, max: Date | null): string | null {

@@ -11,6 +11,8 @@ import {
   ViewersChart,
   GenderPieChart,
   TerritoryChart,
+  AgeGenderChart,
+  AudienceRankChart,
 } from '@/components/marketing/PageMetricsCharts'
 import {
   computeDailyActivityInsight,
@@ -20,6 +22,9 @@ import {
   computeGenderInsight,
   computeTerritoryInsight,
   computePostTypeInsight,
+  computeAgeGenderInsight,
+  computeAudienceLocationInsight,
+  computeTopPagesInsight,
 } from '@/lib/insights/page-metrics-insight'
 import InsightHeader from '@/components/analytics/InsightHeader'
 import { manilaDayRange } from '@/lib/date-range'
@@ -76,6 +81,8 @@ export default async function PageMetricsPage({
     pageViewers,
     genderData,
     territoryData,
+    ageGenderData,
+    audienceRankData,
     postCount,
     postAgg,
     typeBreakdown,
@@ -86,6 +93,8 @@ export default async function PageMetricsPage({
     // No date column on these snapshot tables — always all-time.
     prisma.followerGender.findMany({ orderBy: { distribution: 'desc' } }),
     prisma.followerTerritory.findMany({ orderBy: { distribution: 'desc' } }),
+    prisma.followerAgeGender.findMany({ orderBy: { age_bracket: 'asc' } }),
+    prisma.followerAudienceRank.findMany({ orderBy: { distribution: 'desc' } }),
     prisma.facebookPost.count(postWhere),
     prisma.facebookPost.aggregate({
       ...postWhere,
@@ -127,6 +136,12 @@ export default async function PageMetricsPage({
   const genderInsight        = computeGenderInsight(genderData)
   const territoryInsight     = computeTerritoryInsight(territoryData)
   const postTypeInsight      = computePostTypeInsight(typeBreakdown)
+  const ageGenderInsight     = computeAgeGenderInsight(ageGenderData)
+
+  const topCities = audienceRankData.filter(r => r.category === 'city')
+  const topPages  = audienceRankData.filter(r => r.category === 'page')
+  const topCitiesInsight = computeAudienceLocationInsight(topCities, 'city')
+  const topPagesInsight  = computeTopPagesInsight(topPages)
 
   // --- Chart data ---
   const dailyChartData = dailyMetrics.map(d => ({
@@ -183,6 +198,7 @@ export default async function PageMetricsPage({
               ['Viewers.csv', 'New vs. returning viewers'],
               ['FollowerGender.csv', 'Audience gender split'],
               ['FollowerTopTerritories.csv', 'Audience by country'],
+              ['Audience.csv', 'Age, gender, top cities/pages'],
             ].map(([file, desc]) => (
               <div key={file} className="bg-muted rounded-lg px-3 py-2">
                 <p className="text-xs font-mono text-foreground">{file}</p>
@@ -404,6 +420,47 @@ export default async function PageMetricsPage({
             <EmptyCard message="No territory data. Upload FollowerTopTerritories.csv." />
           )}
         </div>
+
+        {(ageGenderData.length > 0 || topCities.length > 0 || topPages.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            {ageGenderData.length > 0 && (
+              <div className="bg-card rounded-2xl card-shadow p-6">
+                <h3 className="font-medium text-foreground mb-1 text-sm">Age &amp; Gender</h3>
+                <p className="text-xs text-muted-foreground mb-2">Audience share by age bracket and gender</p>
+                <AgeGenderChart data={ageGenderData} />
+                {ageGenderInsight && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <InsightHeader headline={ageGenderInsight.headline} detail={ageGenderInsight.detail} />
+                  </div>
+                )}
+              </div>
+            )}
+            {topCities.length > 0 && (
+              <div className="bg-card rounded-2xl card-shadow p-6">
+                <h3 className="font-medium text-foreground mb-1 text-sm">Top Cities</h3>
+                <p className="text-xs text-muted-foreground mb-2">Followers by city</p>
+                <AudienceRankChart data={topCities} />
+                {topCitiesInsight && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <InsightHeader headline={topCitiesInsight.headline} detail={topCitiesInsight.detail} />
+                  </div>
+                )}
+              </div>
+            )}
+            {topPages.length > 0 && (
+              <div className="bg-card rounded-2xl card-shadow p-6">
+                <h3 className="font-medium text-foreground mb-1 text-sm">Top Pages Your Audience Also Likes</h3>
+                <p className="text-xs text-muted-foreground mb-2">Affinity score, not a share of your audience — see note below</p>
+                <AudienceRankChart data={topPages} valueLabel="Affinity" isPercent={false} />
+                {topPagesInsight && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <InsightHeader headline={topPagesInsight.headline} detail={topPagesInsight.detail} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </section>
     </div>
   )

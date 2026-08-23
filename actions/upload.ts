@@ -1,20 +1,22 @@
 'use server'
 
 import { auth } from '@/lib/auth'
-import { parseCsvBuffer, parsePageMetricBuffer } from '@/lib/csv/parse'
-import { detectCsvType, detectIfPageMetricBuffer } from '@/lib/csv/detect'
+import { parseCsvBuffer, parsePageMetricBuffer, parseAudienceBuffer } from '@/lib/csv/parse'
+import { detectCsvType, detectIfPageMetricBuffer, detectIfAudienceBuffer } from '@/lib/csv/detect'
 import { validateAdsRows } from '@/lib/csv/validate-ads'
 import { validatePostsRows } from '@/lib/csv/validate-posts'
 import { validatePageMetricResult } from '@/lib/csv/validate-page-metric'
 import { validateFollowerHistoryRows } from '@/lib/csv/validate-follower-history'
 import { validatePageViewersRows } from '@/lib/csv/validate-page-viewers'
 import { validateDemographicsRows } from '@/lib/csv/validate-demographics'
+import { validateAudienceResult } from '@/lib/csv/validate-audience'
 import { upsertAds, assertNoDuplicateKeys } from '@/lib/db/upsert-ads'
 import { upsertPosts } from '@/lib/db/upsert-posts'
 import { upsertPageMetric } from '@/lib/db/upsert-page-metric'
 import { upsertFollowerHistory } from '@/lib/db/upsert-follower-history'
 import { upsertPageViewers } from '@/lib/db/upsert-page-viewers'
 import { upsertDemographics } from '@/lib/db/upsert-demographics'
+import { upsertAudience } from '@/lib/db/upsert-audience'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import type { UploadResult, UploadType } from '@/types/index'
@@ -158,8 +160,21 @@ export async function uploadCSV(
     let records_updated = 0
     let records_unchanged = 0
 
+    // --- Audience.csv (UTF-16 LE, same sep=, preamble as page metrics but a
+    // multi-block demographic file, not a single daily metric) — must be
+    // checked before the page-metric branch below, which it would otherwise
+    // also match and fail with "Unknown page metric name". ---
+    if (detectIfAudienceBuffer(buffer)) {
+      detectedType = 'AUDIENCE_CSV'
+      const parsed = parseAudienceBuffer(buffer)
+      const validated = validateAudienceResult(parsed)
+      const { inserted, updated, unchanged } = await upsertAudience(validated)
+      records_inserted  = inserted
+      records_updated   = updated
+      records_unchanged = unchanged
+
     // --- Page metric files (UTF-16 LE with sep=, header) ---
-    if (detectIfPageMetricBuffer(buffer)) {
+    } else if (detectIfPageMetricBuffer(buffer)) {
       detectedType = 'PAGE_METRIC_CSV'
       const parsed   = parsePageMetricBuffer(buffer)
       const validated = validatePageMetricResult(parsed)

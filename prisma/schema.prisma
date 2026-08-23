@@ -20,6 +20,7 @@ enum UploadType {
   FOLLOWER_HISTORY_CSV
   PAGE_VIEWERS_CSV
   DEMOGRAPHICS_CSV
+  AUDIENCE_CSV
 }
 
 enum UploadStatus {
@@ -488,4 +489,40 @@ model FollowerTerritory {
   id           Int    @id @default(autoincrement())
   territory    String @unique
   distribution Float
+}
+
+// Age-bracket x gender distribution snapshot (Audience.csv "Age & gender" block).
+// men_distribution/women_distribution are the pair's shares of the WHOLE
+// audience for that bracket (all 12 cells across every bracket sum to ~1),
+// not a per-bracket 100% split — stored as fractions like every other
+// `distribution` column in this schema. Unlike FollowerAudienceRank below,
+// rows here are upsert-only with no pruning: Meta's 6 age brackets are a
+// fixed, closed set (not a top-N-of-many list), so there's no "fell out of
+// this month's ranking" case to guard against.
+model FollowerAgeGender {
+  id                 Int    @id @default(autoincrement())
+  age_bracket        String @unique
+  men_distribution   Float
+  women_distribution Float
+}
+
+// "Top X" snapshot rows from Audience.csv's city/page blocks — same
+// label+distribution shape as FollowerTerritory, kept in one table with a
+// `category` discriminator since one Audience.csv upload contributes both
+// of these blocks at once. Audience.csv also has a "Top countries" block,
+// but it's the exact same Meta snapshot already ingested from the dedicated
+// FollowerTopTerritories (1).csv file into FollowerTerritory, so it's
+// deliberately skipped rather than duplicated here (see parseAudienceBuffer).
+// `page` rows are a Meta affinity score (how much more likely the audience
+// is to also follow that Page vs. the general population), not a share of
+// the audience — do not sum "page" rows to 100%. Both categories are top-10-
+// of-many snapshots: upsertAudience prunes labels that fall out of a given
+// upload's top 10 rather than letting them linger.
+model FollowerAudienceRank {
+  id           Int    @id @default(autoincrement())
+  category     String // 'city' | 'page'
+  label        String
+  distribution Float
+
+  @@unique([category, label])
 }
