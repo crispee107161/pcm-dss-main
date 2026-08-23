@@ -47,6 +47,22 @@ enum CategoryFinalSource {
   MANUAL_GROUND_TRUTH
   ACCEPTED_SUGGESTION
   MANUAL_OVERRIDE
+  /// docs/raven/Content_Filters_Review.md §2 — the 2026-08-12 MVP v2 schema
+  /// rework backfilled category_final from the legacy category_id FK before
+  /// this column existed (added a day later, 2026-08-13), leaving every
+  /// pre-rework post with category_final set and source NULL. Backfilled
+  /// once, via a migration, to distinguish "we don't know" from "no
+  /// category" — NULL is no longer a valid post-backfill state for a row
+  /// that has category_final set. See docs/raven/Provenance_Audit_Results.md.
+  LEGACY_IMPORT
+  /// docs/raven/Content_Filters_Review.md §6.1 — a revision made from the
+  /// All/Unassigned tabs to a post that already had a final category,
+  /// distinct from MANUAL_OVERRIDE's first-assignment-from-triage meaning.
+  /// Stamped by updatePostCategory (actions/categorize.ts) whenever the row
+  /// being written already had a non-null category_final, so Chapter 4 can
+  /// separate first assignment from later revision without trusting a
+  /// client-supplied flag.
+  MANUAL_CHANGE_AFTER_FINALISATION
 }
 
 /// docs/raven/S4_Categorisation_Review_UI_Change.md §2.1/§3.2 — S4's triage

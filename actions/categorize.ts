@@ -55,11 +55,20 @@ export async function updatePostCategory(postId: number, label: CategoryLabel | 
       return { error: 'This post is part of the locked ground-truth set and cannot be edited here.' }
     }
 
+    // docs/raven/Content_Filters_Review.md §6.1 — distinguishes a triage
+    // decision (previous.category_final was null: this is the row's first
+    // assignment) from a later revision made from the All/Unassigned tabs
+    // (previous.category_final was already set). Derived from the row's own
+    // prior state rather than a caller-supplied flag, since ManagerActionCell
+    // (queue) and CategoryEditCell (All/Unassigned) both call this same
+    // function and only one of them is trusted to ever see an already-final
+    // row in the first place.
+    const isRevision = previous?.category_final != null
     await prisma.facebookPost.update({
       where: { id: postId },
       data: {
         category_final: label,
-        category_final_source: label ? 'MANUAL_OVERRIDE' : null,
+        category_final_source: label ? (isRevision ? 'MANUAL_CHANGE_AFTER_FINALISATION' : 'MANUAL_OVERRIDE') : null,
         category_final_assigned_by_id: label ? userId : null,
         category_final_assigned_at: label ? new Date() : null,
       },

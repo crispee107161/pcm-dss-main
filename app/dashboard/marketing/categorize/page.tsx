@@ -3,8 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import ContentClient from '@/components/marketing/ContentClient'
-import { parseContentFilter, type ContentFilter } from '@/lib/categorize/content-filter'
-import type { Prisma } from '@/app/generated/prisma/client'
+import { parseContentFilter, whereForFilter, type ContentFilter } from '@/lib/categorize/content-filter'
 
 // docs/raven/Categorisation_Workflow_Consolidation.md §3.4 — canonical route
 // for the merged Content screen (Phase 4 of
@@ -12,23 +11,9 @@ import type { Prisma } from '@/app/generated/prisma/client'
 // redirects here with `?filter=all`.
 
 const FILTER_DESCRIPTIONS: Record<ContentFilter, string> = {
-  'needs-review': 'Review and finalize categories for uncategorized posts.',
-  all: 'Every organic post and its assigned category.',
-  categorised: 'Posts with a final category (excluding Unassigned), and who set it.',
-  unassigned: 'Posts explicitly marked as unable to be categorized.',
-}
-
-// "Categorised" and "Unassigned" are mutually exclusive tabs, not overlapping
-// checkboxes — code review (2026-08-23) flagged that `category_final: { not:
-// null }` alone also matches UNCLASSIFIED rows, which then show up under
-// both tabs and defeat the point of Unassigned being able to isolate them.
-// Typed against Prisma.FacebookPostWhereInput (not left to inference) so a
-// typo'd field name here fails tsc instead of silently matching every post.
-function whereForFilter(filter: ContentFilter): Prisma.FacebookPostWhereInput {
-  if (filter === 'needs-review') return { category_final: null }
-  if (filter === 'categorised') return { category_final: { not: null, notIn: ['UNCLASSIFIED'] } }
-  if (filter === 'unassigned') return { category_final: 'UNCLASSIFIED' }
-  return {}
+  'needs-review': 'Review and finalise categories for uncategorised posts.',
+  all: 'Every organic post and its assigned category (excluding the locked ground-truth benchmark).',
+  unassigned: 'Posts explicitly marked as unable to be categorised.',
 }
 
 export default async function CategorizePage({

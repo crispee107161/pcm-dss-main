@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { loadMethodEvaluation, loadGroundTruthMethodEvaluation, getInterCoderReliability } from '@/lib/data/method-evaluation'
+import { loadMethodEvaluation, loadGroundTruthMethodEvaluation, getInterCoderReliability, getSuggestionAcceptanceRate } from '@/lib/data/method-evaluation'
 import { kappaMagnitude } from '@/lib/stats/agreement'
 import { PageHeader } from '@/components/nav/PageHeader'
 import MethodologyNote from '@/components/analytics/MethodologyNote'
@@ -13,10 +13,11 @@ export default async function MarketingMethodEvaluationPage() {
     redirect('/login')
   }
 
-  const [data, groundTruth, interCoder] = await Promise.all([
+  const [data, groundTruth, interCoder, acceptanceRate] = await Promise.all([
     loadMethodEvaluation(),
     loadGroundTruthMethodEvaluation(),
     getInterCoderReliability(),
+    getSuggestionAcceptanceRate(),
   ])
 
   return (
@@ -116,6 +117,65 @@ export default async function MarketingMethodEvaluationPage() {
         </>
       )}
 
+      {/* docs/raven/Provenance_Followup_and_Revised_Order.md §3.2 — a
+          separate, differently-labelled figure from the accuracy cards
+          above: no kappa, never called accuracy. This is a live drift
+          signal ("how much are you changing the suggestion"), not a
+          correctness claim against a blind reference standard. */}
+      <div className="mt-8 mb-2">
+        <h2 className="text-sm font-semibold text-gray-800">Suggestion acceptance rate (live monitoring)</h2>
+        <p className="text-xs text-gray-500 mt-0.5">
+          How often your final category differs from each method&apos;s suggestion, across the posts you&apos;ve
+          actually reviewed and finalised. This is not an accuracy figure and carries no kappa — a high alteration
+          rate means you&apos;re disagreeing with the suggestion often, which is useful for noticing a method
+          drifting on newer content, but says nothing about which of you is right.
+        </p>
+      </div>
+      <div className="bg-card rounded-2xl card-shadow p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+          <div>
+            <p className="text-xs text-gray-500">Keyword suggestions altered</p>
+            <p className="text-lg font-semibold text-foreground">
+              {acceptanceRate.keywordAlteredRate === null ? 'n/a' : `${(acceptanceRate.keywordAlteredRate * 100).toFixed(1)}%`}
+              <span className="text-xs font-normal text-gray-500 ml-1">(n={acceptanceRate.keywordTotal})</span>
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">LLM suggestions altered</p>
+            <p className="text-lg font-semibold text-foreground">
+              {acceptanceRate.llmAlteredRate === null ? 'n/a' : `${(acceptanceRate.llmAlteredRate * 100).toFixed(1)}%`}
+              <span className="text-xs font-normal text-gray-500 ml-1">(n={acceptanceRate.llmTotal})</span>
+            </p>
+          </div>
+        </div>
+        {acceptanceRate.periods.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-border">
+                  <th className="py-1.5 pr-4 font-medium">Period</th>
+                  <th className="py-1.5 pr-4 font-medium text-right">Keyword altered</th>
+                  <th className="py-1.5 font-medium text-right">LLM altered</th>
+                </tr>
+              </thead>
+              <tbody>
+                {acceptanceRate.periods.map((p) => (
+                  <tr key={p.period} className="border-b border-border last:border-0">
+                    <td className="py-1.5 pr-4 text-gray-600">{p.period === 'unknown' ? '—' : p.period}</td>
+                    <td className="py-1.5 pr-4 text-right text-gray-600">
+                      {p.keywordTotal > 0 ? `${((p.keywordAltered / p.keywordTotal) * 100).toFixed(1)}% (${p.keywordAltered}/${p.keywordTotal})` : '—'}
+                    </td>
+                    <td className="py-1.5 text-right text-gray-600">
+                      {p.llmTotal > 0 ? `${((p.llmAltered / p.llmTotal) * 100).toFixed(1)}% (${p.llmAltered}/${p.llmTotal})` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="mt-4">
         <MethodologyNote>
           Cohen&apos;s kappa (unweighted) measures agreement beyond what chance would predict given each label&apos;s
@@ -123,7 +183,8 @@ export default async function MarketingMethodEvaluationPage() {
           Koch (1977): &lt;0 poor, 0–0.2 slight, 0.2–0.4 fair, 0.4–0.6 moderate, 0.6–0.8 substantial, 0.8–1 almost
           perfect. UNCLASSIFIED is treated as a genuine fifth label in the confusion matrix, not dropped or merged
           into another category — a method that returns UNCLASSIFIED against a post you categorised is a real
-          disagreement, not missing data.
+          disagreement, not missing data. The acceptance rate above is a different, unrelated figure — see its own
+          description above for why it carries no kappa.
         </MethodologyNote>
       </div>
     </div>

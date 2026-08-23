@@ -1,0 +1,26 @@
+-- docs/raven/Content_Filters_Review.md §2 and §6.1 — two additive enum
+-- values, no data loss, no existing value touched.
+--
+-- LEGACY_IMPORT: backfills every row where category_final is set but
+-- category_final_source is NULL — the 2026-08-12 MVP v2 schema rework
+-- backfilled category_final from the legacy category_id FK a day before
+-- category_final_source existed (added 2026-08-13). Confirmed via
+-- scripts/category-final-audit.ts: 704 rows currently match this pattern.
+-- Distinguishes "we don't know how this was set" (no longer a valid
+-- post-migration state) from a genuinely new category with no source.
+--
+-- MANUAL_CHANGE_AFTER_FINALISATION: a revision made from the All/Unassigned
+-- tabs to a post that already had a final category, as opposed to
+-- MANUAL_OVERRIDE's first-assignment-from-triage meaning. Not backfilled —
+-- no historical row can be attributed to this path since it didn't exist
+-- before this migration; it will only ever be written going forward by
+-- actions/categorize.ts's updatePostCategory.
+-- IF NOT EXISTS (code review, 2026-08-23): this was applied manually via
+-- `prisma db execute` + `migrate resolve --applied` rather than `migrate
+-- deploy`, because Neon's pooled connection string doesn't support the
+-- session-level advisory lock `migrate dev`/`deploy` needs — see
+-- docs/raven/Consolidation_Plan_Checklist.md Phase 5. That manual path has
+-- no built-in idempotency check, so a second accidental run against the
+-- same DB would otherwise error instead of no-op.
+ALTER TYPE "CategoryFinalSource" ADD VALUE IF NOT EXISTS 'LEGACY_IMPORT';
+ALTER TYPE "CategoryFinalSource" ADD VALUE IF NOT EXISTS 'MANUAL_CHANGE_AFTER_FINALISATION';

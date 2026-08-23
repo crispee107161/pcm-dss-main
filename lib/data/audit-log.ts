@@ -34,6 +34,10 @@ const CATEGORY_ACTION_LABEL: Record<string, string> = {
   REJECT: 'Rejected proposal',
   OVERRIDE: 'Set final category',
   BULK_ACCEPT: 'Bulk-accepted proposal',
+  // docs/raven/Provenance_Followup_and_Revised_Order.md exploration
+  // (2026-08-23) — missing entry meant every batchConfirmAgreed row rendered
+  // the raw enum string ("BATCH_CONFIRM — post #123") instead of a label.
+  BATCH_CONFIRM: 'Batch-confirmed agreed category',
 }
 
 function categoryLabel(label: string | null): string {

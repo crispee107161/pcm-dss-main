@@ -737,6 +737,46 @@
   background: var(--secondary);
 }
 
+/* Brand-filled variant of the segmented control, for a filter/view switch
+   where the selected option should read as a clear, colorful choice rather
+   than a neutral one (e.g. ContentClient.tsx's FilterTabs) — opt-in via an
+   extra class alongside .segmented-control__indicator /
+   .segmented-control__segment--active so ChartViewToggle's neutral
+   white/shadow skin is untouched. Solid --primary (not a translucent tint)
+   so it stays equally visible in both themes — an earlier translucent
+   bg-primary/15 + text-primary combination read as barely-there in dark mode
+   and put crimson text on a crimson surface, which also broke the Fill-vs-
+   Read Rule (crimson is fills/chrome only, never a text read — see
+   DESIGN.md). This is the same fill+white-text pairing button-primary
+   already uses, just shaped as a pill instead of a button.
+
+   Selectors are compounded (.segmented-control__indicator.…--brand, not
+   just .…--brand alone) and repeated under .dark explicitly — a bare
+   single-class modifier (0,1,0) loses to .dark .segmented-control__indicator
+   / .dark .segmented-control__segment above (0,2,0) regardless of source
+   order or class order in the markup, which is exactly what happened before
+   this fix (the dark-theme active tab silently fell back to the neutral
+   skin). The .dark version here (0,3,0) settles it outright instead of
+   relying on the light-mode tie (0,2,0 vs 0,2,0) breaking the right way by
+   source order alone. */
+.segmented-control__indicator.segmented-control__indicator--brand {
+  background: var(--primary);
+  box-shadow: none;
+}
+.dark .segmented-control__indicator.segmented-control__indicator--brand {
+  background: var(--primary);
+}
+.segmented-control__segment.segmented-control__segment--active-brand,
+.segmented-control__segment.segmented-control__segment--active-brand:hover {
+  background: transparent;
+  color: var(--primary-foreground);
+}
+.dark .segmented-control__segment.segmented-control__segment--active-brand,
+.dark .segmented-control__segment.segmented-control__segment--active-brand:hover {
+  background: transparent;
+  color: var(--primary-foreground);
+}
+
 /* Tabular numerals for all KPI/stat values — stays on the sans face (Geist
    supports tabular figures via OpenType "tnum") instead of switching to
    Geist Mono, which read too heavy/wide at the bold weights KPI values use. */

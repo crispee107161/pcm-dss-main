@@ -179,7 +179,7 @@ function SuggestionCell({ post }: { post: ContentPostRow }) {
   // filtered out here via suggestedCandidates rather than shown as a chip.
   const suggestions = suggestedCandidates(post)
   if (suggestions.length === 0) {
-    return <span className="text-muted-foreground text-xs">Uncategorized</span>
+    return <span className="text-muted-foreground text-xs">Uncategorised</span>
   }
   return (
     <div className="flex flex-col gap-1">
@@ -561,7 +561,8 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
       setLlmResult(
         res.batchesRun === 0
           ? 'Nothing new to classify'
-          : `Classified ${res.classified} post${res.classified !== 1 ? 's' : ''} (${res.unclassified} unclassified)`
+          : `Classified ${res.classified} post${res.classified !== 1 ? 's' : ''} (${res.unclassified} unclassified)` +
+            (res.batchesFailed > 0 ? ` — ${res.batchesFailed} batch${res.batchesFailed !== 1 ? 'es' : ''} failed, retry to pick them up` : '')
       )
       // Only pace the next click when this attempt actually reached Groq
       // (batchesRun > 0) — "nothing new to classify" never spent tokens.
@@ -588,7 +589,7 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
     <div>
       <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
         <div>
-          <h2 className="font-semibold text-foreground">Uncategorized Posts</h2>
+          <h2 className="font-semibold text-foreground">Uncategorised Posts</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             {isFiltered ? `${filteredPosts.length} of ${posts.length} in queue` : `${posts.length} in queue`}
           </p>
@@ -608,7 +609,7 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
         <div className="flex items-start gap-3 flex-wrap">
           {autoResult && (
             <p className="self-center animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
-              {autoResult.posts === 0 ? 'Nothing new to categorize' : `Applied to ${autoResult.posts} post${autoResult.posts !== 1 ? 's' : ''}`}
+              {autoResult.posts === 0 ? 'Nothing new to categorise' : `Applied to ${autoResult.posts} post${autoResult.posts !== 1 ? 's' : ''}`}
             </p>
           )}
           {autoError && (
@@ -688,7 +689,7 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
                 // why (a real darker shade, not an opacity fade).
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               >
-                {isPending ? 'Categorizing…' : 'Generate suggestions'}
+                {isPending ? 'Categorising…' : 'Generate suggestions'}
               </button>
               <span className="text-xs text-muted-foreground pl-1">Matches your keyword lists</span>
             </div>
@@ -791,6 +792,14 @@ const CATEGORY_FINAL_SOURCE_DISPLAY: Record<CategoryFinalSource, string> = {
   MANUAL_GROUND_TRUTH: 'Ground truth import',
   ACCEPTED_SUGGESTION: 'Accepted suggestion',
   MANUAL_OVERRIDE: 'Manual selection',
+  // docs/raven/Content_Filters_Review.md §2 — the pre-2026-08-13 schema
+  // rework backfill, surfaced honestly instead of rendering as a bare dash
+  // (which read as "nobody knows," when the real answer is "before we
+  // tracked this").
+  LEGACY_IMPORT: 'Legacy import',
+  // §6.1 — a revision made from All/Unassigned to an already-finalised post,
+  // distinct from "Manual selection" (first assignment via triage).
+  MANUAL_CHANGE_AFTER_FINALISATION: 'Manual revision',
 }
 
 // docs/raven/Categorisation_Workflow_Consolidation.md §3.2 — shown on the
@@ -822,35 +831,68 @@ function ProvenanceCell({ post }: { post: ContentPostRow }) {
   )
 }
 
-// The non-queue filters' (All / Categorised / Unassigned) category control —
-// a dropdown covering every SELECTABLE_LABELS value plus "— None —" to
-// clear it back to Uncategorized, same behavior the old standalone Content
-// Library had. Distinct from the queue's ManagerActionCell/CategoryPicker:
-// this is an edit on an already-decided (or never-decided) post, not a
-// triage decision, so a plain dropdown is the right control here.
+// The non-queue filters' (All / Unassigned) category control. Distinct from
+// the queue's ManagerActionCell/CategoryPicker: this is an edit on an
+// already-decided post, not a triage decision.
+//
+// docs/raven/Content_Filters_Review.md §6 — this used to render a live,
+// always-armed dropdown + Save on every row, which was a second write path
+// to category_final that bypassed triage entirely (the merge's whole point
+// was to make triage unavoidable). Two changes close that:
+// 1. A post with no category_final at all is not editable here — it links
+//    to Needs Review instead, so first assignment only ever happens through
+//    triage's suggestions/flags/two-candidate prompt.
+// 2. An already-finalised post starts read-only (badge + a "Change" button);
+//    clicking Change arms the dropdown+Save, matching the "an explicit click
+//    arms it" pattern §6.1 asked for. updatePostCategory itself stamps
+//    MANUAL_CHANGE_AFTER_FINALISATION for this path vs. MANUAL_OVERRIDE for
+//    a first assignment, so Chapter 4 can tell the two apart without trusting
+//    this component to say which one happened.
+//
 // The ground-truth 200 (category_final_source === 'MANUAL_GROUND_TRUTH') are
 // the external, blind-coded reference standard FR-15's kappa study is
 // measured against — this screen must never be a way to edit one, even by
-// accident. Code review (2026-08-23) flagged that the "Categorised" filter
-// puts a Save button directly next to a "Ground truth import" provenance
-// label, which is exactly the accident this guards against. The real
-// enforcement is server-side (updatePostCategory refuses the write); this is
-// the client half so the control doesn't even render as editable.
-function CategoryEditCell({ post, canEdit }: { post: ContentPostRow; canEdit: boolean }) {
+// accident. The real enforcement is server-side (updatePostCategory refuses
+// the write); this is the client half so the control doesn't even render as
+// editable.
+function CategoryEditCell({ post, canEdit, baseRoute }: { post: ContentPostRow; canEdit: boolean; baseRoute: string }) {
   const [isPending, startTransition] = useTransition()
+  const [armed, setArmed] = useState(false)
   const [value, setValue] = useState<CategoryLabel | ''>(post.category_final ?? '')
   const [error, setError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const isGroundTruth = post.category_final_source === 'MANUAL_GROUND_TRUTH'
 
+  if (!post.category_final) {
+    if (!canEdit) return <span className="text-muted-foreground text-xs">Uncategorised</span>
+    return (
+      <a href={`${baseRoute}?filter=needs-review`} className="text-primary hover:underline text-xs">
+        Categorise in review →
+      </a>
+    )
+  }
+
   if (!canEdit || isGroundTruth) {
-    return post.category_final ? (
+    return (
       <div className="flex items-center gap-1.5">
         <CategoryBadge label={post.category_final} />
         {isGroundTruth && <span className="text-[10px] text-muted-foreground">locked — ground truth</span>}
       </div>
-    ) : (
-      <span className="text-muted-foreground text-xs">Uncategorized</span>
+    )
+  }
+
+  if (!armed) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <CategoryBadge label={post.category_final} />
+        <button
+          type="button"
+          onClick={() => { setValue(post.category_final ?? ''); setArmed(true) }}
+          className="text-xs text-primary hover:underline"
+        >
+          Change
+        </button>
+      </div>
     )
   }
 
@@ -860,6 +902,7 @@ function CategoryEditCell({ post, canEdit }: { post: ContentPostRow; canEdit: bo
       const res = await updatePostCategory(post.id, value || null)
       setConfirmOpen(false)
       if (res.error) setError(res.error)
+      else setArmed(false)
     })
   }
 
@@ -908,21 +951,34 @@ function CategoryEditCell({ post, canEdit }: { post: ContentPostRow; canEdit: bo
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <button type="button" onClick={() => setArmed(false)} className="text-xs text-muted-foreground hover:text-foreground">
+          Cancel
+        </button>
       </div>
       {error && <span role="alert" className="text-status-negative text-[11px]">{error}</span>}
     </div>
   )
 }
 
-// The "All" / "Categorised" / "Unassigned" filters' view — the old
-// ContentLibraryClient's table, extended with a Provenance column
+// docs/raven/Content_Filters_Review.md §4 — each filter needed its own
+// empty-state copy; a shared "No organic posts uploaded yet." rendered on
+// Unassigned even with 730+ posts uploaded, asserting something false about
+// the corpus. 'needs-review' isn't listed — that filter renders through
+// QueueView/ReviewTable instead, which already has its own copy.
+const LIBRARY_EMPTY_STATE: Record<Exclude<ContentFilter, 'needs-review'>, string> = {
+  all: 'No organic posts uploaded yet.',
+  unassigned: 'No posts have been marked unassigned.',
+}
+
+// The "All" / "Unassigned" filters' view — the old ContentLibraryClient's
+// table, extended with a Provenance column
 // (docs/raven/Categorisation_Workflow_Consolidation.md §3.2). Search is
 // carried over from Content Library's requirement; a post-type filter is
 // NOT included — despite the memo describing one as already existing on
 // Content Library "today," the pre-merge component (git history) never had
 // one, so there's nothing to carry over. Flagged to Raven rather than
 // invented.
-function LibraryTable({ posts, canEdit }: { posts: ContentPostRow[]; canEdit: boolean }) {
+function LibraryTable({ posts, canEdit, filter, baseRoute }: { posts: ContentPostRow[]; canEdit: boolean; filter: Exclude<ContentFilter, 'needs-review'>; baseRoute: string }) {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
 
@@ -945,13 +1001,18 @@ function LibraryTable({ posts, canEdit }: { posts: ContentPostRow[]; canEdit: bo
   if (posts.length === 0) {
     return (
       <div className="bg-card rounded-2xl card-shadow overflow-hidden p-12 text-center text-muted-foreground text-sm">
-        No organic posts uploaded yet.
+        {LIBRARY_EMPTY_STATE[filter]}
       </div>
     )
   }
 
   return (
     <div>
+      {/* docs/raven/Content_Filters_Review.md §8 — All/Unassigned had no row
+          count anywhere, unlike the queue's "N in queue". */}
+      <p className="text-xs text-muted-foreground mb-2">
+        {isFiltered ? `${filteredPosts.length} of ${posts.length}` : `${posts.length}`} post{posts.length !== 1 ? 's' : ''}
+      </p>
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <Input
           type="search"
@@ -1007,7 +1068,7 @@ function LibraryTable({ posts, canEdit }: { posts: ContentPostRow[]; canEdit: bo
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmtDate(post.publish_time)}</TableCell>
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.views !== null ? post.views.toLocaleString() : '—'}</TableCell>
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.engagement_rate.toFixed(2)}%</TableCell>
-                  <TableCell className="px-4 py-3"><CategoryEditCell post={post} canEdit={canEdit} /></TableCell>
+                  <TableCell className="px-4 py-3"><CategoryEditCell post={post} canEdit={canEdit} baseRoute={baseRoute} /></TableCell>
                   {/* whitespace-normal overrides TableCell's shared nowrap
                       default (components/ui/table.tsx) — ProvenanceCell
                       renders up to three stacked lines (source / role /
@@ -1027,9 +1088,8 @@ function LibraryTable({ posts, canEdit }: { posts: ContentPostRow[]; canEdit: bo
 }
 
 const CONTENT_FILTER_OPTIONS: { value: ContentFilter; label: string }[] = [
-  { value: 'needs-review', label: 'Needs Review' },
   { value: 'all', label: 'All' },
-  { value: 'categorised', label: 'Categorised' },
+  { value: 'needs-review', label: 'Needs Review' },
   { value: 'unassigned', label: 'Unassigned' },
 ]
 
@@ -1038,10 +1098,19 @@ const CONTENT_FILTER_OPTIONS: { value: ContentFilter; label: string }[] = [
 // to the new one ("sliding tab indicator", segmented-control style, not just
 // an underline). Built on the shared SlidingTabs primitive
 // (components/ui/sliding-tabs.tsx) — the same motion-layoutId mechanism as
-// TrendCharts.tsx's ChartViewToggle, with this control's own bordered-box
-// skin (that toggle keeps its existing white-surface/shadow look). Also
-// gives this control aria-pressed/role="group" for free, which the earlier
-// hand-rolled version didn't have (code review, 2026-08-23).
+// TrendCharts.tsx's ChartViewToggle, on the same .segmented-control track/
+// segment shell — but this control opts into the `--brand` indicator/active
+// modifiers (globals.css) for a solid --primary chip instead of
+// ChartViewToggle's neutral white/shadow one: this is the primary way
+// managers act on content (vs. that toggle's secondary chart-view switch),
+// so it earns the brand color. Solid fill + --primary-foreground text (the
+// same pairing button-primary already uses), not translucent-tint-plus-
+// colored-text — an earlier bg-primary/15 + text-primary version broke the
+// Fill-vs-Read Rule (crimson is fills/chrome only, never a text read) and
+// nearly disappeared in dark mode since the tint rode on top of a
+// low-contrast dark surface (design critique, 2026-08-23). Also gives this
+// control aria-pressed/role="group" for free, which the earlier hand-rolled
+// version didn't have (code review, 2026-08-23).
 //
 // docs/raven/Categorisation_Workflow_Consolidation.md §3.4 — filter state
 // lives in the query string, not component state, so the view is
@@ -1062,17 +1131,17 @@ function FilterTabs({ current }: { current: ContentFilter }) {
       // interaction rule) — without it this row can trip a stray vertical
       // scrollbar on non-overlay scrollbar setups (Windows Chrome/Edge) even
       // though nothing here needs to scroll vertically.
-      className="flex items-center gap-1 mb-4 p-1 rounded-xl bg-secondary/60 w-fit max-w-full overflow-x-auto overflow-y-hidden"
+      className="segmented-control mb-4 w-fit max-w-full overflow-x-auto overflow-y-hidden"
+      // ring-offset-1 (not a bare ring) matches every other bg-primary
+      // control in this file (e.g. the primary action buttons below) — the
+      // offset gap keeps the crimson focus ring visible against the
+      // brand-filled active segment instead of blending into it.
       segmentClassName={(active) =>
-        `relative px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-          active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+        `segmented-control__segment whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+          active ? 'segmented-control__segment--active-brand' : ''
         }`
       }
-      // shadow-border-sm (globals.css) is the app's layered-shadow token, not
-      // a flat drop shadow — the border color on top of it is what reads as
-      // "an outline box," per the sketch, rather than the neutral ring
-      // shadow-border-sm gives every card elsewhere.
-      indicatorClassName="absolute inset-0 rounded-lg border border-primary/50 bg-card shadow-border-sm"
+      indicatorClassName="segmented-control__indicator segmented-control__indicator--brand"
     />
   )
 }
@@ -1085,13 +1154,19 @@ function FilterTabs({ current }: { current: ContentFilter }) {
 // (e.g. a page number past the new post count) no longer applies.
 export default function ContentClient({ posts, role, filter }: Props) {
   const canEdit = role === 'MARKETING_MANAGER'
+  // Code review (2026-08-23) — CategoryEditCell's "Categorise in review" link
+  // was hardcoded to the marketing route; it was only ever safe because
+  // canEdit (and therefore the link's render path) happens to be
+  // role === 'MARKETING_MANAGER' too, an incidental guard rather than an
+  // intentional one. Threaded explicitly instead.
+  const baseRoute = role === 'MARKETING_MANAGER' ? '/dashboard/marketing/categorize' : '/dashboard/owner/categorize'
   return (
     <div>
       <FilterTabs current={filter} />
       {filter === 'needs-review' ? (
         <QueueView key="needs-review" posts={posts} role={role} />
       ) : (
-        <LibraryTable key={filter} posts={posts} canEdit={canEdit} />
+        <LibraryTable key={filter} posts={posts} canEdit={canEdit} filter={filter} baseRoute={baseRoute} />
       )}
     </div>
   )

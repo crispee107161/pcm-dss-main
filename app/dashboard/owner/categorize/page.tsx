@@ -3,8 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import ContentClient from '@/components/marketing/ContentClient'
-import { parseContentFilter, type ContentFilter } from '@/lib/categorize/content-filter'
-import type { Prisma } from '@/app/generated/prisma/client'
+import { parseContentFilter, whereForFilter, type ContentFilter } from '@/lib/categorize/content-filter'
 
 // docs/raven/Categorisation_Workflow_Consolidation.md §3.4 — Owner keeps this
 // route, view-only, default filter "needs-review" (Phase 4 of
@@ -13,19 +12,8 @@ import type { Prisma } from '@/app/generated/prisma/client'
 
 const FILTER_DESCRIPTIONS: Record<ContentFilter, string> = {
   'needs-review': 'Queue of posts awaiting a final category (view only).',
-  all: 'Every organic post and its assigned category (view only).',
-  categorised: 'Posts with a final category (excluding Unassigned), and who set it (view only).',
-  unassigned: 'Posts explicitly marked as unable to be categorized (view only).',
-}
-
-// "Categorised" and "Unassigned" are mutually exclusive tabs, not overlapping
-// checkboxes — see the matching comment in
-// app/dashboard/marketing/categorize/page.tsx, which this mirrors.
-function whereForFilter(filter: ContentFilter): Prisma.FacebookPostWhereInput {
-  if (filter === 'needs-review') return { category_final: null }
-  if (filter === 'categorised') return { category_final: { not: null, notIn: ['UNCLASSIFIED'] } }
-  if (filter === 'unassigned') return { category_final: 'UNCLASSIFIED' }
-  return {}
+  all: 'Every organic post and its assigned category, excluding the locked ground-truth benchmark (view only).',
+  unassigned: 'Posts explicitly marked as unable to be categorised (view only).',
 }
 
 export default async function OwnerCategorizePage({

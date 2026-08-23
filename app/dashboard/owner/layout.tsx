@@ -46,7 +46,6 @@ const navItems: NavItem[] = [
   {                             label: 'Category Performance',  href: '/dashboard/owner/category-performance', icon: 'category' },
   {                             label: 'Post Type Performance', href: '/dashboard/owner/post-type-performance', icon: 'layers' },
   { section: 'Reports',         label: 'Generate Report',       href: '/dashboard/owner/report',             icon: 'report' },
-  {                             label: 'Method Evaluation',    href: '/dashboard/owner/method-evaluation', icon: 'compare' },
   { section: 'Administration',  label: 'User Management',       href: '/dashboard/owner/administration',     icon: 'users' },
   {                             label: 'Audit Log',             href: '/dashboard/owner/audit-log',          icon: 'auditLog' },
 ]

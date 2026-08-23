@@ -6,7 +6,6 @@ import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 import { resolveCaption } from '@/lib/keywords/caption'
 import { recomputeQueueFlagReasons } from '@/lib/data/category-flags'
-import { resolveGroqModel } from '@/lib/groq-model'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
 
 // ALG-05 — LLM-assisted classification (FR-12, method B). Writes only
@@ -17,10 +16,26 @@ const BATCH_SIZE = 15
 const CLASSIFY_LIMIT = 5
 const CLASSIFY_WINDOW_MS = 5 * 60 * 1000
 
+// docs/raven/Provenance_Followup_and_Revised_Order.md §2.1 — the FR-08/FR-15
+// kappa figures need a reproducible model, so this path is pinned to a fixed,
+// version-controlled id rather than calling lib/groq-model.ts's
+// resolveGroqModel() (used by chat.ts/ai-insights.ts/keywords.ts, where
+// deprecation-resilience matters more than reproducibility and there's no
+// evaluation figure riding on a specific model). Confirmed via
+// LlmClassificationRun that every run to date used 'llama-3.1-8b-instant',
+// which Groq has since deprecated (commit a308813) — that exact model can no
+// longer be pinned back to. 'openai/gpt-oss-20b' is the model
+// resolveGroqModel currently resolves to (verified live against Groq's
+// /models endpoint, 2026-08-23); pinning it here means a future Groq
+// deprecation surfaces as a loud, fixable error on this path instead of a
+// silent model swap that would invalidate reproducibility without anyone
+// noticing. See docs/raven/LLM_Prompt_Model_Provenance.md.
+const CLASSIFICATION_MODEL = 'openai/gpt-oss-20b'
+
 const LABELS: CategoryLabel[] = ['PRODUCT_SHOWCASE', 'PROMOTIONAL_OFFER', 'TESTIMONIAL', 'ENTERTAINMENT']
 
 export type ClassifyPostsResult =
-  | { ok: true; classified: number; unclassified: number; batchesRun: number; batchesRemaining: number }
+  | { ok: true; classified: number; unclassified: number; batchesRun: number; batchesRemaining: number; batchesFailed: number }
   | { ok: false; reason: string; retryable: boolean; retryAfterSeconds?: number }
 
 interface BatchPost {
@@ -34,6 +49,21 @@ class GroqRateLimitError extends Error {
   constructor(public retryAfterSeconds: number) {
     super('Groq rate limit')
   }
+}
+
+// Code review (2026-08-23) caught that a decommissioned/unrecognised model
+// was falling into the generic "non-quota failure" branch below, which marks
+// the batch UNCLASSIFIED and writes that to category_llm — permanently, since
+// the next run's selection query (`category_llm: null`) would never pick
+// those rows up again. That silently corrupts the exact column FR-08/FR-15
+// read, which is worse than the silent model-swap CLASSIFICATION_MODEL was
+// pinned to prevent. This error type carves the case out so the whole run
+// aborts loudly with nothing written, instead of stamping wrong answers.
+class GroqModelUnavailableError extends Error {}
+
+function isModelUnavailableError(message: string): boolean {
+  const m = message.toLowerCase()
+  return m.includes('model_not_found') || m.includes('model_decommissioned') || m.includes('does not exist') || m.includes('has been decommissioned')
 }
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -102,7 +132,13 @@ async function callGroq(apiKey: string, model: string, prompt: string): Promise<
   }
 
   const data = await res.json()
-  if (data.error) throw new Error(data.error.message ?? 'Groq API error')
+  if (data.error) {
+    const message: string = data.error.message ?? data.error.code ?? 'Groq API error'
+    if (res.status === 404 || isModelUnavailableError(message) || isModelUnavailableError(data.error.code ?? '')) {
+      throw new GroqModelUnavailableError(message)
+    }
+    throw new Error(message)
+  }
   const text = data?.choices?.[0]?.message?.content
   if (!text) throw new Error('Empty response from Groq')
   return text as string
@@ -156,7 +192,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
 
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return { ok: false, reason: 'AI classification is not configured for this deployment.', retryable: false }
-  const model = await resolveGroqModel(apiKey)
+  const model = CLASSIFICATION_MODEL
 
   // Wraps the DB calls below (findMany, per-batch update/create) so a
   // genuine infra failure (lost connection mid-run) returns a result this
@@ -167,7 +203,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
       where: { category_llm: null },
       select: { id: true, post_id: true, post_type: true, title: true, description: true },
     })
-    if (posts.length === 0) return { ok: true, classified: 0, unclassified: 0, batchesRun: 0, batchesRemaining: 0 }
+    if (posts.length === 0) return { ok: true, classified: 0, unclassified: 0, batchesRun: 0, batchesRemaining: 0, batchesFailed: 0 }
 
     const batchPosts: BatchPost[] = posts.map((p) => ({
       id: p.id,
@@ -180,9 +216,11 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
     let classified = 0
     let unclassified = 0
     let batchesRun = 0
+    let batchesFailed = 0
 
     for (const batch of batches) {
-      let outcome: BatchOutcome
+      let outcome: BatchOutcome | null = null
+
       try {
         outcome = await classifyBatch(apiKey, model, batch)
       } catch (error) {
@@ -197,13 +235,33 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
             retryAfterSeconds: error.retryAfterSeconds,
           }
         }
-        // Non-quota failure (network error, malformed response after retry) —
-        // mark this batch UNCLASSIFIED and keep going with the rest.
-        outcome = {
-          labels: new Map(batch.map((b) => [b.id, 'UNCLASSIFIED' as CategoryLabel])),
-          rawResponse: `(request failed: ${error instanceof Error ? error.message : String(error)})`,
-          succeeded: false,
+        if (error instanceof GroqModelUnavailableError) {
+          // Abort the whole run with nothing written for this or any
+          // remaining batch — CLASSIFICATION_MODEL is a pinned constant, so
+          // this can only mean Groq has retired it, and the fix is a code
+          // change (repoint the constant), not a retry.
+          return {
+            ok: false,
+            reason: `The classification model (${model}) is no longer available on Groq. This needs a code fix, not a retry — ${batchesRun}/${batches.length} batches completed before this.`,
+            retryable: false,
+          }
         }
+        // Non-quota, non-model failure (network error, malformed response
+        // after retry) — log it and move on, but do NOT write UNCLASSIFIED
+        // to category_llm: these posts stay null (the selection query below
+        // is `category_llm: null`) so the next run retries them, instead of
+        // permanently stamping a wrong answer that looks like a real model
+        // disagreement to FR-15's kappa.
+        await prisma.llmClassificationRun.create({
+          data: {
+            model_name: model,
+            post_ids: batch.map((b) => b.id),
+            raw_response: `(request failed: ${error instanceof Error ? error.message : String(error)})`,
+            succeeded: false,
+          },
+        })
+        batchesFailed++
+        continue
       }
 
       await Promise.all(
@@ -230,7 +288,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
     await recomputeQueueFlagReasons()
     revalidatePath('/dashboard/marketing/categorize')
     revalidatePath('/dashboard/owner/categorize')
-    return { ok: true, classified, unclassified, batchesRun, batchesRemaining: batches.length - batchesRun }
+    return { ok: true, classified, unclassified, batchesRun, batchesRemaining: batches.length - batchesRun - batchesFailed, batchesFailed }
   } catch {
     return { ok: false, reason: 'Something went wrong. Please try again.', retryable: true }
   }
