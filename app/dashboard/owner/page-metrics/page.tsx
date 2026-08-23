@@ -181,24 +181,26 @@ export default async function OwnerPageMetricsPage({
                   <p className="text-xs text-muted-foreground mt-1">{postTypeInsight.headline}. {postTypeInsight.detail}</p>
                 )}
               </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-secondary">
-                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</th>
-                    <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Posts</th>
-                    <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Avg Engagement</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {typeBreakdown.map(row => (
-                    <tr key={row.post_type} className="border-t border-border hover:bg-secondary">
-                      <td className="px-4 py-2.5 font-medium text-foreground">{row.post_type}</td>
-                      <td className="px-4 py-2.5 text-right text-muted-foreground">{row._count.id}</td>
-                      <td className="px-4 py-2.5 text-right text-muted-foreground">{(row._avg.engagement_rate ?? 0).toFixed(2)}%</td>
+              <div className="table-scroll rounded-lg">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-secondary">
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</th>
+                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Posts</th>
+                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Avg Engagement</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {typeBreakdown.map(row => (
+                      <tr key={row.post_type} className="border-t border-border hover:bg-secondary">
+                        <td className="px-4 py-2.5 font-medium text-foreground">{row.post_type}</td>
+                        <td className="px-4 py-2.5 text-right text-muted-foreground">{row._count.id}</td>
+                        <td className="px-4 py-2.5 text-right text-muted-foreground">{(row._avg.engagement_rate ?? 0).toFixed(2)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>

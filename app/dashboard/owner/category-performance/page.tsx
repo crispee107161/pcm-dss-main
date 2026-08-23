@@ -99,7 +99,7 @@ export default async function CategoryPerformancePage() {
           <div className="px-5 py-4 border-b border-gray-100">
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">Organic Post Performance by Category</p>
           </div>
-          <div className="overflow-x-auto">
+          <div className="table-scroll rounded-lg">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-200">

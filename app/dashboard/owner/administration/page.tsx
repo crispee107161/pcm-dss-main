@@ -74,7 +74,7 @@ export default async function OwnerAdministrationPage() {
         {recentUploads.length === 0 ? (
           <p className="text-muted-foreground text-sm p-6">No uploads yet.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="table-scroll rounded-lg">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-secondary">

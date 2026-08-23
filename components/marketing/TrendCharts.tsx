@@ -293,7 +293,7 @@ export function SpendMessagingTrend({ data, heading, showReach }: { data: Monthl
   const [view, setView] = useState<'bars' | 'indexed'>('bars')
   return (
     <div>
-      <div className="flex items-start justify-between gap-3 mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
         <div className="flex-1 min-w-0">
           {heading ?? <h2 className="font-semibold text-foreground">Ad Spend vs. Messaging Conversations by Reporting Period</h2>}
           <p className="text-xs text-muted-foreground">
@@ -350,8 +350,8 @@ export function PostEngagementTrend({ data, footer }: { data: MonthlyPostTrend[]
   const [view, setView] = useState<'bars' | 'indexed'>('bars')
   return (
     <div>
-      <div className="flex items-start justify-between gap-3 mb-1">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 mb-1">
+        <div className="flex-1 min-w-0">
           <h2 className="font-semibold text-foreground">Organic Post Engagement</h2>
           <p className="text-xs text-muted-foreground">
             {view === 'bars'

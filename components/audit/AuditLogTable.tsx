@@ -17,7 +17,7 @@ export default function AuditLogTable({ events }: { events: AuditEvent[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="table-scroll rounded-lg">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-secondary">
