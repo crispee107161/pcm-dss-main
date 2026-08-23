@@ -692,6 +692,20 @@
 .dark .segmented-control {
   background: var(--color-alpha-white-200);
 }
+/* Opt-in for controls meant to read as a bounded group even in light mode
+   (e.g. ContentClient.tsx's FilterTabs) — not applied to the base class
+   because ChartViewToggle (TrendCharts.tsx) deliberately keeps the plain
+   white-surface/shadow look instead. Dark mode doesn't need this: the
+   alpha-white-200 track background above already reads clearly against the
+   dark card, whereas gray-50 sits only ~2% off the white card in light mode
+   (#F9F8F7 vs #FFFFFF) — nowhere near enough contrast on its own to read as
+   a grouped control there. */
+.segmented-control--bordered {
+  border: 1px solid var(--border);
+}
+.dark .segmented-control--bordered {
+  border-color: transparent;
+}
 .segmented-control__segment {
   position: relative;
   display: inline-flex;

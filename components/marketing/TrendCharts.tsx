@@ -160,8 +160,9 @@ const CHART_VIEW_OPTIONS: { value: 'bars' | 'indexed'; label: string }[] = [
 // the same SlidingTabs mechanism (components/ui/sliding-tabs.tsx) as
 // ContentClient.tsx's FilterTabs — one implementation of the sliding
 // shared-element indicator, two different skins (this one keeps the
-// existing .segmented-control white-surface/shadow look; FilterTabs has its
-// own bordered-box look) — code review (2026-08-23) flagged the two
+// existing .segmented-control white-surface/shadow indicator; FilterTabs has
+// its own brand-filled indicator plus a .segmented-control--bordered track
+// for light-mode grouping, added 2026-08-24) — code review (2026-08-23) flagged the two
 // segmented controls as duplicated logic before this refactor. `id` keys the
 // layoutId: two instances of this component render at once on the trend
 // pages (SpendMessagingTrend + PostEngagementTrend below), and a shared

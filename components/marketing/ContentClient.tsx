@@ -1131,7 +1131,7 @@ function FilterTabs({ current }: { current: ContentFilter }) {
       // interaction rule) — without it this row can trip a stray vertical
       // scrollbar on non-overlay scrollbar setups (Windows Chrome/Edge) even
       // though nothing here needs to scroll vertically.
-      className="segmented-control mb-4 w-fit max-w-full overflow-x-auto overflow-y-hidden"
+      className="segmented-control segmented-control--bordered mb-4 w-fit max-w-full overflow-x-auto overflow-y-hidden"
       // ring-offset-1 (not a bare ring) matches every other bg-primary
       // control in this file (e.g. the primary action buttons below) — the
       // offset gap keeps the crimson focus ring visible against the
