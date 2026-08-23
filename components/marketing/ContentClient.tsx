@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { SlidingTabs } from '@/components/ui/sliding-tabs'
 import {
   updatePostCategory,
   batchConfirmAgreed,
@@ -593,29 +594,40 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        {/* items-start, not items-center: "Batch confirm agreed" is a plain
+            single-line button, but "Generate suggestions" / "Generate AI
+            suggestions" are each a button plus a caption line stacked below
+            it — center-aligning the row put the shorter Batch confirm
+            button's top below the other two buttons' tops instead of flush
+            with them. */}
+        {/* self-center on the toast <p>s below: the row itself is
+            items-start (to top-align the buttons, see above), but these are
+            plain single-line pills much shorter than the button blocks —
+            self-center keeps them centered against the row's full height
+            instead of hanging flush at the top with everything else. */}
+        <div className="flex items-start gap-3 flex-wrap">
           {autoResult && (
-            <p className="animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
+            <p className="self-center animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
               {autoResult.posts === 0 ? 'Nothing new to categorize' : `Applied to ${autoResult.posts} post${autoResult.posts !== 1 ? 's' : ''}`}
             </p>
           )}
           {autoError && (
-            <p role="alert" className="animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
+            <p role="alert" className="self-center animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
               {autoError}
             </p>
           )}
           {batchConfirmResult && (
-            <p className="animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
+            <p className="self-center animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
               Confirmed {batchConfirmResult.confirmed} post{batchConfirmResult.confirmed !== 1 ? 's' : ''}
             </p>
           )}
           {batchConfirmError && (
-            <p role="alert" className="animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
+            <p role="alert" className="self-center animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
               {batchConfirmError}
             </p>
           )}
           {llmResult && (
-            <p role={llmIsError ? 'alert' : undefined} className={`animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
+            <p role={llmIsError ? 'alert' : undefined} className={`self-center animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
               llmIsError
                 ? 'text-status-warning bg-status-warning/10 border-status-warning/30'
                 : 'text-status-positive bg-green-500/10 border-green-500/30'
@@ -625,33 +637,46 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
           )}
 
           {role === 'MARKETING_MANAGER' && batchConfirmCountInView > 0 && (
-            <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
-              <DialogTrigger
-                disabled={isPending}
-                render={<Button type="button" size="sm" variant="outline" className="text-xs h-8 px-3" />}
-              >
-                {isFiltered ? `Batch confirm in view (${batchConfirmCountInView})` : `Batch confirm agreed (${batchConfirmCountInView})`}
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Confirm {batchConfirmCountInView} unflagged, agreed post{batchConfirmCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
-                  <DialogDescription>
-                    Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
-                    {isFiltered && batchConfirmCountOutsideView > 0 && (
-                      <> {batchConfirmCountOutsideView} more eligible post{batchConfirmCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to confirm everything.</>
-                    )}
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setConfirmBatchOpen(false)} className="text-xs">
-                    Cancel
-                  </Button>
-                  <Button type="button" onClick={() => handleBatchConfirm(isFiltered)} className="text-xs">
-                    Confirm {batchConfirmCountInView}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            // Matches the size/shape of "Generate suggestions" / "Generate AI
+            // suggestions" below (same button padding/weight, own caption
+            // line) — it previously used the smaller shadcn Button component
+            // with no caption, which made it look visually lighter-weight
+            // than the other two despite being an equally significant action.
+            <div className="flex flex-col items-start gap-0.5">
+              <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
+                <DialogTrigger
+                  disabled={isPending}
+                  render={
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                    />
+                  }
+                >
+                  {isFiltered ? `Batch confirm in view (${batchConfirmCountInView})` : `Batch confirm agreed (${batchConfirmCountInView})`}
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Confirm {batchConfirmCountInView} unflagged, agreed post{batchConfirmCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
+                    <DialogDescription>
+                      Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
+                      {isFiltered && batchConfirmCountOutsideView > 0 && (
+                        <> {batchConfirmCountOutsideView} more eligible post{batchConfirmCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to confirm everything.</>
+                      )}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setConfirmBatchOpen(false)} className="text-xs">
+                      Cancel
+                    </Button>
+                    <Button type="button" onClick={() => handleBatchConfirm(isFiltered)} className="text-xs">
+                      Confirm {batchConfirmCountInView}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <span className="text-xs text-muted-foreground pl-1">Finalizes unflagged, agreed posts</span>
+            </div>
           )}
 
           {role === 'MARKETING_MANAGER' && (
@@ -659,7 +684,9 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
               <button
                 onClick={handleAutoCategorize}
                 disabled={isPending || posts.length === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                // hover:bg-[var(--primary-hover)] — see app/globals.css for
+                // why (a real darker shade, not an opacity fade).
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               >
                 {isPending ? 'Categorizing…' : 'Generate suggestions'}
               </button>
@@ -777,8 +804,19 @@ function ProvenanceCell({ post }: { post: ContentPostRow }) {
   return (
     <div className="text-xs text-muted-foreground">
       <div>{CATEGORY_FINAL_SOURCE_DISPLAY[post.category_final_source]}</div>
+      {/* Role, not the raw email — updatePostCategory/batchConfirmAgreed are
+          both Marketing-Manager-only (mvp.md's three fixed accounts, one per
+          role, prisma/seed.ts), so this line is always the same one account
+          whenever it appears at all; showing the email added length without
+          adding information, and was what was overflowing the column. Kept
+          as a title tooltip in case anyone needs to check it directly. Own
+          line rather than "Role · Date" on one line — three short lines read
+          easier here than one long one. */}
       {post.assignedByEmail && post.assignedAt && (
-        <div>{post.assignedByEmail} · {fmtDateTime(post.assignedAt)}</div>
+        <>
+          <div title={post.assignedByEmail}>Marketing Manager</div>
+          <div>{fmtDateTime(post.assignedAt)}</div>
+        </>
       )}
     </div>
   )
@@ -802,6 +840,7 @@ function CategoryEditCell({ post, canEdit }: { post: ContentPostRow; canEdit: bo
   const [isPending, startTransition] = useTransition()
   const [value, setValue] = useState<CategoryLabel | ''>(post.category_final ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const isGroundTruth = post.category_final_source === 'MANUAL_GROUND_TRUTH'
 
   if (!canEdit || isGroundTruth) {
@@ -819,6 +858,7 @@ function CategoryEditCell({ post, canEdit }: { post: ContentPostRow; canEdit: bo
     setError(null)
     startTransition(async () => {
       const res = await updatePostCategory(post.id, value || null)
+      setConfirmOpen(false)
       if (res.error) setError(res.error)
     })
   }
@@ -840,10 +880,34 @@ function CategoryEditCell({ post, canEdit }: { post: ContentPostRow; canEdit: bo
             ))}
           </SelectContent>
         </Select>
-        <Button type="button" size="sm" disabled={isPending} onClick={handleSave}
-          className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3">
-          {isPending ? 'Saving…' : 'Save'}
-        </Button>
+        {/* Same confirmation gate as the queue's "Save category" (Manager
+            ActionCell) — this writes category_final just as finally, and
+            previously saved with no confirmation at all, an inconsistency
+            flagged in review. */}
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogTrigger
+            disabled={isPending}
+            render={<Button type="button" size="sm" className="text-xs whitespace-nowrap h-7 px-3" />}
+          >
+            Save
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Set category to &ldquo;{categoryEditLabel(value)}&rdquo;?</DialogTitle>
+              <DialogDescription>
+                This updates the post&apos;s final category directly. It can&apos;t be undone from here.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)} className="text-xs">
+                Cancel
+              </Button>
+              <Button type="button" disabled={isPending} onClick={handleSave} className="text-xs">
+                {isPending ? 'Saving…' : 'Confirm'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
       {error && <span role="alert" className="text-status-negative text-[11px]">{error}</span>}
     </div>
@@ -944,7 +1008,13 @@ function LibraryTable({ posts, canEdit }: { posts: ContentPostRow[]; canEdit: bo
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.views !== null ? post.views.toLocaleString() : '—'}</TableCell>
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.engagement_rate.toFixed(2)}%</TableCell>
                   <TableCell className="px-4 py-3"><CategoryEditCell post={post} canEdit={canEdit} /></TableCell>
-                  <TableCell className="px-4 py-3"><ProvenanceCell post={post} /></TableCell>
+                  {/* whitespace-normal overrides TableCell's shared nowrap
+                      default (components/ui/table.tsx) — ProvenanceCell
+                      renders up to three stacked lines (source / role /
+                      date), and nowrap would force them onto one long line
+                      that pushes the whole table wider instead of wrapping
+                      within this bounded column width. */}
+                  <TableCell className="px-4 py-3 whitespace-normal max-w-[200px]"><ProvenanceCell post={post} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -963,6 +1033,16 @@ const CONTENT_FILTER_OPTIONS: { value: ContentFilter; label: string }[] = [
   { value: 'unassigned', label: 'Unassigned' },
 ]
 
+// User-sketched spec: the active tab shouldn't just flip its own styling when
+// the filter changes — a bordered box should slide smoothly from the old tab
+// to the new one ("sliding tab indicator", segmented-control style, not just
+// an underline). Built on the shared SlidingTabs primitive
+// (components/ui/sliding-tabs.tsx) — the same motion-layoutId mechanism as
+// TrendCharts.tsx's ChartViewToggle, with this control's own bordered-box
+// skin (that toggle keeps its existing white-surface/shadow look). Also
+// gives this control aria-pressed/role="group" for free, which the earlier
+// hand-rolled version didn't have (code review, 2026-08-23).
+//
 // docs/raven/Categorisation_Workflow_Consolidation.md §3.4 — filter state
 // lives in the query string, not component state, so the view is
 // bookmarkable and deep-linkable. router.push (not replace) so Back steps
@@ -971,22 +1051,29 @@ function FilterTabs({ current }: { current: ContentFilter }) {
   const router = useRouter()
   const pathname = usePathname()
   return (
-    <div className="flex items-center gap-1 mb-4 border-b border-border overflow-x-auto">
-      {CONTENT_FILTER_OPTIONS.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => router.push(`${pathname}?filter=${opt.value}`)}
-          className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t ${
-            current === opt.value
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
+    <SlidingTabs
+      value={current}
+      onChange={(next) => router.push(`${pathname}?filter=${next}`)}
+      options={CONTENT_FILTER_OPTIONS}
+      layoutId="content-filter-indicator"
+      ariaLabel="Content filter"
+      // overflow-y-hidden below is deliberate, not redundant: overflow-x-auto
+      // alone computes overflow-y as auto too (CSS overflow spec's
+      // interaction rule) — without it this row can trip a stray vertical
+      // scrollbar on non-overlay scrollbar setups (Windows Chrome/Edge) even
+      // though nothing here needs to scroll vertically.
+      className="flex items-center gap-1 mb-4 p-1 rounded-xl bg-secondary/60 w-fit max-w-full overflow-x-auto overflow-y-hidden"
+      segmentClassName={(active) =>
+        `relative px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+        }`
+      }
+      // shadow-border-sm (globals.css) is the app's layered-shadow token, not
+      // a flat drop shadow — the border color on top of it is what reads as
+      // "an outline box," per the sketch, rather than the neutral ring
+      // shadow-border-sm gives every card elsewhere.
+      indicatorClassName="absolute inset-0 rounded-lg border border-primary/50 bg-card shadow-border-sm"
+    />
   )
 }
 

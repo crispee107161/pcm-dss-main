@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid,
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'
+import { SlidingTabs } from '@/components/ui/sliding-tabs'
 import { ChartTooltipRow } from '@/lib/chart-tooltip'
 import { CHART_COLORS, formatCompactCount, formatCompactPhp } from '@/lib/chart-axis'
 
@@ -150,24 +151,38 @@ export function PostCountChart({ data }: { data: MonthlyPostTrend[] }) {
   )
 }
 
-// Shared toggle for the "side by side" vs "compare trend" chart views.
-function ChartViewToggle({ view, onChange }: { view: 'bars' | 'indexed'; onChange: (view: 'bars' | 'indexed') => void }) {
+const CHART_VIEW_OPTIONS: { value: 'bars' | 'indexed'; label: string }[] = [
+  { value: 'bars', label: 'Side by side' },
+  { value: 'indexed', label: 'Compare trend' },
+]
+
+// Shared toggle for the "side by side" vs "compare trend" chart views. Uses
+// the same SlidingTabs mechanism (components/ui/sliding-tabs.tsx) as
+// ContentClient.tsx's FilterTabs — one implementation of the sliding
+// shared-element indicator, two different skins (this one keeps the
+// existing .segmented-control white-surface/shadow look; FilterTabs has its
+// own bordered-box look) — code review (2026-08-23) flagged the two
+// segmented controls as duplicated logic before this refactor. `id` keys the
+// layoutId: two instances of this component render at once on the trend
+// pages (SpendMessagingTrend + PostEngagementTrend below), and a shared
+// layoutId across separate instances would animate one's indicator toward
+// the other's position instead of staying independent.
+function ChartViewToggle({ id, view, onChange }: { id: string; view: 'bars' | 'indexed'; onChange: (view: 'bars' | 'indexed') => void }) {
   return (
-    <div className="flex-shrink-0 segmented-control" role="group" aria-label="Chart view">
-      {(['bars', 'indexed'] as const).map(option => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onChange(option)}
-          aria-pressed={view === option}
-          className={`segmented-control__segment text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-            view === option ? 'segmented-control__segment--active' : ''
-          }`}
-        >
-          {option === 'bars' ? 'Side by side' : 'Compare trend'}
-        </button>
-      ))}
-    </div>
+    <SlidingTabs
+      value={view}
+      onChange={onChange}
+      options={CHART_VIEW_OPTIONS}
+      layoutId={`chart-view-toggle-${id}`}
+      ariaLabel="Chart view"
+      className="flex-shrink-0 segmented-control"
+      segmentClassName={(active) =>
+        `segmented-control__segment text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          active ? 'segmented-control__segment--active' : ''
+        }`
+      }
+      indicatorClassName="segmented-control__indicator"
+    />
   )
 }
 
@@ -286,7 +301,7 @@ export function SpendMessagingTrend({ data, heading, showReach }: { data: Monthl
               : 'Both series indexed to the first month, so their trend shapes are directly comparable'}
           </p>
         </div>
-        <ChartViewToggle view={view} onChange={setView} />
+        <ChartViewToggle id="ad-trend" view={view} onChange={setView} />
       </div>
       {/* Both views stay mounted, stacked in the same grid cell, so the
           container's height is always the taller of the two — switching
@@ -343,7 +358,7 @@ export function PostEngagementTrend({ data, footer }: { data: MonthlyPostTrend[]
               : 'Both series indexed to the first month, so their trend shapes are directly comparable'}
           </p>
         </div>
-        <ChartViewToggle view={view} onChange={setView} />
+        <ChartViewToggle id="post-trend" view={view} onChange={setView} />
       </div>
       {/* Same stacked-grid approach as SpendMessagingTrend above — both
           views stay mounted so the container height never jumps on toggle. */}

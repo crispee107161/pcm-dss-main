@@ -259,7 +259,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
                   <button
                     type="submit"
                     disabled={pwPending}
-                    className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:text-white/60 text-white text-xs rounded-lg py-1.5 font-medium transition-[background-color]"
+                    className="w-full bg-primary hover:bg-[var(--primary-hover)] disabled:bg-primary/30 disabled:text-white/60 text-white text-xs rounded-lg py-1.5 font-medium transition-[background-color]"
                   >
                     {pwPending ? 'Updating...' : 'Update Password'}
                   </button>

@@ -9,7 +9,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        // [a]:hover:bg-[var(--primary-hover)] — matches button.tsx's default
+        // variant fix; a real darker shade, not an opacity fade that barely
+        // shows on --primary's already-deep red. Only fires when rendered as
+        // an <a> (via the `render` prop), so low-traffic, but the same
+        // weak-hover pattern nonetheless.
+        default: "bg-primary text-primary-foreground [a]:hover:bg-[var(--primary-hover)]",
         secondary:
           "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
         destructive:

@@ -291,6 +291,12 @@
   --popover-foreground: #0F090B;
   --primary: #BB061E;
   --primary-foreground: #FFFFFF;
+  /* A real darker shade for hover, not an opacity fade — bg-primary/90-style
+     hover was blending in only ~10% of the page background, which barely
+     shifts an already-deep, highly saturated red. color-mix keeps this
+     correct automatically per theme (derives from whatever --primary
+     resolves to here) instead of a second hardcoded hex. */
+  --primary-hover: color-mix(in srgb, var(--primary) 85%, black);
   --secondary: #F2F2EE;
   --secondary-foreground: #0F090B;
   --muted: #ECEBE7;
@@ -386,6 +392,7 @@
   --popover-foreground: #FAFAFA;
   --primary: #D41135;
   --primary-foreground: #FFFFFF;
+  --primary-hover: color-mix(in srgb, var(--primary) 85%, black);
   --secondary: #242424;
   --secondary-foreground: #FAFAFA;
   --muted: #171717;
@@ -473,6 +480,7 @@
   --popover-foreground: #0F090B;
   --primary: #BB061E;
   --primary-foreground: #FFFFFF;
+  --primary-hover: color-mix(in srgb, var(--primary) 85%, black);
   --secondary: #F2F2EE;
   --secondary-foreground: #0F090B;
   --muted: #ECEBE7;
@@ -536,6 +544,7 @@
   --popover-foreground: #0F090B;
   --primary: #BB061E;
   --primary-foreground: #FFFFFF;
+  --primary-hover: color-mix(in srgb, var(--primary) 85%, black);
   --secondary: #F2F2EE;
   --secondary-foreground: #0F090B;
   --muted: #ECEBE7;
@@ -684,6 +693,7 @@
   background: var(--color-alpha-white-200);
 }
 .segmented-control__segment {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -705,17 +715,26 @@
 .dark .segmented-control__segment:hover {
   background: var(--color-gray-800);
 }
+/* The active surface (background/shadow) is now painted by
+   .segmented-control__indicator below — a motion-animated span that slides
+   between segments (components/ui/sliding-tabs.tsx) instead of this
+   modifier hard-cutting the background on click. This modifier is just the
+   text color, plus disabling the plain hover background so it can't show
+   through/beside the indicator. */
 .segmented-control__segment--active,
 .segmented-control__segment--active:hover {
-  background: #FFFFFF;
+  background: transparent;
   color: var(--foreground);
+}
+.segmented-control__indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: #FFFFFF;
   box-shadow: var(--shadow-sm);
 }
-.dark .segmented-control__segment--active,
-.dark .segmented-control__segment--active:hover {
+.dark .segmented-control__indicator {
   background: var(--secondary);
-  color: var(--foreground);
-  box-shadow: var(--shadow-sm);
 }
 
 /* Tabular numerals for all KPI/stat values — stays on the sans face (Geist

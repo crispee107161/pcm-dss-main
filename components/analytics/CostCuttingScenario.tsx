@@ -74,7 +74,7 @@ export default function CostCuttingScenario() {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-primary hover:bg-primary/90 active:bg-primary/80 disabled:bg-primary/40 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
+          className="bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-primary/40 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors flex items-center gap-2"
         >
           {isPending ? (
             <>

@@ -73,7 +73,7 @@ function CreateUserForm() {
         </div>
         <Button
           onClick={() => setOpen(v => !v)}
-          className="bg-primary hover:bg-primary/90 text-white px-4"
+          className="px-4"
         >
           {open ? 'Cancel' : '+ Add User'}
         </Button>
@@ -124,7 +124,7 @@ function CreateUserForm() {
             <Button
               type="submit"
               disabled={pending}
-              className="bg-primary hover:bg-primary/90 text-white px-4"
+              className="px-4"
             >
               {pending ? 'Creating…' : 'Create User'}
             </Button>

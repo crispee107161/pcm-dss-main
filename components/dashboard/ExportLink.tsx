@@ -25,7 +25,7 @@ export function ExportLink({ href }: { href: string }) {
       onMouseLeave={reset}
       onFocus={play}
       onBlur={reset}
-      className="flex items-center gap-2 text-sm font-semibold rounded-lg px-3.5 py-2 bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80 transition-colors"
+      className="flex items-center gap-2 text-sm font-semibold rounded-lg px-3.5 py-2 bg-primary text-primary-foreground hover:bg-[var(--primary-hover)] active:bg-primary/80 transition-colors"
     >
       <DownloadIcon ref={iconRef} size={14} />
       Export
