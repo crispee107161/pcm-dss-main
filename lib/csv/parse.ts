@@ -49,7 +49,7 @@ export function parseCsvBuffer(buffer: Buffer): ParseResult {
   return { headers, rows }
 }
 
-export type PageMetricColumn = 'follows' | 'interactions' | 'link_clicks' | 'views' | 'visits'
+export type PageMetricColumn = 'follows' | 'interactions' | 'link_clicks' | 'views' | 'viewers' | 'visits'
 
 export interface PageMetricRow {
   date: string   // ISO datetime string as-is from the file
@@ -70,6 +70,7 @@ const METRIC_NAME_MAP: Record<string, PageMetricColumn> = {
   'Facebook link clicks': 'link_clicks',
   'Link clicks':          'link_clicks',
   'Views':                'views',
+  'Viewers':              'viewers',
   'Facebook visits':      'visits',
   'Visits':               'visits',
 }

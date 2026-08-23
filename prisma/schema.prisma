@@ -425,8 +425,8 @@ model SimulationResult {
   simulated_at        DateTime @default(now())
 }
 
-// Page-level daily metrics (Follows, Interactions, Link Clicks, Views, Visits)
-// All 5 CSV files upsert into this single table by date
+// Page-level daily metrics (Follows, Interactions, Link Clicks, Views, Viewers, Visits)
+// All 6 CSV files upsert into this single table by date
 model PageMetricDaily {
   id           Int      @id @default(autoincrement())
   date         DateTime @unique
@@ -434,6 +434,9 @@ model PageMetricDaily {
   interactions Int?
   link_clicks  Int?
   views        Int?
+  // Distinct metric from PageViewers.total_viewers (different source file, different
+  // values on overlapping dates — e.g. 2025-08-19: 5780 vs 8876). Not a duplicate; do not merge.
+  viewers      Int?
   visits       Int?
   created_at   DateTime @default(now())
 }

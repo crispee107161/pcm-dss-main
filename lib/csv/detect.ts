@@ -15,7 +15,9 @@ const POSTS_REQUIRED_HEADERS  = ['Post ID', 'Publish time', 'Post type']
 const FOLLOWER_HIST_HEADERS   = ['Date', 'Followers', 'Difference in followers from previous day']
 const VIEWERS_HEADERS         = ['Date', 'Total Viewers', 'New Viewers', 'Returning Viewers']
 const GENDER_HEADERS          = ['Gender', 'Distribution']
-const TERRITORY_HEADERS       = ['Top territories', 'Distribution']
+// Facebook exports this column as either "Top territories" or "Top Territories"
+// depending on export vintage — match case-insensitively.
+const TERRITORY_HEADER_NAMES  = ['top territories']
 
 // Page metric CSVs (Follows, Interactions, etc.) have identical headers: Date + Primary
 // They are UTF-16 LE files identified by the metric name line — detection for these
@@ -25,6 +27,9 @@ const PAGE_METRIC_HEADERS = ['Date', 'Primary']
 export function detectCsvType(headers: string[]): CsvType {
   const hasAll = (required: string[]) =>
     required.every((h) => headers.includes(h))
+  const lowerHeaders = headers.map((h) => h.toLowerCase())
+  const hasAllCaseInsensitive = (required: string[]) =>
+    required.every((h) => lowerHeaders.includes(h))
 
   if (hasAll(ADS_REQUIRED_HEADERS))       return 'ADS_CSV'
   if (hasAll(POSTS_REQUIRED_HEADERS))     return 'POSTS_CSV'
@@ -34,8 +39,8 @@ export function detectCsvType(headers: string[]): CsvType {
   if (hasAll(VIEWERS_HEADERS))        return 'PAGE_VIEWERS_CSV'
 
   // Demographics — Gender takes priority since Territory also has 'Distribution'
-  if (hasAll(GENDER_HEADERS) && headers.length === 2) return 'DEMOGRAPHICS_CSV'
-  if (hasAll(TERRITORY_HEADERS))                      return 'DEMOGRAPHICS_CSV'
+  if (hasAll(GENDER_HEADERS) && headers.length === 2)                 return 'DEMOGRAPHICS_CSV'
+  if (hasAllCaseInsensitive(TERRITORY_HEADER_NAMES) && headers.includes('Distribution')) return 'DEMOGRAPHICS_CSV'
 
   // Page metric files — detected at buffer level, but include a header fallback
   if (hasAll(PAGE_METRIC_HEADERS) && headers.length === 2) return 'PAGE_METRIC_CSV'
@@ -44,7 +49,7 @@ export function detectCsvType(headers: string[]): CsvType {
     `CSV type could not be detected from headers: [${headers.join(', ')}]. ` +
     `Accepted files: Ads Manager CSV, Facebook Insights (Posts) CSV, ` +
     `FollowerHistory, Viewers, FollowerGender, FollowerTopTerritories, ` +
-    `or any Page-Level Metric CSV (Follows, Interactions, Link clicks, Views, Visits).`
+    `or any Page-Level Metric CSV (Follows, Interactions, Link clicks, Views, Viewers, Visits).`
   )
 }
 

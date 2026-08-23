@@ -53,14 +53,15 @@ export function validateDemographicsRows(
     return { type: 'gender', rows: normalizeDistribution(genderRows, 'Gender') }
   }
 
-  if (headers.includes('Top territories')) {
+  const territoryHeader = headers.find((h) => h.toLowerCase() === 'top territories')
+  if (territoryHeader) {
     const territoryRows: TerritoryRecord[] = rows.map((row, i) => {
-      const territory = row['Top territories']?.trim()
+      const territory = row[territoryHeader]?.trim()
       const dist      = parseFloat(row['Distribution'] ?? '0')
-      if (!territory) throw new Error(`Row ${i + 1}: missing Top territories`)
+      if (!territory) throw new Error(`Row ${i + 1}: missing ${territoryHeader}`)
       return { territory, distribution: isNaN(dist) ? 0 : dist }
     })
-    return { type: 'territory', rows: normalizeDistribution(territoryRows, 'Top territories') }
+    return { type: 'territory', rows: normalizeDistribution(territoryRows, territoryHeader) }
   }
 
   throw new Error('Could not identify demographics file type (expected Gender or Top territories column)')

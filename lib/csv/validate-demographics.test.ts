@@ -81,6 +81,20 @@ describe('validateDemographicsRows', () => {
         validateDemographicsRows(headers, [{ 'Top territories': '', Distribution: '0.5' }])
       ).toThrow(/missing Top territories/)
     })
+
+    it('detects and parses the capitalized "Top Territories" header variant', () => {
+      const capitalizedHeaders = ['Top Territories', 'Distribution']
+      const result = validateDemographicsRows(capitalizedHeaders, [
+        { 'Top Territories': 'Philippines', Distribution: '0.601' },
+        { 'Top Territories': 'Others', Distribution: '0.399' },
+      ])
+      expect(result.type).toBe('territory')
+      if (result.type !== 'territory') throw new Error('unreachable')
+      expect(result.rows).toEqual([
+        { territory: 'Philippines', distribution: 0.601 },
+        { territory: 'Others', distribution: 0.399 },
+      ])
+    })
   })
 
   it('throws when the CSV has no data rows', () => {

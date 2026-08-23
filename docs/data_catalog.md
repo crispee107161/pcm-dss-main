@@ -198,7 +198,7 @@ sep=,
 ```
 Line 1 is an Excel separator hint. Line 2 is the metric name — used to route the value into the correct DB column. Line 3 is the real header. The reader must skip 2 lines and route by the line-2 metric name.
 
-> ⚠️ **`Viewers` is not currently a recognised metric name.** `lib/csv/parse.ts`'s `METRIC_NAME_MAP` accepts `Facebook follows`/`Follows`, `Content interactions`/`Interactions`, `Facebook link clicks`/`Link clicks`, `Views`, but has no entry for `Viewers` (or `Facebook visits`'s bare form is `Visits`, which is covered). Uploading `Viewers (1).csv` today throws "Unknown page metric name." Add `Viewers` to the map before this file can be ingested.
+> ✅ **Fixed 2026-08-23.** `Viewers` is now mapped to a dedicated `viewers` column on `PageMetricDaily` (`METRIC_NAME_MAP` in `lib/csv/parse.ts`, migration `20260823144735_add_page_metric_viewers`). `Viewers (1).csv` ingests like the other 5 daily series. Note this is a distinct metric from the `PageViewers` table (fed by `Viewers.csv`, headers `Date,Total Viewers,New Viewers,Returning Viewers`) — the two disagree in value on overlapping dates (e.g. 2025-08-19: `PageViewers.total_viewers` = 5780 vs `PageMetricDaily.viewers` = 8876), so they are not duplicates and neither should be dropped in favor of the other. Unlike `views` (displayed on `app/dashboard/owner/page-metrics`), no dashboard currently reads `PageMetricDaily.viewers` — it is ingested only, pending a future FR.
 
 ### 3.2 `Audience.csv` — not a single table (UTF-16 LE)
 
@@ -220,7 +220,9 @@ Blocks 1–3 are demographic breakdowns with no FR currently depending on them �
 | `Gender.csv` | `Gender,Distribution` | Percent (0–100) | `Male,73.7` / `Female,26.3` |
 | `FollowerTopTerritories (1).csv` | `Top Territories,Distribution` | Fraction (0–1) | `Philippines,0.601` |
 
-> ⚠️ **Two problems, not one.** (1) `FollowerTopTerritories (1).csv` capitalises `Top Territories`; `lib/csv/detect.ts`'s signature requires lowercase `Top territories` and will not detect this file as-is. (2) The two files disagree on scale — `Gender.csv` is percent-form with no "Other" bucket (73.7 + 26.3 = 100 exactly), `FollowerTopTerritories` is fraction-form. A shared demographics validator must normalise both to one scale, not assume percent (the existing `validate-demographics.ts` fraction/percent auto-detection logic already handles this — verify it against these two files specifically before relying on it).
+> ✅ **Case-sensitivity problem fixed 2026-08-23.** `lib/csv/detect.ts` and `lib/csv/validate-demographics.ts` now match the `Top Territories`/`Top territories` column case-insensitively, so `FollowerTopTerritories (1).csv` detects and parses correctly regardless of export capitalization.
+>
+> The scale problem was already handled: `Gender.csv` is percent-form with no "Other" bucket (73.7 + 26.3 = 100 exactly), `FollowerTopTerritories` is fraction-form, and `validate-demographics.ts`'s fraction/percent auto-detection normalises both to one scale.
 
 No FR currently depends on demographic data; treat as dashboard display only, same as the current MVP scope.
 
