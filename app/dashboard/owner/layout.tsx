@@ -20,7 +20,11 @@ import UploadStatusBar from '@/components/upload/UploadStatusBar'
 const navItems: NavItem[] = [
   { section: 'Overview',        label: 'Executive Dashboard',   href: '/dashboard/owner',                    icon: 'home' },
   { section: 'Data',            label: 'Upload Data',           href: '/dashboard/owner/upload',             icon: 'upload' },
-  { section: 'Content',         label: 'Categorization Review', href: '/dashboard/owner/categorize',         icon: 'tag' },
+  // Renamed from "Categorization Review" — the route now serves the merged
+  // Content screen (docs/raven/Categorisation_Workflow_Consolidation.md §3,
+  // Phase 4 of docs/raven/Consolidation_Plan_Checklist.md), not just the
+  // review queue.
+  { section: 'Content',         label: 'Content',               href: '/dashboard/owner/categorize',         icon: 'tag' },
   // "Correlation" (the old ad-metrics-vs-messaging Spearman matrix, cut-era
   // code) is superseded by S7 Analysis (FR-19-22) — unlinked from the nav,
   // route file left on disk per this repo's convention for superseded pages.

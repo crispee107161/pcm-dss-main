@@ -13,19 +13,23 @@ import type { CategoryLabel } from '@/app/generated/prisma/client'
 // efficiency has no join key and is permanently out of scope). Categorisation
 // is organic-post-only.
 
+// docs/raven/Categorisation_Workflow_Consolidation.md §3 — Content Library and
+// Categorisation Review are one screen now (Phase 4 of
+// docs/raven/Consolidation_Plan_Checklist.md), reached via the same two
+// routes with a `?filter=` query param. `/dashboard/owner/content` and
+// `/dashboard/marketing/content` no longer render post data themselves
+// (the latter just redirects), so there's nothing left to revalidate there.
 function revalidateCategoryScreens() {
   revalidatePath('/dashboard/marketing/categorize')
-  revalidatePath('/dashboard/marketing/content')
   revalidatePath('/dashboard/owner/categorize')
-  revalidatePath('/dashboard/owner/content')
 }
 
 const GENERIC_ERROR = 'Something went wrong. Please try again.'
 
-// S3 Content Library + direct S4 override — Marketing Manager only (mvp.md
-// §3 S3/S4 permission grid: MM is the only "Full" role on both screens).
-// Setting the final label directly supersedes any pending team proposal, so
-// it's cleared here rather than left stale.
+// The one write path to category_final (Phase 4 §3.3 of the 22 Aug memo) —
+// used by both the queue's ManagerActionCell and the non-queue filters'
+// CategoryEditCell in components/marketing/ContentClient.tsx. Marketing
+// Manager only (mvp.md §3 S3/S4 permission grid: MM is the only "Full" role).
 export async function updatePostCategory(postId: number, label: CategoryLabel | null): Promise<{ error?: string }> {
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
@@ -34,14 +38,27 @@ export async function updatePostCategory(postId: number, label: CategoryLabel | 
   const userId = parseInt(session.user.id, 10)
 
   try {
-    const previous = await prisma.facebookPost.findUnique({ where: { id: postId }, select: { category_final: true } })
+    const previous = await prisma.facebookPost.findUnique({
+      where: { id: postId },
+      select: { category_final: true, category_final_source: true },
+    })
+
+    // Ground-truth rows are the external, blind-coded reference standard
+    // FR-15's kappa study is measured against — this is the one write path
+    // to category_final, so this is the one place that has to refuse. A
+    // legitimate correction belongs in scripts/import-ground-truth.ts, not
+    // an operational review action. Code review (2026-08-23) flagged that
+    // nothing previously stopped this; there is a matching client-side
+    // guard in CategoryEditCell (components/marketing/ContentClient.tsx),
+    // but that's UX only — this check is what actually protects the data.
+    if (previous?.category_final_source === 'MANUAL_GROUND_TRUTH') {
+      return { error: 'This post is part of the locked ground-truth set and cannot be edited here.' }
+    }
 
     await prisma.facebookPost.update({
       where: { id: postId },
       data: {
         category_final: label,
-        category_pending: null,
-        category_pending_by: null,
         category_final_source: label ? 'MANUAL_OVERRIDE' : null,
         category_final_assigned_by_id: label ? userId : null,
         category_final_assigned_at: label ? new Date() : null,
@@ -56,196 +73,6 @@ export async function updatePostCategory(postId: number, label: CategoryLabel | 
     return {}
   } catch {
     return { error: GENERIC_ERROR }
-  }
-}
-
-// FormData-compatible version for use with form action + .bind(null, postId) —
-// binding postId first leaves a (prevState, formData) signature, which is
-// what useActionState requires of its action.
-export async function updatePostCategoryForm(
-  postId: number,
-  _prev: { error?: string; success?: string } | null,
-  formData: FormData
-): Promise<{ error?: string; success?: string }> {
-  const raw = formData.get('categoryLabel')
-  const label = raw && raw !== '' ? (raw as CategoryLabel) : null
-  const result = await updatePostCategory(postId, label)
-  return result.error ? result : { success: 'Category updated.' }
-}
-
-// S4 Categorisation Review — MARKETING_TEAM proposes a label for a post still
-// awaiting a final category. Never touches category_final (mvp.md §3 item 2:
-// "Team members may propose a change; it stays pending until accepted").
-export async function proposePostCategory(postId: number, label: CategoryLabel): Promise<{ error?: string }> {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_TEAM') {
-    return { error: 'Unauthorized' }
-  }
-
-  const userId = parseInt(session.user.id, 10)
-  try {
-    await prisma.facebookPost.update({
-      where: { id: postId },
-      data: { category_pending: label, category_pending_by: userId },
-    })
-
-    await prisma.categoryAuditLog.create({
-      data: { user_id: userId, action: 'PROPOSE', facebook_post_id: postId, new_category: label },
-    })
-
-    revalidateCategoryScreens()
-    return {}
-  } catch {
-    return { error: GENERIC_ERROR }
-  }
-}
-
-export async function proposePostCategoryForm(
-  postId: number,
-  _prev: { error?: string; success?: string } | null,
-  formData: FormData
-): Promise<{ error?: string; success?: string }> {
-  const raw = formData.get('categoryLabel')
-  if (!raw || raw === '') return { error: 'Select a category before proposing.' }
-  const result = await proposePostCategory(postId, raw as CategoryLabel)
-  return result.error ? result : { success: 'Proposal submitted.' }
-}
-
-// S4 — Marketing Manager accepts a pending team proposal, copying it into
-// category_final and clearing the pending fields.
-export async function acceptPendingCategory(postId: number): Promise<{ error?: string }> {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
-    return { error: 'Unauthorized' }
-  }
-
-  try {
-    const post = await prisma.facebookPost.findUnique({
-      where: { id: postId },
-      select: { category_pending: true, category_final: true },
-    })
-    if (!post?.category_pending) {
-      return { error: 'No pending proposal on this post.' }
-    }
-
-    await prisma.facebookPost.update({
-      where: { id: postId },
-      data: {
-        category_final: post.category_pending,
-        category_pending: null,
-        category_pending_by: null,
-        category_final_source: 'ACCEPTED_SUGGESTION',
-        category_final_assigned_by_id: parseInt(session.user.id, 10),
-        category_final_assigned_at: new Date(),
-      },
-    })
-
-    await prisma.categoryAuditLog.create({
-      data: {
-        user_id: parseInt(session.user.id, 10), action: 'ACCEPT', facebook_post_id: postId,
-        previous_category: post.category_final, new_category: post.category_pending,
-      },
-    })
-
-    revalidateCategoryScreens()
-    return {}
-  } catch {
-    return { error: GENERIC_ERROR }
-  }
-}
-
-// S4 — Marketing Manager rejects a pending proposal without finalising it,
-// returning the post to the plain uncategorised queue.
-export async function rejectPendingCategory(postId: number): Promise<{ error?: string }> {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
-    return { error: 'Unauthorized' }
-  }
-
-  try {
-    const post = await prisma.facebookPost.findUnique({ where: { id: postId }, select: { category_pending: true } })
-
-    await prisma.facebookPost.update({
-      where: { id: postId },
-      data: { category_pending: null, category_pending_by: null },
-    })
-
-    await prisma.categoryAuditLog.create({
-      data: {
-        user_id: parseInt(session.user.id, 10), action: 'REJECT', facebook_post_id: postId,
-        previous_category: post?.category_pending ?? null, new_category: null,
-      },
-    })
-
-    revalidateCategoryScreens()
-    return {}
-  } catch {
-    return { error: GENERIC_ERROR }
-  }
-}
-
-export type BulkAcceptResult = { ok: true; accepted: number } | { ok: false; reason: string }
-
-// S4 bulk accept — every post currently carrying a pending proposal, or (when
-// the Manager has the review queue filtered/searched down) only the subset
-// visible in that filtered view. `postIds` is client-supplied scope, not
-// trust — it's ANDed onto the same eligibility query, so passing an
-// arbitrary id list can only narrow the result, never accept a post that
-// wasn't already pending.
-export async function bulkAcceptPendingCategories(postIds?: number[]): Promise<BulkAcceptResult> {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
-    return { ok: false, reason: 'Unauthorized' }
-  }
-
-  try {
-    const pendingPosts = await prisma.facebookPost.findMany({
-      where: {
-        category_pending: { not: null },
-        // Fails closed: an explicitly-passed empty array scopes to nothing,
-        // not "everything" — only an omitted (undefined) postIds means
-        // unscoped. An empty array reading as "no scope" would be a fail-open
-        // default on a category-finalizing write.
-        ...(postIds !== undefined ? { id: { in: postIds } } : {}),
-      },
-      select: { id: true, category_pending: true, category_final: true },
-    })
-    const userId = parseInt(session.user.id, 10)
-    const acceptedAt = new Date()
-
-    // Transacted so a mid-flight failure can't finalize categories without
-    // the matching audit rows (or vice versa) — this system's audit log is
-    // meant to be a complete decision record, not a best-effort one.
-    await prisma.$transaction([
-      ...pendingPosts.map((post) =>
-        prisma.facebookPost.update({
-          where: { id: post.id },
-          data: {
-            category_final: post.category_pending,
-            category_pending: null,
-            category_pending_by: null,
-            category_final_source: 'ACCEPTED_SUGGESTION',
-            category_final_assigned_by_id: userId,
-            category_final_assigned_at: acceptedAt,
-          },
-        })
-      ),
-      ...(pendingPosts.length > 0
-        ? [
-            prisma.categoryAuditLog.createMany({
-              data: pendingPosts.map((post) => ({
-                user_id: userId, action: 'BULK_ACCEPT' as const, facebook_post_id: post.id,
-                previous_category: post.category_final, new_category: post.category_pending,
-              })),
-            }),
-          ]
-        : []),
-    ])
-
-    revalidateCategoryScreens()
-    return { ok: true, accepted: pendingPosts.length }
-  } catch {
-    return { ok: false, reason: GENERIC_ERROR }
   }
 }
 
@@ -300,10 +127,10 @@ export type BatchConfirmResult = { ok: true; confirmed: number } | { ok: false; 
 
 // docs/raven/S4_Categorisation_Review_UI_Change.md §2.2 — "the agreed label
 // IS the batch-confirm value" for posts where both methods agree and no
-// other flag condition fired. category_pending is excluded even when it
-// happens to equal the agreed label — accept/reject already own that path,
-// and finalising it here too would double-write the audit trail.
-// `postIds` is client-supplied scope, not trust — see bulkAcceptPendingCategories.
+// other flag condition fired.
+// `postIds` is client-supplied scope, not trust — it's ANDed onto the same
+// eligibility query, so passing an arbitrary id list can only narrow the
+// result, never confirm a post that wasn't already eligible.
 export async function batchConfirmAgreed(postIds?: number[]): Promise<BatchConfirmResult> {
   const session = await auth()
   if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
@@ -314,7 +141,6 @@ export async function batchConfirmAgreed(postIds?: number[]): Promise<BatchConfi
     const candidates = await prisma.facebookPost.findMany({
       where: {
         category_final: null,
-        category_pending: null,
         // Fails closed: an explicitly-passed empty array scopes to nothing,
         // not "everything" — only an omitted (undefined) postIds means
         // unscoped. An empty array reading as "no scope" would be a fail-open

@@ -22,15 +22,3 @@ export const CATEGORY_LABEL_DISPLAY: Record<CategoryLabel, string> = {
   // (CODEBOOK_content_categories.md §5). Never produced by ALG-04/ALG-05.
   UNCLEAR: 'Unclear',
 }
-
-// SelectValue's default label lookup depends on the popup's SelectItems having
-// registered into base-ui's internal store, which only happens once the popup
-// has mounted (i.e. after the Select is opened at least once) — until then it
-// falls back to the raw value. Resolving the label ourselves keeps the
-// trigger text correct from first paint. `value` is `''` for the "— None —"
-// option, `null` when nothing is selected yet, and a raw CategoryLabel
-// string otherwise.
-export function categorySelectLabel(value: string | null): string {
-  if (value === null || value === '') return '— None —'
-  return CATEGORY_LABEL_DISPLAY[value as CategoryLabel] ?? value
-}

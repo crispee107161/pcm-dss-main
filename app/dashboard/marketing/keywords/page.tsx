@@ -17,7 +17,7 @@ export default async function KeywordsPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <PageHeader title="Manage Keywords" description="Keywords are used to auto-suggest categories for posts and ads" />
+      <PageHeader title="Keyword Lexicon" description="Fixed research baseline used to auto-suggest categories — view only, see docs/raven/FR08_Seed_Lexicon_Rerun_Results.md" />
       <KeywordsClient categories={categories} />
     </div>
   )

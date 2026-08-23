@@ -1,37 +1,57 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import {
   updatePostCategory,
-  proposePostCategoryForm,
-  acceptPendingCategory,
-  rejectPendingCategory,
-  bulkAcceptPendingCategories,
   batchConfirmAgreed,
   autoCategorizeAll,
 } from '@/actions/categorize'
 import { runLlmClassification } from '@/actions/classify-posts'
-import { CATEGORY_LABEL_DISPLAY, categorySelectLabel } from '@/lib/category-label'
 import { FLAG_REASON_SHORT, rankFlagReasons } from '@/lib/categorize/flag-reasons'
+import {
+  SELECTABLE_LABELS,
+  selectableLabelText,
+  categoryEditLabel,
+  suggestedCandidates,
+  agreedSuggestion,
+  isBatchConfirmEligible,
+} from '@/lib/categorize/category-picker'
+import type { ContentFilter } from '@/lib/categorize/content-filter'
 import { useCooldown } from '@/hooks/useCooldown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import type { CategoryLabel, CategoryFlagReason, Role } from '@/app/generated/prisma/client'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import type { CategoryLabel, CategoryFlagReason, CategoryFinalSource, Role } from '@/app/generated/prisma/client'
 
-// FR-13: only Product Showcase / Promotional Offer / Testimonial /
-// Entertainment are assignable manually. UNCLASSIFIED is a system-set
-// outcome (ALG-04/05 zero-match), not a manual choice.
-const ASSIGNABLE_LABELS: CategoryLabel[] = ['PRODUCT_SHOWCASE', 'PROMOTIONAL_OFFER', 'TESTIMONIAL', 'ENTERTAINMENT']
+// Re-exported so the categorize/page.tsx routes can import it alongside the
+// default export without a separate lib/ import line.
+export type { ContentFilter }
 
-// Same first-paint rationale as categorySelectLabel (lib/category-label.ts),
-// which it delegates to for everything except '' — this Select has no
-// "— None —" item, so an empty value means nothing has been proposed yet
-// and should resolve back to the placeholder text instead.
-function proposeCategoryLabel(value: string | null): string {
-  return value === '' || value === null ? 'Select category' : categorySelectLabel(value)
+export interface ContentPostRow {
+  id: number
+  title: string | null
+  permalink: string
+  post_type: string
+  publish_time: string
+  views: number | null
+  engagement_rate: number
+  // ALG-04 / ALG-05 suggestions (actions/categorize.ts, actions/classify-posts.ts).
+  // Stored separately per FR-15 — never copied into category_final automatically.
+  // Only meaningful on the "needs-review" filter — a post with a final
+  // category has left the queue these describe.
+  keywordSuggestion: CategoryLabel | null
+  llmSuggestion: CategoryLabel | null
+  // docs/raven/S4_Categorisation_Review_UI_Change.md §2.1/§3.2 — specific
+  // condition(s), rendered via FLAG_REASON_SHORT. Empty = unflagged.
+  flagReasons: CategoryFlagReason[]
+  category_final: CategoryLabel | null
+  category_final_source: CategoryFinalSource | null
+  assignedByEmail: string | null
+  assignedAt: string | null
 }
 
 // Client-side pacing floor, same rationale and value as Manage Keywords'
@@ -41,64 +61,24 @@ function proposeCategoryLabel(value: string | null): string {
 const LLM_COOLDOWN_SECONDS = 60
 const LLM_COOLDOWN_STORAGE_KEY = 'pcm-classify-llm-cooldown-until'
 
-export interface ReviewPostRow {
-  id: number
-  title: string | null
-  permalink: string
-  post_type: string
-  // ALG-04 / ALG-05 suggestions (actions/categorize.ts, actions/classify-posts.ts).
-  // Stored separately per FR-15 — never copied into category_final automatically.
-  keywordSuggestion: CategoryLabel | null
-  llmSuggestion: CategoryLabel | null
-  category_pending: CategoryLabel | null
-  // docs/raven/S4_Categorisation_Review_UI_Change.md §2.1/§3.2 — specific
-  // condition(s), rendered via FLAG_REASON_SHORT. Empty = unflagged.
-  flagReasons: CategoryFlagReason[]
-  pendingByEmail: string | null
-}
-
-// A suggestion usable as a select default must be one of the four assignable
-// labels — UNCLASSIFIED means "the method found nothing," not a category
-// choice, and UNCLEAR is ground-truth-only. Mirrors isUnflaggedAgreed's
-// ASSIGNABLE_LABELS membership check (lib/data/category-flags.ts) so
-// isBatchConfirmEligible below can't diverge from what the server actually
-// confirms.
-function assignableSuggestion(label: CategoryLabel | null): CategoryLabel | undefined {
-  return label && ASSIGNABLE_LABELS.includes(label) ? label : undefined
-}
-
-// Docs/raven/S4_Categorisation_Review_UI_Change.md §2.2: pre-select only when
-// there's nothing to referee — a human proposal, or both methods already
-// agreeing. A disagreement or a single-method suggestion must NOT be
-// pre-selected, or the Manager is nudged toward one method's answer.
-function agreedSuggestion(post: ReviewPostRow): CategoryLabel | undefined {
-  const keyword = assignableSuggestion(post.keywordSuggestion)
-  const llm = assignableSuggestion(post.llmSuggestion)
-  return keyword && llm && keyword === llm ? keyword : undefined
-}
-
-function defaultSelection(post: ReviewPostRow): CategoryLabel | '' {
-  return post.category_pending ?? agreedSuggestion(post) ?? ''
-}
-
-// Mirrors lib/data/category-flags.ts's isUnflaggedAgreed (server-only, can't
-// be imported into a client bundle) — kept in sync by both reading the same
-// three fields the same way, and by assignableSuggestion sharing its
-// ASSIGNABLE_LABELS membership check. Used only to size the "Batch confirm"
-// button; the action itself re-derives eligibility server-side before
-// writing.
-function isBatchConfirmEligible(post: ReviewPostRow): boolean {
-  return post.flagReasons.length === 0 && post.category_pending === null && agreedSuggestion(post) !== undefined
-}
-
 interface Props {
-  posts: ReviewPostRow[]
+  posts: ContentPostRow[]
   // mvp.md §3 S4 permission grid: Owner=View, Marketing Manager=Full
-  // (only role that finalises), Marketing Team=Suggest only.
+  // (only role that finalises), Marketing Team=Suggest only (view only on
+  // this screen since Phase 2 removed Propose).
   role: Role
+  filter: ContentFilter
 }
 
 const PAGE_SIZE = 50
+
+function fmtDate(iso: string) {
+  return new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(iso))
+}
+
+function fmtDateTime(iso: string) {
+  return new Intl.DateTimeFormat('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
+}
 
 function PaginationBar({
   page, pageCount, onPageChange,
@@ -175,37 +155,28 @@ function CategoryBadge({ label }: { label: CategoryLabel }) {
     // Ground-truth-only; never shown here in practice (S4 never assigns it), kept for exhaustiveness.
     UNCLEAR: 'bg-secondary text-muted-foreground border-border',
   }
+  // Routed through selectableLabelText (not CATEGORY_LABEL_DISPLAY directly)
+  // so UNCLASSIFIED reads "Unassigned" here too — code review caught this
+  // badge showing "Unclassified" to Owner/Team while the Manager's own
+  // picker and dropdown call the same value "Unassigned".
   return (
     <Badge className={`rounded-full h-auto py-0.5 px-2 text-xs font-medium ${colors[label]}`}>
-      {CATEGORY_LABEL_DISPLAY[label]}
+      {selectableLabelText(label)}
     </Badge>
   )
 }
 
-function PendingCell({ post }: { post: ReviewPostRow }) {
-  if (post.category_pending) {
-    return (
-      <span className="flex items-center gap-1.5">
-        <CategoryBadge label={post.category_pending} />
-        <span className="text-xs text-muted-foreground">
-          proposed{post.pendingByEmail ? ` by ${post.pendingByEmail}` : ''}
-        </span>
-      </span>
-    )
-  }
-  // Docs/raven/S4_Categorisation_Review_UI_Change.md §2.2: show suggestions
-  // as unlabelled candidates, deduped (agreement collapses to one badge) and
-  // in a consistent alphabetical order — never which method produced which.
+// Read-only display for Owner/Team (view-only roles — Phase 2 of
+// docs/raven/Consolidation_Plan_Checklist.md). The Manager's interactive
+// equivalent is CategoryPicker below, which reuses suggestedCandidates too.
+function SuggestionCell({ post }: { post: ContentPostRow }) {
   // docs/raven/S4_Presentation_Fix.md §3.1: when one method abstains
   // (UNCLASSIFIED), rendering it as a chip still leaks which method said
   // what — UNCLASSIFIED is unmistakably "the keyword method found nothing,"
   // not a candidate category, and can't be selected anyway. The abstention
   // is already communicated by the UNCLASSIFIED flag reason, so it's
-  // filtered out here via assignableSuggestion rather than shown as a chip.
-  const suggestions = Array.from(
-    new Set([assignableSuggestion(post.keywordSuggestion), assignableSuggestion(post.llmSuggestion)]
-      .filter((v): v is CategoryLabel => v !== undefined))
-  ).sort((a, b) => CATEGORY_LABEL_DISPLAY[a].localeCompare(CATEGORY_LABEL_DISPLAY[b]))
+  // filtered out here via suggestedCandidates rather than shown as a chip.
+  const suggestions = suggestedCandidates(post)
   if (suggestions.length === 0) {
     return <span className="text-muted-foreground text-xs">Uncategorized</span>
   }
@@ -218,233 +189,124 @@ function PendingCell({ post }: { post: ReviewPostRow }) {
   )
 }
 
-// Each role renders as its own component (rather than branching inside one
-// component) so a future per-role useActionState call is guaranteed to stay
-// unconditional — role-branching a single component with hooks inside each
-// branch would violate the rules of hooks the moment one is added there.
-function TeamProposeCell({ post }: { post: ReviewPostRow }) {
-  const boundAction = proposePostCategoryForm.bind(null, post.id)
-  const [proposeState, proposeAction, isProposing] = useActionState(boundAction, null)
+// A single radio-style option, styled as a pill matching CategoryBadge's
+// visual language. The input is a real <input type="radio"> (sr-only, not
+// display:none) so native keyboard nav (arrow keys between same-name
+// options) and focus-visible both keep working — only its box is hidden;
+// the visible pill is a sibling styled off its peer state.
+function CategoryOption({
+  name, value, text, checked, onSelect, disabled,
+}: { name: string; value: string; text: string; checked: boolean; onSelect: () => void; disabled?: boolean }) {
   return (
-    <div className="flex flex-col gap-1">
-      <form action={proposeAction} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        <Select name="categoryLabel" defaultValue={defaultSelection(post)}>
-          {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
-              with the selected label's length — keeps the submit button lined up
-              in a straight column across rows. */}
-          <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-48 h-7" size="sm">
-            {/* proposeCategoryLabel already resolves '' to "Select category", so
-                the placeholder prop below would never actually render. */}
-            <SelectValue>{proposeCategoryLabel}</SelectValue>
-          </SelectTrigger>
-          {/* alignItemWithTrigger={false}: base-ui's default popup positioning
-              overlays the list directly on top of the trigger, which spills the
-              list across the row below and visually collides with its submit
-              button. Normal dropdown positioning (opens below the trigger)
-              avoids that. Popup width stays default (== trigger width) — it
-              doesn't need to stretch over the button; base-ui's Select is
-              modal, so the button is inert while the popup is open anyway. */}
-          <SelectContent align="start" alignItemWithTrigger={false}>
-            {ASSIGNABLE_LABELS.map((label) => (
-              <SelectItem key={label} value={label} label={CATEGORY_LABEL_DISPLAY[label]}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
+    <label className="inline-flex">
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        onChange={onSelect}
+        disabled={disabled}
+        className="peer sr-only"
+      />
+      <span className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs cursor-pointer select-none transition-[background-color,border-color,color] border-border text-muted-foreground bg-card hover:border-foreground/30 hover:text-foreground peer-checked:bg-primary/10 peer-checked:border-primary peer-checked:text-primary peer-checked:font-medium peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed">
+        {text}
+      </span>
+    </label>
+  )
+}
+
+// docs/raven/Categorisation_Workflow_Consolidation.md §4.1 — both candidates
+// shown as selectable, unlabelled radio options when methods disagree
+// (previously only one was visible), nothing pre-selected, chip becomes the
+// radio option itself rather than a badge next to a separate dropdown.
+function CategoryPicker({
+  post, value, onChange, disabled,
+}: { post: ContentPostRow; value: CategoryLabel | ''; onChange: (label: CategoryLabel) => void; disabled?: boolean }) {
+  const suggested = suggestedCandidates(post)
+  const others = SELECTABLE_LABELS.filter((label) => !suggested.includes(label))
+  const groupName = `category-${post.id}`
+
+  return (
+    <div className="flex flex-col gap-2">
+      {suggested.length > 0 && (
+        <div>
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Suggested for this post</p>
+          <div className="flex flex-wrap gap-1.5">
+            {suggested.map((label) => (
+              <CategoryOption key={label} name={groupName} value={label} text={selectableLabelText(label)}
+                checked={value === label} onSelect={() => onChange(label)} disabled={disabled} />
             ))}
-          </SelectContent>
-        </Select>
-        <Button type="submit" size="sm" disabled={isProposing} className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3">
-          {isProposing ? 'Saving…' : post.category_pending ? 'Update proposal' : 'Propose'}
-        </Button>
-      </form>
-      {proposeState?.error && (
-        <span role="alert" className="text-status-negative text-xs">{proposeState.error}</span>
+          </div>
+        </div>
       )}
+      <div>
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+          {suggested.length > 0 ? 'Other categories' : 'Categories'}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {others.map((label) => (
+            <CategoryOption key={label} name={groupName} value={label} text={selectableLabelText(label)}
+              checked={value === label} onSelect={() => onChange(label)} disabled={disabled} />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
 
-// MARKETING_MANAGER — full: accept/reject a pending proposal, or override
-// directly. When a pending proposal exists, the override form starts
-// collapsed behind a toggle so Accept/Reject reads as the default path and
-// override as the deliberate exception — showing both a full Select+button
-// form and Accept/Reject side by side left every row asking the Manager to
-// re-parse "am I accepting, or overriding?" (impeccable critique, P2).
-// Accept, Reject, and Override all confirm before writing, matching the
-// confirmation gate on the two bulk actions (though not their close timing —
-// the bulk dialogs close before the transition, these close after). Reject
-// doesn't write category_final like the other three (it only clears the
-// pending proposal), but it still discards a teammate's proposed label with
-// no undo, so it gets the same gate — none of the three should be a single
-// unconfirmed click (evaluate audit, P1: Accept had been the one path left
-// with no safety net; Reject was found missing the same gate later).
-function ManagerActionCell({ post }: { post: ReviewPostRow }) {
+// MARKETING_MANAGER — the queue's write path now that Propose is gone (Phase
+// 2). §4.2/§4.3 of the 22 Aug memo: "Override" no longer labels the primary
+// action (reserved for the non-queue filters' CategoryEditCell below), one
+// "Save category" button enabled once a selection exists, header reads
+// "Suggested" with no method attribution. Nothing pre-selected (§4.1) — an
+// empty starting value, never agreedSuggestion, or the Manager is nudged
+// toward one method's answer even on a flagged post. Confirmation gate
+// matches the two bulk actions (evaluate audit, P1) — this isn't a single
+// unconfirmed click.
+function ManagerActionCell({ post }: { post: ContentPostRow }) {
   const [isPending, startTransition] = useTransition()
   const [rowError, setRowError] = useState<string | null>(null)
-  const [overrideValue, setOverrideValue] = useState<CategoryLabel | ''>(defaultSelection(post))
-  // Derived, not snapshotted: this component instance survives across a
-  // Reject's revalidate (ReviewTable keys by post.id), so a plain
-  // useState(post.category_pending === null) would freeze at its mount-time
-  // value — after Reject clears category_pending, the toggle block above
-  // unmounts and this stayed false, leaving the row with no controls at all.
-  const [overrideExpanded, setOverrideExpanded] = useState(false)
-  const showOverrideForm = overrideExpanded || post.category_pending === null
-  const [confirmAcceptOpen, setConfirmAcceptOpen] = useState(false)
-  const [confirmRejectOpen, setConfirmRejectOpen] = useState(false)
-  const [confirmOverrideOpen, setConfirmOverrideOpen] = useState(false)
-  // Same "survives across a revalidate" hazard as overrideExpanded above,
-  // for the three confirm dialogs: a dialog left open (e.g. Manager opens
-  // Reject, then a bulk action elsewhere revalidates this row and clears
-  // category_pending) is never told to close — the Accept/Reject block just
-  // unmounts around it. If category_pending then goes non-null again (a new
-  // proposal), the block remounts with the stale `true` still on this
-  // instance's state and the dialog pops back open unprompted, referring to
-  // a proposal the Manager never clicked on. Reset on any change to the
-  // value a dialog's copy is actually about.
-  useEffect(() => {
-    setConfirmAcceptOpen(false)
-    setConfirmRejectOpen(false)
-    setConfirmOverrideOpen(false)
-  }, [post.category_pending])
+  const [selected, setSelected] = useState<CategoryLabel | ''>('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
-  function handleAccept() {
+  function handleSave() {
     setRowError(null)
     startTransition(async () => {
-      const res = await acceptPendingCategory(post.id)
-      setConfirmAcceptOpen(false)
-      if (res.error) setRowError(res.error)
-    })
-  }
-
-  function handleReject() {
-    setRowError(null)
-    startTransition(async () => {
-      const res = await rejectPendingCategory(post.id)
-      setConfirmRejectOpen(false)
-      if (res.error) setRowError(res.error)
-    })
-  }
-
-  function handleOverride() {
-    setRowError(null)
-    startTransition(async () => {
-      const res = await updatePostCategory(post.id, overrideValue || null)
-      setConfirmOverrideOpen(false)
+      const res = await updatePostCategory(post.id, selected || null)
+      setConfirmOpen(false)
       if (res.error) setRowError(res.error)
     })
   }
 
   return (
     <div className="flex flex-col gap-2">
-      {post.category_pending && (
-        <div className="flex items-center gap-2">
-          <Dialog open={confirmAcceptOpen} onOpenChange={setConfirmAcceptOpen}>
-            <DialogTrigger
-              disabled={isPending}
-              render={<Button type="button" size="sm" className="text-xs h-7 px-3" />}
-            >
-              Accept
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Finalize as &ldquo;{categorySelectLabel(post.category_pending)}&rdquo;?</DialogTitle>
-                <DialogDescription>
-                  This finalizes the category directly. It can&apos;t be undone from here — a finalized post can only be changed afterward from the Content Library, one at a time.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setConfirmAcceptOpen(false)} className="text-xs">
-                  Cancel
-                </Button>
-                <Button type="button" disabled={isPending} onClick={handleAccept} className="text-xs">
-                  {isPending ? 'Saving…' : 'Confirm'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Dialog open={confirmRejectOpen} onOpenChange={setConfirmRejectOpen}>
-            <DialogTrigger
-              disabled={isPending}
-              render={<Button type="button" size="sm" variant="outline" className="text-xs h-7 px-3" />}
-            >
-              Reject
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Discard the proposed &ldquo;{categorySelectLabel(post.category_pending)}&rdquo; category?</DialogTitle>
-                <DialogDescription>
-                  This clears the pending proposal and sends the post back to needing review. It can&apos;t be undone from here.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setConfirmRejectOpen(false)} className="text-xs">
-                  Cancel
-                </Button>
-                <Button type="button" disabled={isPending} onClick={handleReject} className="text-xs">
-                  {isPending ? 'Saving…' : 'Confirm'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          {!showOverrideForm && (
-            <button
-              type="button"
-              onClick={() => setOverrideExpanded(true)}
-              className="text-xs text-primary hover:underline"
-            >
-              Choose a different category
-            </button>
-          )}
-        </div>
-      )}
-      {showOverrideForm && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <Select value={overrideValue} onValueChange={(v) => setOverrideValue(v as CategoryLabel | '')}>
-            {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
-                with the selected label's length — keeps the "Override & finalize"
-                button lined up in a straight column across rows. */}
-            <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-48 h-7" size="sm">
-              {/* categorySelectLabel already resolves '' to "— None —", so the
-                  placeholder prop below would never actually render. */}
-              <SelectValue>{categorySelectLabel}</SelectValue>
-            </SelectTrigger>
-            {/* alignItemWithTrigger={false}: base-ui's default popup positioning
-                overlays the list directly on top of the trigger, which spills the
-                list across the row below and visually collides with its "Override
-                & finalize" button. Normal dropdown positioning (opens below the
-                trigger) avoids that. Popup width stays default (== trigger width)
-                — it doesn't need to stretch over the button; base-ui's Select is
-                modal, so the button is inert while the popup is open anyway. */}
-            <SelectContent align="start" alignItemWithTrigger={false}>
-              <SelectItem value="" label="— None —">— None —</SelectItem>
-              {ASSIGNABLE_LABELS.map((label) => (
-                <SelectItem key={label} value={label} label={CATEGORY_LABEL_DISPLAY[label]}>{CATEGORY_LABEL_DISPLAY[label]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Dialog open={confirmOverrideOpen} onOpenChange={setConfirmOverrideOpen}>
-            <DialogTrigger
-              disabled={isPending}
-              render={<Button type="button" size="sm" variant="outline" className="text-xs whitespace-nowrap h-7 px-3" />}
-            >
-              Override & finalize
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Finalize as &ldquo;{categorySelectLabel(overrideValue)}&rdquo;?</DialogTitle>
-                <DialogDescription>
-                  This finalizes the category directly. It can&apos;t be undone from here — a finalized post can only be changed afterward from the Content Library, one at a time.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setConfirmOverrideOpen(false)} className="text-xs">
-                  Cancel
-                </Button>
-                <Button type="button" disabled={isPending} onClick={handleOverride} className="text-xs">
-                  {isPending ? 'Saving…' : 'Confirm'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
+      <CategoryPicker post={post} value={selected} onChange={setSelected} disabled={isPending} />
+      <div>
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogTrigger
+            disabled={isPending || selected === ''}
+            render={<Button type="button" size="sm" className="text-xs h-7 px-3" />}
+          >
+            Save category
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Finalize as &ldquo;{selected ? selectableLabelText(selected) : ''}&rdquo;?</DialogTitle>
+              <DialogDescription>
+                This finalizes the category directly. It can&apos;t be undone from here — a finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)} className="text-xs">
+                Cancel
+              </Button>
+              <Button type="button" disabled={isPending} onClick={handleSave} className="text-xs">
+                {isPending ? 'Saving…' : 'Confirm'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
       {rowError && (
         <span role="alert" className="text-status-negative text-xs">{rowError}</span>
       )}
@@ -456,7 +318,7 @@ function ManagerActionCell({ post }: { post: ReviewPostRow }) {
 // as an undifferentiated wall of warnings across rows. Show only the
 // highest-ranked (most informative) reason, with the rest available on
 // demand rather than always visible.
-function FlagReasonCell({ post }: { post: ReviewPostRow }) {
+function FlagReasonCell({ post }: { post: ContentPostRow }) {
   const [expanded, setExpanded] = useState(false)
 
   if (post.flagReasons.length === 0) {
@@ -499,27 +361,14 @@ function FlagReasonCell({ post }: { post: ReviewPostRow }) {
   )
 }
 
-function ActionCell({ post, role }: { post: ReviewPostRow; role: Role }) {
-  if (role === 'BUSINESS_OWNER') {
-    return <span className="text-muted-foreground text-xs">View only</span>
-  }
-  if (role === 'MARKETING_TEAM') {
-    return <TeamProposeCell post={post} />
-  }
-  return <ManagerActionCell post={post} />
-}
-
 // docs/raven/S4_Presentation_Fix.md §4 — one card per post instead of a
-// five-column table row. The table spread "View post," the suggestion
-// chips, and the review reason across separate columns that could be a
-// full row-width apart; a card keeps them in one visual block so, e.g.,
-// the reason line and the action control read together instead of
-// requiring a left-to-right scan. Suggested-category input stays the
-// existing Select (ManagerActionCell/TeamProposeCell), not the mockup's
-// literal radio buttons — same rationale as
-// docs/raven/S4_Categorisation_Review_UI_Change.md §2.2's badge+Select
-// choice: same no-attribution/no-forced-pick effect, already-built control.
-function ReviewCard({ post, role }: { post: ReviewPostRow; role: Role }) {
+// five-column table row, kept for the "needs-review" filter. For
+// MARKETING_MANAGER, Phase 3 (§4 of the 22 Aug memo) replaces the old
+// "Suggested" display row + separate action row with one block: the
+// suggestion chips are themselves the category picker now, so there's
+// nothing left to show read-only above it.
+function ReviewCard({ post, role }: { post: ContentPostRow; role: Role }) {
+  const isManager = role === 'MARKETING_MANAGER'
   return (
     <div className="px-4 py-4 border-t border-border first:border-t-0 hover:bg-secondary transition-colors">
       <div className="flex items-start justify-between gap-3">
@@ -538,19 +387,27 @@ function ReviewCard({ post, role }: { post: ReviewPostRow; role: Role }) {
       </div>
 
       <div className="mt-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Suggested / Pending</p>
-        <PendingCell post={post} />
+        <FlagReasonCell post={post} />
       </div>
 
-      <div className="mt-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-        <div className="min-w-0 flex-1"><FlagReasonCell post={post} /></div>
-        <div className="shrink-0"><ActionCell post={post} role={role} /></div>
-      </div>
+      {isManager ? (
+        <div className="mt-3">
+          <ManagerActionCell post={post} />
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Suggested</p>
+            <SuggestionCell post={post} />
+          </div>
+          <div className="shrink-0"><span className="text-muted-foreground text-xs">View only</span></div>
+        </div>
+      )}
     </div>
   )
 }
 
-function ReviewTable({ posts, role }: { posts: ReviewPostRow[]; role: Role }) {
+function ReviewTable({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
   if (posts.length === 0) {
     return (
       <div className="p-12 text-center text-muted-foreground text-sm">
@@ -586,19 +443,20 @@ const FLAG_FILTER_OPTIONS: { value: FlagFilter; label: string }[] = [
   { value: 'SHORT_CAPTION', label: 'Short caption' },
 ]
 
-function matchesFlagFilter(post: ReviewPostRow, filter: FlagFilter): boolean {
+function matchesFlagFilter(post: ContentPostRow, filter: FlagFilter): boolean {
   if (filter === 'ALL') return true
   if (filter === 'FLAGGED') return post.flagReasons.length > 0
   if (filter === 'UNFLAGGED') return post.flagReasons.length === 0
   return post.flagReasons.includes(filter)
 }
 
-export default function CategorizeClient({ posts, role }: Props) {
+// The "needs-review" filter's view — the old CategorizeClient body, unchanged
+// in behavior. Only rendered when filter === 'needs-review', so `posts` here
+// is always already scoped server-side to category_final: null.
+function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
   const [isPending, startTransition] = useTransition()
   const [autoResult, setAutoResult] = useState<{ posts: number } | null>(null)
   const [autoError, setAutoError] = useState<string | null>(null)
-  const [bulkResult, setBulkResult] = useState<{ accepted: number } | null>(null)
-  const [bulkError, setBulkError] = useState<string | null>(null)
   const [batchConfirmResult, setBatchConfirmResult] = useState<{ confirmed: number } | null>(null)
   const [batchConfirmError, setBatchConfirmError] = useState<string | null>(null)
   const [llmResult, setLlmResult] = useState<string | null>(null)
@@ -611,11 +469,9 @@ export default function CategorizeClient({ posts, role }: Props) {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [flagFilter, setFlagFilter] = useState<FlagFilter>('ALL')
-  const [confirmBulkOpen, setConfirmBulkOpen] = useState(false)
   const [confirmBatchOpen, setConfirmBatchOpen] = useState(false)
   const { secondsLeft: llmCooldown, begin: beginLlmCooldown } = useCooldown(LLM_COOLDOWN_STORAGE_KEY)
 
-  const pendingCount = posts.filter((p) => p.category_pending !== null).length
   const batchConfirmCount = posts.filter(isBatchConfirmEligible).length
 
   const filteredPosts = useMemo(() => {
@@ -631,15 +487,12 @@ export default function CategorizeClient({ posts, role }: Props) {
   const pagedPosts = filteredPosts.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE)
   const isFiltered = search.trim() !== '' || flagFilter !== 'ALL'
 
-  // Bulk actions default to the active filter's scope (impeccable critique,
-  // P1) — "Accept all pending" sitting directly above a filtered view
-  // previously accepted everything in the whole queue, not what was visible.
-  // When unfiltered, filtered === full queue, so behavior is unchanged.
-  const pendingIdsInView = filteredPosts.filter((p) => p.category_pending !== null).map((p) => p.id)
+  // Batch confirm defaults to the active filter's scope (impeccable critique,
+  // P1) — sitting directly above a filtered view previously confirmed
+  // everything in the whole queue, not what was visible. When unfiltered,
+  // filtered === full queue, so behavior is unchanged.
   const batchConfirmIdsInView = filteredPosts.filter(isBatchConfirmEligible).map((p) => p.id)
-  const pendingCountInView = pendingIdsInView.length
   const batchConfirmCountInView = batchConfirmIdsInView.length
-  const pendingCountOutsideView = pendingCount - pendingCountInView
   const batchConfirmCountOutsideView = batchConfirmCount - batchConfirmCountInView
 
   function updateSearch(value: string) {
@@ -662,12 +515,6 @@ export default function CategorizeClient({ posts, role }: Props) {
   }, [autoResult, autoError])
 
   useEffect(() => {
-    if (!bulkResult && !bulkError) return
-    const timer = setTimeout(() => { setBulkResult(null); setBulkError(null) }, MESSAGE_AUTO_DISMISS_MS)
-    return () => clearTimeout(timer)
-  }, [bulkResult, bulkError])
-
-  useEffect(() => {
     if (!batchConfirmResult && !batchConfirmError) return
     const timer = setTimeout(() => { setBatchConfirmResult(null); setBatchConfirmError(null) }, MESSAGE_AUTO_DISMISS_MS)
     return () => clearTimeout(timer)
@@ -678,7 +525,6 @@ export default function CategorizeClient({ posts, role }: Props) {
   // sitting in the header while a new one renders next to them.
   function clearAllMessages() {
     setAutoResult(null); setAutoError(null)
-    setBulkResult(null); setBulkError(null)
     setBatchConfirmResult(null); setBatchConfirmError(null)
   }
 
@@ -688,16 +534,6 @@ export default function CategorizeClient({ posts, role }: Props) {
       const res = await autoCategorizeAll()
       if (res.ok) setAutoResult({ posts: res.posts })
       else setAutoError(res.reason)
-    })
-  }
-
-  function handleBulkAccept(scopeToView: boolean) {
-    clearAllMessages()
-    setConfirmBulkOpen(false)
-    startTransition(async () => {
-      const res = await bulkAcceptPendingCategories(scopeToView ? pendingIdsInView : undefined)
-      if (res.ok) setBulkResult({ accepted: res.accepted })
-      else setBulkError(res.reason)
     })
   }
 
@@ -754,7 +590,6 @@ export default function CategorizeClient({ posts, role }: Props) {
           <h2 className="font-semibold text-foreground">Uncategorized Posts</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             {isFiltered ? `${filteredPosts.length} of ${posts.length} in queue` : `${posts.length} in queue`}
-            {pendingCount > 0 ? ` · ${pendingCount} pending review` : ''}
           </p>
         </div>
 
@@ -767,16 +602,6 @@ export default function CategorizeClient({ posts, role }: Props) {
           {autoError && (
             <p role="alert" className="animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
               {autoError}
-            </p>
-          )}
-          {bulkResult && (
-            <p className="animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
-              Accepted {bulkResult.accepted} proposal{bulkResult.accepted !== 1 ? 's' : ''}
-            </p>
-          )}
-          {bulkError && (
-            <p role="alert" className="animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
-              {bulkError}
             </p>
           )}
           {batchConfirmResult && (
@@ -799,36 +624,6 @@ export default function CategorizeClient({ posts, role }: Props) {
             </p>
           )}
 
-          {role === 'MARKETING_MANAGER' && pendingCountInView > 0 && (
-            <Dialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
-              <DialogTrigger
-                disabled={isPending}
-                render={<Button type="button" size="sm" className="text-xs h-8 px-3" />}
-              >
-                {isFiltered ? `Accept pending in view (${pendingCountInView})` : `Accept all pending (${pendingCountInView})`}
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Accept {pendingCountInView} pending proposal{pendingCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
-                  <DialogDescription>
-                    This finalizes the category for every post a Team member has proposed on{isFiltered ? ' that matches your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the Content Library, one at a time.
-                    {isFiltered && pendingCountOutsideView > 0 && (
-                      <> {pendingCountOutsideView} more pending proposal{pendingCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to accept everything.</>
-                    )}
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setConfirmBulkOpen(false)} className="text-xs">
-                    Cancel
-                  </Button>
-                  <Button type="button" onClick={() => handleBulkAccept(isFiltered)} className="text-xs">
-                    Accept {pendingCountInView}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-
           {role === 'MARKETING_MANAGER' && batchConfirmCountInView > 0 && (
             <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
               <DialogTrigger
@@ -841,7 +636,7 @@ export default function CategorizeClient({ posts, role }: Props) {
                 <DialogHeader>
                   <DialogTitle>Confirm {batchConfirmCountInView} unflagged, agreed post{batchConfirmCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
                   <DialogDescription>
-                    Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the Content Library, one at a time.
+                    Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
                     {isFiltered && batchConfirmCountOutsideView > 0 && (
                       <> {batchConfirmCountOutsideView} more eligible post{batchConfirmCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to confirm everything.</>
                     )}
@@ -939,7 +734,7 @@ export default function CategorizeClient({ posts, role }: Props) {
             </svg>
           </div>
           <p className="text-sm font-semibold text-foreground mb-1">All caught up</p>
-          <p className="text-xs text-muted-foreground max-w-[240px]">Every post has a final category. Reassign from the Content Library if needed.</p>
+          <p className="text-xs text-muted-foreground max-w-[240px]">Every post has a final category. Switch to the &ldquo;All&rdquo; filter to reassign one if needed.</p>
         </div>
       ) : filteredPosts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-card rounded-2xl card-shadow">
@@ -955,16 +750,261 @@ export default function CategorizeClient({ posts, role }: Props) {
         </div>
       )}
 
-      {role === 'MARKETING_TEAM' && (
-        <p className="text-xs text-muted-foreground mt-3">
-          Proposals stay pending until a Marketing Manager accepts them.
-        </p>
-      )}
       {role === 'MARKETING_MANAGER' && (
         <p className="text-xs text-muted-foreground mt-3">
           Keywords configured in{' '}
           <a href="/dashboard/marketing/keywords" className="text-primary hover:underline">Manage Keywords</a>.
         </p>
+      )}
+    </div>
+  )
+}
+
+const CATEGORY_FINAL_SOURCE_DISPLAY: Record<CategoryFinalSource, string> = {
+  MANUAL_GROUND_TRUTH: 'Ground truth import',
+  ACCEPTED_SUGGESTION: 'Accepted suggestion',
+  MANUAL_OVERRIDE: 'Manual selection',
+}
+
+// docs/raven/Categorisation_Workflow_Consolidation.md §3.2 — shown on the
+// non-queue filters ("who set it and when"). A post can have a
+// category_final_source without the assignedBy/assignedAt pair (the ground
+// truth import stamps neither), so those two lines are independent.
+function ProvenanceCell({ post }: { post: ContentPostRow }) {
+  if (!post.category_final_source) {
+    return <span className="text-muted-foreground text-xs">—</span>
+  }
+  return (
+    <div className="text-xs text-muted-foreground">
+      <div>{CATEGORY_FINAL_SOURCE_DISPLAY[post.category_final_source]}</div>
+      {post.assignedByEmail && post.assignedAt && (
+        <div>{post.assignedByEmail} · {fmtDateTime(post.assignedAt)}</div>
+      )}
+    </div>
+  )
+}
+
+// The non-queue filters' (All / Categorised / Unassigned) category control —
+// a dropdown covering every SELECTABLE_LABELS value plus "— None —" to
+// clear it back to Uncategorized, same behavior the old standalone Content
+// Library had. Distinct from the queue's ManagerActionCell/CategoryPicker:
+// this is an edit on an already-decided (or never-decided) post, not a
+// triage decision, so a plain dropdown is the right control here.
+// The ground-truth 200 (category_final_source === 'MANUAL_GROUND_TRUTH') are
+// the external, blind-coded reference standard FR-15's kappa study is
+// measured against — this screen must never be a way to edit one, even by
+// accident. Code review (2026-08-23) flagged that the "Categorised" filter
+// puts a Save button directly next to a "Ground truth import" provenance
+// label, which is exactly the accident this guards against. The real
+// enforcement is server-side (updatePostCategory refuses the write); this is
+// the client half so the control doesn't even render as editable.
+function CategoryEditCell({ post, canEdit }: { post: ContentPostRow; canEdit: boolean }) {
+  const [isPending, startTransition] = useTransition()
+  const [value, setValue] = useState<CategoryLabel | ''>(post.category_final ?? '')
+  const [error, setError] = useState<string | null>(null)
+  const isGroundTruth = post.category_final_source === 'MANUAL_GROUND_TRUTH'
+
+  if (!canEdit || isGroundTruth) {
+    return post.category_final ? (
+      <div className="flex items-center gap-1.5">
+        <CategoryBadge label={post.category_final} />
+        {isGroundTruth && <span className="text-[10px] text-muted-foreground">locked — ground truth</span>}
+      </div>
+    ) : (
+      <span className="text-muted-foreground text-xs">Uncategorized</span>
+    )
+  }
+
+  function handleSave() {
+    setError(null)
+    startTransition(async () => {
+      const res = await updatePostCategory(post.id, value || null)
+      if (res.error) setError(res.error)
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <Select value={value} onValueChange={(v) => setValue(v as CategoryLabel | '')}>
+          {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
+              with the selected label's length — keeps the Save button lined up
+              in a straight column across rows. */}
+          <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-48 h-7" size="sm">
+            <SelectValue>{categoryEditLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start" alignItemWithTrigger={false}>
+            <SelectItem value="" label="— None —">— None —</SelectItem>
+            {SELECTABLE_LABELS.map((label) => (
+              <SelectItem key={label} value={label} label={selectableLabelText(label)}>{selectableLabelText(label)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" size="sm" disabled={isPending} onClick={handleSave}
+          className="bg-primary hover:bg-primary/90 text-white text-xs whitespace-nowrap h-7 px-3">
+          {isPending ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+      {error && <span role="alert" className="text-status-negative text-[11px]">{error}</span>}
+    </div>
+  )
+}
+
+// The "All" / "Categorised" / "Unassigned" filters' view — the old
+// ContentLibraryClient's table, extended with a Provenance column
+// (docs/raven/Categorisation_Workflow_Consolidation.md §3.2). Search is
+// carried over from Content Library's requirement; a post-type filter is
+// NOT included — despite the memo describing one as already existing on
+// Content Library "today," the pre-merge component (git history) never had
+// one, so there's nothing to carry over. Flagged to Raven rather than
+// invented.
+function LibraryTable({ posts, canEdit }: { posts: ContentPostRow[]; canEdit: boolean }) {
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+
+  const filteredPosts = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return posts
+    return posts.filter((post) => (post.title ?? '').toLowerCase().includes(query))
+  }, [posts, search])
+
+  const pageCount = Math.max(1, Math.ceil(filteredPosts.length / PAGE_SIZE))
+  const clampedPage = Math.min(page, pageCount)
+  const pagedPosts = filteredPosts.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE)
+  const isFiltered = search.trim() !== ''
+
+  function updateSearch(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
+
+  if (posts.length === 0) {
+    return (
+      <div className="bg-card rounded-2xl card-shadow overflow-hidden p-12 text-center text-muted-foreground text-sm">
+        No organic posts uploaded yet.
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <Input
+          type="search"
+          value={search}
+          onChange={(e) => updateSearch(e.target.value)}
+          placeholder="Search by title…"
+          aria-label="Search posts by title"
+          className="h-8 max-w-xs text-xs"
+        />
+        {isFiltered && (
+          <button type="button" onClick={() => updateSearch('')} className="text-xs text-primary hover:underline">
+            Clear search
+          </button>
+        )}
+      </div>
+
+      {filteredPosts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-card rounded-2xl card-shadow">
+          <p className="text-sm font-semibold text-foreground mb-1">No posts match your search</p>
+          <button type="button" onClick={() => updateSearch('')} className="text-xs text-primary hover:underline mt-1">
+            Clear search
+          </button>
+        </div>
+      ) : (
+        <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-secondary/50">
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Post Details</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Date</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 text-right">Views</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 text-right">Engagement</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Category</TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Provenance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pagedPosts.map((post) => (
+                <TableRow key={post.id} className="hover:bg-secondary/50 border-t border-border">
+                  <TableCell className="px-4 py-3 max-w-xs">
+                    {post.title ? (
+                      <div className="font-medium text-foreground text-sm truncate" title={post.title}>{post.title}</div>
+                    ) : (
+                      <span className="text-muted-foreground text-xs italic">No title</span>
+                    )}
+                    <a href={post.permalink} target="_blank" rel="noopener noreferrer"
+                      className="text-primary hover:text-primary/80 hover:underline text-xs mt-0.5 inline-block">
+                      View post ↗
+                    </a>
+                  </TableCell>
+                  <TableCell className="px-4 py-3"><TypeBadge type={post.post_type} /></TableCell>
+                  <TableCell className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmtDate(post.publish_time)}</TableCell>
+                  <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.views !== null ? post.views.toLocaleString() : '—'}</TableCell>
+                  <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right">{post.engagement_rate.toFixed(2)}%</TableCell>
+                  <TableCell className="px-4 py-3"><CategoryEditCell post={post} canEdit={canEdit} /></TableCell>
+                  <TableCell className="px-4 py-3"><ProvenanceCell post={post} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <PaginationBar page={clampedPage} pageCount={pageCount} onPageChange={setPage} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+const CONTENT_FILTER_OPTIONS: { value: ContentFilter; label: string }[] = [
+  { value: 'needs-review', label: 'Needs Review' },
+  { value: 'all', label: 'All' },
+  { value: 'categorised', label: 'Categorised' },
+  { value: 'unassigned', label: 'Unassigned' },
+]
+
+// docs/raven/Categorisation_Workflow_Consolidation.md §3.4 — filter state
+// lives in the query string, not component state, so the view is
+// bookmarkable and deep-linkable. router.push (not replace) so Back steps
+// through filter changes rather than skipping them.
+function FilterTabs({ current }: { current: ContentFilter }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  return (
+    <div className="flex items-center gap-1 mb-4 border-b border-border overflow-x-auto">
+      {CONTENT_FILTER_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => router.push(`${pathname}?filter=${opt.value}`)}
+          className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t ${
+            current === opt.value
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// docs/raven/Categorisation_Workflow_Consolidation.md §3 — Content Library
+// and Categorisation Review merged into one component, switched by `filter`
+// (Phase 4 of docs/raven/Consolidation_Plan_Checklist.md). `key={filter}` on
+// each view resets its local UI state (search, page, flag filter) on every
+// filter switch, since a fresh server fetch means the old in-view state
+// (e.g. a page number past the new post count) no longer applies.
+export default function ContentClient({ posts, role, filter }: Props) {
+  const canEdit = role === 'MARKETING_MANAGER'
+  return (
+    <div>
+      <FilterTabs current={filter} />
+      {filter === 'needs-review' ? (
+        <QueueView key="needs-review" posts={posts} role={role} />
+      ) : (
+        <LibraryTable key={filter} posts={posts} canEdit={canEdit} />
       )}
     </div>
   )

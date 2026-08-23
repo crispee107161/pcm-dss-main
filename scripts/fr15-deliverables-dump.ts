@@ -29,14 +29,13 @@ async function main() {
   })
   console.log(provenance)
 
-  // --- total posts, category_pending count (C3 partial) ---
+  // --- total posts (C3 partial) ---
   const totalPosts = await prisma.facebookPost.count()
-  const pendingCount = await prisma.facebookPost.count({ where: { category_pending: { not: null } } })
   const finalSetCount = await prisma.facebookPost.count({ where: { category_final: { not: null } } })
   const keywordSetCount = await prisma.facebookPost.count({ where: { category_keyword: { not: null } } })
   const llmSetCount = await prisma.facebookPost.count({ where: { category_llm: { not: null } } })
   console.log('\n=== COUNTS ===')
-  console.log({ totalPosts, pendingCount, finalSetCount, keywordSetCount, llmSetCount })
+  console.log({ totalPosts, finalSetCount, keywordSetCount, llmSetCount })
 
   // --- C1: final category distribution across all posts ---
   console.log('\n=== FINAL CATEGORY DISTRIBUTION (all posts) ===')
@@ -117,13 +116,6 @@ async function main() {
   }
   fs.writeFileSync('scripts/output/fr15-per-post.csv', csvLines.join('\n'))
   console.log('\nWrote scripts/output/fr15-per-post.csv')
-
-  // --- C3: triage / pending breakdown (no formal flag system found in code) ---
-  const pendingPosts = await prisma.facebookPost.findMany({
-    where: { category_pending: { not: null } },
-    select: { id: true, category_final: true },
-  })
-  console.log('\n=== PENDING (proposed, not yet accepted) ===', pendingPosts.length)
 
   await prisma.$disconnect()
 }
