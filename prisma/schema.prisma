@@ -506,21 +506,23 @@ model FollowerAgeGender {
   women_distribution Float
 }
 
-// "Top X" snapshot rows from Audience.csv's city/page blocks — same
-// label+distribution shape as FollowerTerritory, kept in one table with a
-// `category` discriminator since one Audience.csv upload contributes both
-// of these blocks at once. Audience.csv also has a "Top countries" block,
-// but it's the exact same Meta snapshot already ingested from the dedicated
-// FollowerTopTerritories (1).csv file into FollowerTerritory, so it's
-// deliberately skipped rather than duplicated here (see parseAudienceBuffer).
-// `page` rows are a Meta affinity score (how much more likely the audience
-// is to also follow that Page vs. the general population), not a share of
-// the audience — do not sum "page" rows to 100%. Both categories are top-10-
-// of-many snapshots: upsertAudience prunes labels that fall out of a given
-// upload's top 10 rather than letting them linger.
+// "Top X" snapshot rows from Audience.csv's "Top cities" block — same
+// label+distribution shape as FollowerTerritory. Only `category: 'city'` is
+// populated today; the discriminator is retained (rather than folding this
+// into FollowerTerritory) specifically because Audience.csv is a multi-block
+// format and a future Meta export change adding another rank-shaped block is
+// plausible, while dropping the column later would need a real migration —
+// not because of open-ended "might need it someday" speculation. Audience.csv
+// also has "Top countries" and "Top pages" blocks, deliberately not ingested
+// here — countries duplicate the exact same Meta snapshot already ingested
+// from FollowerTopTerritories (1).csv into FollowerTerritory, and pages (a
+// "audience also likes" affinity score, not an audience share) aren't used
+// anywhere in this app (see parseAudienceBuffer). Top cities is a
+// top-10-of-many snapshot: upsertAudience prunes labels that fall out of a
+// given upload's top 10 rather than letting them linger.
 model FollowerAudienceRank {
   id           Int    @id @default(autoincrement())
-  category     String // 'city' | 'page'
+  category     String // 'city'
   label        String
   distribution Float
 

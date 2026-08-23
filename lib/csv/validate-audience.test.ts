@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { validateAudienceResult } from './validate-audience'
 import type { AudienceParseResult } from './parse'
 
-const empty: AudienceParseResult = { ageGender: [], topCities: [], topPages: [] }
+const empty: AudienceParseResult = { ageGender: [], topCities: [] }
 
 describe('validateAudienceResult', () => {
   it('converts percent values to fractions', () => {
@@ -16,15 +16,6 @@ describe('validateAudienceResult', () => {
     expect(result.ageGender[0].women_distribution).toBeCloseTo(0.036, 5)
     expect(result.topCities[0].label).toBe('Manila, Philippines')
     expect(result.topCities[0].distribution).toBeCloseTo(0.064, 5)
-  })
-
-  it('allows Top pages affinity scores above 100 (not a distribution)', () => {
-    const result = validateAudienceResult({
-      ...empty,
-      topPages: [{ label: 'ABS-CBN', pct: 168.4 }],
-    })
-    expect(result.topPages[0].label).toBe('ABS-CBN')
-    expect(result.topPages[0].distribution).toBeCloseTo(1.684, 5)
   })
 
   it('rejects a negative Top cities percentage', () => {

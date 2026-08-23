@@ -35,7 +35,7 @@ const FULL_FILE = [
 ].join('\n')
 
 describe('parseAudienceBuffer', () => {
-  it('parses Age & gender, Top cities, and Top pages from the real block layout', () => {
+  it('parses Age & gender and Top cities from the real block layout', () => {
     const result = parseAudienceBuffer(utf16leBuffer(FULL_FILE))
     expect(result.ageGender).toEqual([
       { age_bracket: '18-24', men_pct: 12.3, women_pct: 3.6 },
@@ -45,10 +45,6 @@ describe('parseAudienceBuffer', () => {
       { label: 'Quezon City, Philippines', pct: 6.4 },
       { label: 'Manila, Philippines', pct: 3.2 },
     ])
-    expect(result.topPages).toEqual([
-      { label: 'Ivana Alawi', pct: 37.58 },
-      { label: 'ABS-CBN', pct: 15.38 },
-    ])
   })
 
   it('does not ingest the Top countries block (duplicates FollowerTopTerritories (1).csv)', () => {
@@ -56,12 +52,17 @@ describe('parseAudienceBuffer', () => {
     expect(result).not.toHaveProperty('topCountries')
   })
 
+  it('does not ingest the Top pages block (not used anywhere in this app)', () => {
+    const result = parseAudienceBuffer(utf16leBuffer(FULL_FILE))
+    expect(result).not.toHaveProperty('topPages')
+  })
+
   it('does not ingest the trailing Follows block (duplicates Follows (1).csv)', () => {
     const result = parseAudienceBuffer(utf16leBuffer(FULL_FILE))
     // No field on AudienceParseResult carries follows data — the assertion
     // that matters is that parsing the file at all doesn't throw or hang
     // on the block, and the other blocks around it still parse correctly.
-    expect(result.topPages.length).toBe(2)
+    expect(result.topCities.length).toBe(2)
   })
 
   it('does not desync when the Age & gender block has no data rows', () => {
@@ -80,36 +81,38 @@ describe('parseAudienceBuffer', () => {
   })
 
   it('does not desync when a rank block is missing its values row', () => {
+    // Two "Top cities"-labeled blocks: the first is truncated (no values
+    // row), the second is well-formed. Proves the truncated block doesn't
+    // consume the second block's label line as its own missing values row.
     const text = [
       'sep=,',
       '"Top cities"',
       '"Manila, Philippines"',
       '',
-      '"Top pages"',
-      '"ABS-CBN"',
-      '"15.38"',
+      '"Top cities"',
+      '"Quezon City, Philippines"',
+      '"6.4"',
     ].join('\n')
 
     const result = parseAudienceBuffer(utf16leBuffer(text))
-    expect(result.topCities).toEqual([])
-    expect(result.topPages).toEqual([{ label: 'ABS-CBN', pct: 15.38 }])
+    expect(result.topCities).toEqual([{ label: 'Quezon City, Philippines', pct: 6.4 }])
   })
 
   it('parses correctly regardless of block order', () => {
     const text = [
       'sep=,',
-      '"Top pages"',
-      '"ABS-CBN"',
-      '"15.38"',
-      '',
       '"Age & gender"',
       '"","Men","Women"',
       '"18-24","12.3","3.6"',
+      '',
+      '"Top cities"',
+      '"Manila, Philippines"',
+      '"3.2"',
     ].join('\n')
 
     const result = parseAudienceBuffer(utf16leBuffer(text))
-    expect(result.topPages).toEqual([{ label: 'ABS-CBN', pct: 15.38 }])
     expect(result.ageGender).toEqual([{ age_bracket: '18-24', men_pct: 12.3, women_pct: 3.6 }])
+    expect(result.topCities).toEqual([{ label: 'Manila, Philippines', pct: 3.2 }])
   })
 
   it('throws when the buffer is not UTF-16 LE', () => {

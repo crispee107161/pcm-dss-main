@@ -7,21 +7,21 @@ function addCounts(a: UpsertCounts, b: UpsertCounts): UpsertCounts {
   return { inserted: a.inserted + b.inserted, updated: a.updated + b.updated, unchanged: a.unchanged + b.unchanged }
 }
 
-// Top cities/pages are top-10-of-many snapshots, not a fixed label set — a
-// label that falls out of this month's top 10 must be pruned, or it lingers
+// Top cities is a top-10-of-many snapshot, not a fixed label set — a label
+// that falls out of this month's top 10 must be pruned, or it lingers
 // forever and silently blends into "Other" in AudienceRankChart's fold-past-10
 // grouping (looks plausible, is actually stale). Delete-then-upsert keeps
 // unchanged/updated tracking for labels that persist across uploads while
 // guaranteeing no stale label survives.
 async function upsertRankRows(
   tx: Prisma.TransactionClient,
-  category: 'city' | 'page',
+  category: 'city',
   rows: AudienceRankRecord[]
 ): Promise<UpsertCounts> {
   const counts = emptyCounts()
 
   // An empty `rows` here means this block didn't parse (missing/truncated
-  // in the upload), not "the audience now has zero cities/pages" — Prisma's
+  // in the upload), not "the audience now has zero cities" — Prisma's
   // `notIn: []` matches every row, so without this guard the delete below
   // would wipe the entire category on a bad or partial file instead of
   // leaving last upload's data in place.
@@ -73,7 +73,6 @@ export async function upsertAudience(result: AudienceResult): Promise<UpsertCoun
       }
 
       counts = addCounts(counts, await upsertRankRows(tx, 'city', result.topCities))
-      counts = addCounts(counts, await upsertRankRows(tx, 'page', result.topPages))
 
       return counts
     },

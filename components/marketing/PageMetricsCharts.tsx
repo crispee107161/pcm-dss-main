@@ -295,7 +295,7 @@ export function TerritoryChart({ data }: { data: TerritorySlice[] }) {
   )
 }
 
-// ── Audience.csv (age/gender + top cities/pages) ───────────────────────────
+// ── Audience.csv (age/gender + top cities) ──────────────────────────────────
 
 interface AgeGenderPoint { age_bracket: string; men_distribution: number; women_distribution: number }
 
@@ -330,10 +330,8 @@ interface RankSlice { label: string; distribution: number }
 interface FoldedRankSlice extends RankSlice { isOther?: boolean }
 
 // Same fixed 10-hue order and "fold past 10 into Other" rule as
-// foldTerritoryOverflow above, generalized to any label field — reused for
-// Audience.csv's Top cities and Top pages blocks, each of which is rendered
-// as its own chart instance (own color assignment) rather than sharing
-// color state across charts.
+// foldTerritoryOverflow above, generalized to any label field — used for
+// Audience.csv's Top cities block.
 function foldRankOverflow(sorted: RankSlice[]): FoldedRankSlice[] {
   if (sorted.length <= TERRITORY_COLORS.length) return sorted
   const kept = sorted.slice(0, TERRITORY_COLORS.length)
@@ -342,9 +340,8 @@ function foldRankOverflow(sorted: RankSlice[]): FoldedRankSlice[] {
   return [...kept, { label: `Other (${overflow.length})`, distribution: otherTotal, isOther: true }]
 }
 
-// Audience.csv's city/page labels ("Quezon City, Philippines", "Kapuso Mo,
-// Jessica Soho (One at Heart, Jessica Soho)") run far longer than
-// TerritoryChart's 2-letter country codes — truncate for the axis tick
+// Audience.csv's city labels ("Quezon City, Philippines") run far longer
+// than TerritoryChart's 2-letter country codes — truncate for the axis tick
 // (the full label is still shown in the tooltip) rather than reusing
 // TerritoryChart's narrow width and letting labels overlap illegibly.
 const MAX_RANK_LABEL_LENGTH = 24
@@ -352,23 +349,8 @@ function truncateRankLabel(label: string): string {
   return label.length > MAX_RANK_LABEL_LENGTH ? `${label.slice(0, MAX_RANK_LABEL_LENGTH - 1)}…` : label
 }
 
-// `valueLabel`/`isPercent` distinguish a true audience share ("Distribution",
-// a %) from the Top pages block's Meta affinity score, which isn't a share
-// of the audience and doesn't sum to 100% (see FollowerAudienceRank's `page`
-// category comment) — same bar chart, but rendering affinity with a "%"
-// suffix would read as a percentage it explicitly isn't.
-export function AudienceRankChart({
-  data,
-  valueLabel = 'Distribution',
-  isPercent = true,
-}: {
-  data: RankSlice[]
-  valueLabel?: string
-  isPercent?: boolean
-}) {
+export function AudienceRankChart({ data }: { data: RankSlice[] }) {
   const sorted = foldRankOverflow([...data].sort((a, b) => b.distribution - a.distribution))
-  const formatValue = (v: number) => isPercent ? `${(v * 100).toFixed(0)}%` : (v * 100).toFixed(0)
-  const formatTooltipValue = (v: number) => isPercent ? `${(v * 100).toFixed(1)}%` : (v * 100).toFixed(1)
   return (
     <ChartContainer config={NO_CHART_CONFIG} className="aspect-auto h-[260px] w-full">
       <BarChart
@@ -377,13 +359,13 @@ export function AudienceRankChart({
         layout="vertical"
         margin={{ right: 32, left: 8 }}
       >
-        <XAxis type="number" tickFormatter={formatValue} tickLine={false} axisLine={false} tickMargin={8} />
+        <XAxis type="number" tickFormatter={v => `${(v * 100).toFixed(0)}%`} tickLine={false} axisLine={false} tickMargin={8} />
         <YAxis type="category" dataKey="label" width={140} tickFormatter={truncateRankLabel} tickLine={false} axisLine={false} tickMargin={8} />
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent hideLabel nameKey="label" formatter={(value, name, item) => <ChartTooltipRow color={(item.payload as { fill?: string })?.fill ?? item.color ?? CHART_COLORS.blue} label={name} value={formatTooltipValue(Number(value))} />} />}
+          content={<ChartTooltipContent hideLabel nameKey="label" formatter={(value, name, item) => <ChartTooltipRow color={(item.payload as { fill?: string })?.fill ?? item.color ?? CHART_COLORS.blue} label={name} value={`${(Number(value) * 100).toFixed(1)}%`} />} />}
         />
-        <Bar dataKey="distribution" name={valueLabel} radius={[0, 4, 4, 0]}>
+        <Bar dataKey="distribution" name="Distribution" radius={[0, 4, 4, 0]}>
           {sorted.map((entry, i) => (
             <Cell key={`${entry.label}-${i}`} fill={entry.isOther ? TERRITORY_OTHER_COLOR : TERRITORY_COLORS[i]} />
           ))}

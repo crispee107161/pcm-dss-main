@@ -202,17 +202,17 @@ Line 1 is an Excel separator hint. Line 2 is the metric name — used to route t
 
 ### 3.2 `Audience.csv` — not a single table (UTF-16 LE)
 
-> ✅ **Ingested 2026-08-24.** `AUDIENCE_CSV` is a live upload type (`FollowerAgeGender` + `FollowerAudienceRank` tables, migration `20260824030000_add_audience_csv_tables`). Only blocks 1, 2, and 4 below are actually ingested — see the per-block notes for why 3 and 5 are deliberately skipped. `lib/csv/parse.ts`'s `parseAudienceBuffer` skips any unrecognized block by scanning to the next blank line, so this list isn't a hard contract the parser depends on — a future block Meta adds will be ignored safely rather than corrupting the scan.
+> ✅ **Ingested 2026-08-24.** `AUDIENCE_CSV` is a live upload type (`FollowerAgeGender` + `FollowerAudienceRank` tables, migration `20260824030000_add_audience_csv_tables`). Only blocks 1 and 2 below are actually ingested — see the per-block notes for why 3, 4, and 5 are deliberately skipped. `lib/csv/parse.ts`'s `parseAudienceBuffer` skips any unrecognized block by scanning to the next blank line, so this list isn't a hard contract the parser depends on — a future block Meta adds will be ignored safely rather than corrupting the scan.
 
 This file is **five separate blocks** stacked in one CSV, each with its own mini-header, and must be parsed as distinct sections rather than one table:
 
 1. `Age & gender` — a small age-bracket × gender percentage matrix (`18-24`, `25-34`, … `65+` rows). **Ingested** into `FollowerAgeGender`.
 2. `Top cities` — one row of city names, one row of percentages. **Ingested** into `FollowerAudienceRank` (`category: 'city'`).
 3. `Top countries` — same shape as top cities. **Not ingested** — verified byte-for-byte identical (same countries, same order, same values, just percent vs. fraction scale) to the country list already ingested from `FollowerTopTerritories (1).csv` into `FollowerTerritory` (§3.3). Parsing it again here would render two country charts with identical numbers under different headings.
-4. `Top pages` — same shape as top cities, but a Meta affinity score (how much more likely the audience is to also follow that Page vs. the general population), not a percentage share — values can exceed 100 and don't sum to 100%. **Ingested** into `FollowerAudienceRank` (`category: 'page'`).
+4. `Top pages` — same shape as top cities, but a Meta affinity score (how much more likely the audience is to also follow that Page vs. the general population), not a percentage share — values can exceed 100 and don't sum to 100%. **Not ingested** (removed 2026-08-24) — not used anywhere in this app.
 5. **`Follows`** — an embedded 365-row daily series, **identical in shape and content to `Follows (1).csv`**. **Not ingested** — it duplicates `Follows (1).csv` exactly and would double-count if both were upserted naively.
 
-Blocks 3 and 5 both fall through to the parser's generic "unrecognized block" skip path rather than being special-cased, so correctness doesn't depend on `Follows` always appearing last or `Top countries` always appearing third.
+Blocks 3, 4, and 5 all fall through to the parser's generic "unrecognized block" skip path rather than being special-cased, so correctness doesn't depend on any of them appearing in a fixed position.
 
 ### 3.3 Demographic snapshots (2 files — UTF-8 BOM, single header row, no preamble)
 

@@ -272,8 +272,8 @@ export interface AudienceRankPoint {
   distribution: number
 }
 
-/** Top Cities chart: which location leads, framed as a share of the audience. */
-export function computeAudienceLocationInsight(data: AudienceRankPoint[], noun: 'city'): MetricInsight | null {
+/** Top Cities chart: which city leads, framed as a share of the audience. */
+export function computeAudienceLocationInsight(data: AudienceRankPoint[]): MetricInsight | null {
   if (data.length === 0) return null
   const sorted = [...data].sort((a, b) => b.distribution - a.distribution)
   const top = sorted[0]
@@ -282,25 +282,8 @@ export function computeAudienceLocationInsight(data: AudienceRankPoint[], noun: 
   const total = sorted.reduce((s, t) => s + t.distribution, 0)
 
   return {
-    headline: `${top.label} is the top ${noun} at ${(top.distribution * 100).toFixed(0)}% of the audience`,
-    detail: `Together with the other ${sorted.length - 1} ${sorted.length - 1 === 1 ? noun : `${noun}s`} shown, these account for ${(total * 100).toFixed(0)}% of the audience. This is a current snapshot and does not change with the date filter.`,
-  }
-}
-
-// Top pages is a Meta "audience also likes" affinity score, not a share of
-// the audience — the values don't sum to 100%, so this deliberately avoids
-// computeAudienceLocationInsight's "remaining X%" framing, which would
-// misstate the numbers here.
-export function computeTopPagesInsight(data: AudienceRankPoint[]): MetricInsight | null {
-  if (data.length === 0) return null
-  const top = [...data].sort((a, b) => b.distribution - a.distribution)[0]
-
-  return {
-    // Deliberately not a "%" — an affinity score of 168 isn't a percentage,
-    // and rendering it with a % sign would misstate it as one even though
-    // the detail line explains otherwise (see AudienceRankChart's isPercent prop).
-    headline: `${top.label} has the strongest audience affinity, scoring ${(top.distribution * 100).toFixed(0)}`,
-    detail: `Meta measures this as how much more likely your audience is to also follow each Page, compared to the general population — not a share of your audience. This is a current snapshot and does not change with the date filter.`,
+    headline: `${top.label} is the top city at ${(top.distribution * 100).toFixed(0)}% of the audience`,
+    detail: `Together with the other ${sorted.length - 1} ${sorted.length - 1 === 1 ? 'city' : 'cities'} shown, these account for ${(total * 100).toFixed(0)}% of the audience. This is a current snapshot and does not change with the date filter.`,
   }
 }
 

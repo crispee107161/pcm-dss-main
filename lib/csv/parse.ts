@@ -151,22 +151,23 @@ export interface AudienceRankRow {
 export interface AudienceParseResult {
   ageGender: AgeGenderRow[]
   topCities: AudienceRankRow[]
-  topPages: AudienceRankRow[]
 }
 
-// Audience.csv's city/page blocks share one shape: a row of quoted labels,
-// then a row of quoted percentage values, same index lining up both.
+// Audience.csv's "Top cities" block is a row of quoted labels, then a row
+// of quoted percentage values.
 //
-// "Top countries" is deliberately NOT in this map — it's the exact same
-// Meta snapshot already ingested from the dedicated FollowerTopTerritories
-// (1).csv file into FollowerTerritory (verified byte-for-byte: same
-// countries, same order, same values, just percent vs. fraction scale).
-// Parsing it here too would render two country charts with identical
-// numbers under different headings. It falls through to the "unrecognized
-// block" branch below and is skipped, same as the trailing Follows block.
+// "Top countries" and "Top pages" are deliberately NOT in this map:
+//  - "Top countries" is the exact same Meta snapshot already ingested from
+//    the dedicated FollowerTopTerritories (1).csv file into FollowerTerritory
+//    (verified byte-for-byte: same countries, same order, same values, just
+//    percent vs. fraction scale). Parsing it here too would render two
+//    country charts with identical numbers under different headings.
+//  - "Top pages" (a Meta "audience also likes" affinity score) isn't used
+//    anywhere in this app — dropped rather than ingested and never displayed.
+// Both fall through to the "unrecognized block" branch below and are
+// skipped, same as the trailing Follows block.
 const RANK_BLOCK_KEYS: Record<string, keyof Omit<AudienceParseResult, 'ageGender'>> = {
   'Top cities': 'topCities',
-  'Top pages':  'topPages',
 }
 
 // Splits one already-dequoted CSV line into fields, respecting quoted commas
@@ -192,16 +193,15 @@ function parsePercentCell(raw: string | undefined, context: string): number {
 /**
  * Parser for Audience.csv — UTF-16 LE, `sep=,` preamble, then several
  * blocks stacked in one file (not one table). Only two shapes are actually
- * ingested (see RANK_BLOCK_KEYS above for why "Top countries" isn't):
+ * ingested (see RANK_BLOCK_KEYS above for why "Top countries"/"Top pages" aren't):
  *   1. "Age & gender" — age-bracket rows x Men/Women percentage columns
  *   2. "Top cities"   — one row of city labels, one row of percentages
- *   3. "Top pages"    — same shape as Top cities (a Meta affinity score,
- *      not a distribution — see FollowerAudienceRank's schema comment)
- * Every other block ("Top countries", the trailing daily "Follows" series,
- * and anything Meta adds in future exports) is skipped by scanning to the
- * next blank line, rather than special-cased — that keeps this parser
- * forward-compatible with new/reordered blocks instead of relying on
- * "Follows" always being last (see docs/data_catalog.md §3.2).
+ * Every other block ("Top countries", "Top pages", the trailing daily
+ * "Follows" series, and anything Meta adds in future exports) is skipped by
+ * scanning to the next blank line, rather than special-cased — that keeps
+ * this parser forward-compatible with new/reordered blocks instead of
+ * relying on any particular block always appearing in a fixed position
+ * (see docs/data_catalog.md §3.2).
  */
 export function parseAudienceBuffer(buffer: Buffer): AudienceParseResult {
   const bytes = new Uint8Array(buffer)
@@ -218,7 +218,7 @@ export function parseAudienceBuffer(buffer: Buffer): AudienceParseResult {
 
   const lines = text.split('\n').map(l => l.replace(/\r$/, ''))
 
-  const result: AudienceParseResult = { ageGender: [], topCities: [], topPages: [] }
+  const result: AudienceParseResult = { ageGender: [], topCities: [] }
 
   const isBlank = (idx: number) => idx >= lines.length || lines[idx].trim() === ''
 
