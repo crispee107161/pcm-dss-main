@@ -122,6 +122,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
           label="Median Cost / Inquiry"
           value={kpis.medianCpi.value !== null ? formatPhpPrecise(kpis.medianCpi.value) : '—'}
           sub={kpis.medianCpi.iqr ? `IQR ${formatPhpPrecise(kpis.medianCpi.iqr.q1)} – ${formatPhpPrecise(kpis.medianCpi.iqr.q3)} (n=${kpis.medianCpi.n})` : `n=${kpis.medianCpi.n}`}
+          note={kpis.medianCpi.value !== null ? 'Half of ads this period cost less than this per inquiry, half cost more.' : undefined}
           delta={kpis.medianCpi.delta} deltaLabel={data.deltaWindowLabel ?? undefined} invertSentiment
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0a3 3 0 106 0m-6 0a3 3 0 016 0M9 13h6" /></svg>}
         />
@@ -129,6 +130,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
           label="Median Organic Engagement"
           value={kpis.medianEngagement.value !== null ? `${kpis.medianEngagement.value.toFixed(2)}%` : '—'}
           sub={`n=${kpis.medianEngagement.n} posts`}
+          note={kpis.medianEngagement.value !== null ? 'Half of posts this period perform above this rate, half below.' : undefined}
           delta={kpis.medianEngagement.delta} deltaLabel={data.deltaWindowLabel ?? undefined}
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>}
         />
@@ -159,7 +161,13 @@ export default async function DashboardOverview({ role, displayName, from, to, a
         )}
       </div>
 
-      {/* CPI distribution & category performance */}
+      {/* CPI distribution (ad metric) paired with an organic, non-category
+          chart — never place this beside the content-category chart below.
+          Content category → ad efficiency has no join key and is
+          permanently out of scope (mvp.md §5.1); putting the two charts
+          side by side would visually assert a relationship the four
+          places documenting that constraint spent effort establishing does
+          not exist (docs/raven/FR16_Caveat_Demographics_Gap_and_FR18_Decisions.md §3). */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-stretch">
         <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Cost-per-Inquiry Distribution</SectionLabel>
@@ -167,21 +175,23 @@ export default async function DashboardOverview({ role, displayName, from, to, a
           <CpiDistributionChart data={data.cpiDistribution} />
         </div>
         <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
-          <SectionLabel>Performance by Content Category</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-3 mb-3">Median organic engagement rate, {data.periodLabel} — n labelled per bar since sample sizes differ.</p>
-          <div className="flex-1 min-h-[240px]">
-            <CategoryPerformanceChart data={data.categoryPerformance} />
-          </div>
-        </div>
-      </div>
-
-      {/* Organic reach/views trend & FR-30 page-visit funnel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-stretch">
-        <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Organic Reach &amp; Views Trend</SectionLabel>
           <p className="text-xs text-muted-foreground -mt-3 mb-3">Always shows the last 3 months of uploaded post data, independent of the period selector above.</p>
           <div className="flex-1 min-h-0">
             <PostReachViewsTrendChart data={data.postReachViewsTrend} />
+          </div>
+        </div>
+      </div>
+
+      {/* Content-category performance (organic) paired with the page-visit
+          funnel (organic) — see the note above for why this never shares a
+          row with an ad-efficiency chart. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-stretch">
+        <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
+          <SectionLabel>Performance by Content Category</SectionLabel>
+          <p className="text-xs text-muted-foreground -mt-3 mb-3">Median organic engagement rate, {data.periodLabel} — n labelled per bar since sample sizes differ.</p>
+          <div className="flex-1 min-h-[240px]">
+            <CategoryPerformanceChart data={data.categoryPerformance} />
           </div>
         </div>
         <div className="bg-card rounded-2xl p-5" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
