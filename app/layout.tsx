@@ -4,6 +4,7 @@ import './globals.css'
 import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "next-themes";
+import NavigationProgress from "@/components/ui/NavigationProgress";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
@@ -22,6 +23,7 @@ export default function RootLayout({
     <html lang="en" className={cn("h-full", "font-sans", geist.variable, geistMono.variable)} suppressHydrationWarning>
       <body className="min-h-full bg-background antialiased" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+          <NavigationProgress />
           {children}
         </ThemeProvider>
         <Analytics />

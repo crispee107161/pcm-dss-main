@@ -1,7 +1,8 @@
 'use client'
 
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
+import { useProgressRouter } from '@/lib/navigation-progress'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -61,7 +62,7 @@ function buildPresets(ref: Date): Preset[] {
 }
 
 export default function DateRangeFilter({ from, to, className = '', anchor }: DateRangeFilterProps) {
-  const router = useRouter()
+  const { push, isPending } = useProgressRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [customOpen, setCustomOpen] = useState(false)
@@ -77,8 +78,8 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
     // (see setAllTime below) — always clear it here so picking any other
     // range supersedes a previously-chosen "All time".
     params.delete('all')
-    router.push(`${pathname}?${params.toString()}`)
-  }, [router, pathname, searchParams])
+    push(`${pathname}?${params.toString()}`)
+  }, [push, pathname, searchParams])
 
   // When `anchor` is set, absent from/to means "use the default period"
   // (last complete month), not "all time" — so "All time" needs its own
@@ -89,8 +90,8 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
     params.delete('from')
     params.delete('to')
     params.set('all', '1')
-    router.push(`${pathname}?${params.toString()}`)
-  }, [router, pathname, searchParams])
+    push(`${pathname}?${params.toString()}`)
+  }, [push, pathname, searchParams])
 
   const activePreset = useMemo(() => {
     if (!from && !to) return null
@@ -132,12 +133,12 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
   const nextDisabled = windowDays === null || (to !== undefined && to >= toISODate(new Date()))
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+    <div className={`flex flex-wrap items-center gap-2 transition-opacity duration-150 ${isPending ? 'opacity-60' : ''} ${className}`}>
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={goPrev}
-          disabled={windowDays === null}
+          disabled={windowDays === null || isPending}
           className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           aria-label="Previous period"
         >
@@ -146,7 +147,7 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
         <button
           type="button"
           onClick={goNext}
-          disabled={nextDisabled}
+          disabled={nextDisabled || isPending}
           className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           aria-label="Next period"
         >

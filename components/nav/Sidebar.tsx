@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import Image from 'next/image'
 import { motion, useReducedMotion } from 'motion/react'
 import TopBar from './TopBar'
@@ -66,6 +66,22 @@ export interface NavItem {
   section?: string
 }
 
+// Reads the pending state of the nearest ancestor <Link> (React 19 / Next 15+
+// API) — must render as a descendant of <Link>, not beside it. Gives the
+// clicked nav item its own instant "working on it" pulse on top of the
+// global top progress bar, since a rail item can be visually far from the
+// page content that's actually loading.
+function NavLinkPendingDot() {
+  const { pending } = useLinkStatus()
+  if (!pending) return null
+  return (
+    <span
+      aria-hidden
+      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-crimson-500 animate-pulse"
+    />
+  )
+}
+
 // Hover/focus on the whole row drives the icon animation, not just the 20px
 // glyph — icon components are refs, so this needs its own component (a plain
 // render function can't hold a ref) rather than living inline in Sidebar.
@@ -104,6 +120,7 @@ function NavLink({ item, active, showText }: { item: NavItem; active: boolean; s
       <FadeText show={showText} className="whitespace-nowrap">
         {item.label}
       </FadeText>
+      <NavLinkPendingDot />
     </Link>
   )
 }
@@ -263,7 +280,17 @@ export default function Sidebar({ navItems, email, roleLabel, children }: Sideba
       <motion.div
         animate={{ marginLeft: isDesktop ? (collapsed ? RAIL_WIDTH : EXPANDED_WIDTH) : 0 }}
         transition={reduceMotion ? REDUCED_TRANSITION : SIDEBAR_TRANSITION}
-        className="flex-1 min-h-screen print:ml-0 flex flex-col overflow-x-hidden"
+        // overflow-x-clip, not overflow-x-hidden: per the CSS overflow spec,
+        // setting only one axis to 'hidden' forces the other to compute as
+        // 'auto' too, silently turning this div into a scroll container of
+        // its own. Since it's never actually the one that scrolls (the page
+        // just grows and the viewport/html scrolls instead — min-h-screen
+        // has no height cap), that phantom auto-overflow container becomes
+        // TopBar's sticky positioning context instead of the real scrollport,
+        // breaking `sticky top-0` (TopBar.tsx) with no visible symptom until
+        // you actually scroll. 'clip' clips the same as 'hidden' without
+        // that cross-axis side effect.
+        className="flex-1 min-h-screen print:ml-0 flex flex-col overflow-x-clip"
       >
         <TopBar
           navItems={navItems}

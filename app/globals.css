@@ -751,18 +751,24 @@
   background: var(--secondary);
 }
 
-/* Brand-filled variant of the segmented control, for a filter/view switch
+/* Brand-outlined variant of the segmented control, for a filter/view switch
    where the selected option should read as a clear, colorful choice rather
    than a neutral one (e.g. ContentClient.tsx's FilterTabs) — opt-in via an
    extra class alongside .segmented-control__indicator /
    .segmented-control__segment--active so ChartViewToggle's neutral
-   white/shadow skin is untouched. Solid --primary (not a translucent tint)
-   so it stays equally visible in both themes — an earlier translucent
-   bg-primary/15 + text-primary combination read as barely-there in dark mode
-   and put crimson text on a crimson surface, which also broke the Fill-vs-
-   Read Rule (crimson is fills/chrome only, never a text read — see
-   DESIGN.md). This is the same fill+white-text pairing button-primary
-   already uses, just shaped as a pill instead of a button.
+   white/shadow skin is untouched. A solid --primary fill (the original
+   version of this variant) was replaced with an outline: same white-in-
+   light/--secondary-in-dark pill background as the neutral variant above,
+   plus a 1px --primary border for the "colorful choice" read. Label text is
+   --primary too — a deliberate, explicit exception to the Fill-vs-Read Rule
+   (crimson is normally fills/chrome only, never a text read — see
+   DESIGN.md), signed off on knowing that history: an earlier translucent
+   bg-primary/15 + text-primary attempt was reverted for reading as barely-
+   there in dark mode, but that was a legibility problem with the
+   *translucent fill*, not the crimson text itself — this version pairs
+   --primary text with an opaque white/--secondary background instead, so
+   don't "fix" this back to --foreground without checking with whoever asked
+   for it.
 
    Selectors are compounded (.segmented-control__indicator.…--brand, not
    just .…--brand alone) and repeated under .dark explicitly — a bare
@@ -773,22 +779,26 @@
    skin). The .dark version here (0,3,0) settles it outright instead of
    relying on the light-mode tie (0,2,0 vs 0,2,0) breaking the right way by
    source order alone. */
+/* background/box-shadow deliberately omitted — the compound selector still
+   matches the base .segmented-control__indicator rule above (higher
+   specificity than that rule, so `border` alone overrides cleanly), and
+   restating byte-identical values here would just be a second place to
+   forget to update if the neutral skin's background/shadow ever changes. */
 .segmented-control__indicator.segmented-control__indicator--brand {
-  background: var(--primary);
-  box-shadow: none;
+  border: 1px solid var(--primary);
 }
 .dark .segmented-control__indicator.segmented-control__indicator--brand {
-  background: var(--primary);
+  border: 1px solid var(--primary);
 }
 .segmented-control__segment.segmented-control__segment--active-brand,
 .segmented-control__segment.segmented-control__segment--active-brand:hover {
   background: transparent;
-  color: var(--primary-foreground);
+  color: var(--primary);
 }
 .dark .segmented-control__segment.segmented-control__segment--active-brand,
 .dark .segmented-control__segment.segmented-control__segment--active-brand:hover {
   background: transparent;
-  color: var(--primary-foreground);
+  color: var(--primary);
 }
 
 /* Tabular numerals for all KPI/stat values — stays on the sans face (Geist

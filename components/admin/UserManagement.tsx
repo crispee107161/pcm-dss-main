@@ -1,7 +1,7 @@
 'use client'
 
-import { useActionState, useState } from 'react'
-import { createUser, updateUserRole, resetPassword, deleteUser } from '@/actions/admin'
+import { useActionState, useOptimistic, useState, useTransition } from 'react'
+import { createUser, updateUserRole, resetPassword, deactivateUser, reactivateUser } from '@/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,6 +16,7 @@ interface User {
   email: string
   role: Role
   created_at: Date
+  is_active: boolean
 }
 
 interface Props {
@@ -140,22 +141,42 @@ function CreateUserForm() {
 }
 
 // ── Per-user row actions ────────────────────────────────────────────────────
-function UserRow({ user, currentUserId }: { user: User; currentUserId: number }) {
+function UserRow({
+  user, currentUserId, onOptimisticActiveChange,
+}: {
+  user: User
+  currentUserId: number
+  onOptimisticActiveChange: (isActive: boolean) => void
+}) {
   const isSelf = user.id === currentUserId
 
   const [roleState, roleAction, rolePending] = useActionState(updateUserRole, null)
   const [pwState, pwAction, pwPending] = useActionState(resetPassword, null)
-  const [delState, delAction, delPending] = useActionState(deleteUser, null)
+  const [deactivateState, deactivateAction, deactivatePending] = useActionState(deactivateUser, null)
+  const [reactivateState, reactivateAction, reactivatePending] = useActionState(reactivateUser, null)
+  // Deactivate/reactivate flips a Badge and swaps the whole action row (not
+  // just button text), so it reads as "nothing happened yet" if the row
+  // waits for the full round trip — this transition lets the optimistic
+  // is_active flip (owned by the parent's useOptimistic) land the instant
+  // the button is clicked, alongside the real action call.
+  const [isActivePending, startActiveTransition] = useTransition()
 
   const [showPwForm, setShowPwForm] = useState(false)
-  const [showDelConfirm, setShowDelConfirm] = useState(false)
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false)
 
   return (
     <>
       <TableRow className="border-t border-border align-top">
         <TableCell className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell">#{user.id}</TableCell>
         <TableCell className="px-4 py-3">
-          <div className="font-medium text-foreground text-sm">{user.email}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground text-sm">{user.email}</span>
+            {!user.is_active && (
+              <Badge className="bg-secondary text-muted-foreground border-border rounded-full text-[10px] font-medium h-auto py-0 px-2">
+                Inactive
+              </Badge>
+            )}
+          </div>
           {isSelf && <span className="text-xs text-status-negative">(you)</span>}
         </TableCell>
         <TableCell className="px-4 py-3">
@@ -203,20 +224,48 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
           {!isSelf && (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => { setShowPwForm(v => !v); setShowDelConfirm(false) }}
+                onClick={() => { setShowPwForm(v => !v); setShowDeactivateConfirm(false) }}
                 className="text-xs text-muted-foreground hover:text-status-warning underline underline-offset-2 transition-colors"
               >
                 Reset PW
               </button>
               <span className="text-muted-foreground/50" aria-hidden="true">|</span>
-              <button
-                onClick={() => { setShowDelConfirm(v => !v); setShowPwForm(false) }}
-                className="text-xs text-status-negative hover:text-status-negative/70 underline underline-offset-2 transition-colors"
-              >
-                Delete
-              </button>
+              {user.is_active ? (
+                <button
+                  onClick={() => { setShowDeactivateConfirm(v => !v); setShowPwForm(false) }}
+                  className="text-xs text-status-negative hover:text-status-negative/70 underline underline-offset-2 transition-colors"
+                >
+                  Deactivate
+                </button>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const formData = new FormData(e.currentTarget)
+                    startActiveTransition(() => {
+                      onOptimisticActiveChange(true)
+                      reactivateAction(formData)
+                    })
+                  }}
+                >
+                  <input type="hidden" name="userId" value={user.id} />
+                  <button
+                    type="submit"
+                    disabled={reactivatePending || isActivePending}
+                    className="text-xs text-status-positive hover:text-status-positive/70 underline underline-offset-2 transition-colors"
+                  >
+                    {(reactivatePending || isActivePending) ? 'Reactivating…' : 'Reactivate'}
+                  </button>
+                </form>
+              )}
             </div>
           )}
+          {/* Hoisted into this always-rendered cell (not the confirm row
+              below) — that row unmounts synchronously on submit, so a
+              FormAlert living inside it could never actually display a
+              rejected deactivate's error. */}
+          {!isSelf && <FormAlert state={deactivateState} />}
+          {!isSelf && <FormAlert state={reactivateState} />}
         </TableCell>
       </TableRow>
 
@@ -255,27 +304,36 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
         </TableRow>
       )}
 
-      {/* Inline delete confirmation */}
-      {showDelConfirm && !isSelf && (
+      {/* Inline deactivate confirmation */}
+      {showDeactivateConfirm && !isSelf && (
         <TableRow className="border-t-0">
           <TableCell colSpan={5} className="px-4 pb-3">
-            <form action={async (fd) => { await delAction(fd); setShowDelConfirm(false) }}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                setShowDeactivateConfirm(false)
+                startActiveTransition(() => {
+                  onOptimisticActiveChange(false)
+                  deactivateAction(formData)
+                })
+              }}
               className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-wrap items-center gap-3">
               <input type="hidden" name="userId" value={user.id} />
               <p className="text-sm text-status-negative">
-                Are you sure you want to delete <strong>{user.email}</strong>? This cannot be undone.
+                Deactivate <strong>{user.email}</strong>? They won&apos;t be able to sign in. Their account and
+                upload/audit history are kept, and you can reactivate them later.
               </p>
               <Button
                 type="submit"
-                disabled={delPending}
+                disabled={deactivatePending || isActivePending}
                 className="bg-red-600 hover:bg-red-500 text-white"
               >
-                {delPending ? 'Deleting…' : 'Yes, Delete'}
+                {(deactivatePending || isActivePending) ? 'Deactivating…' : 'Yes, Deactivate'}
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowDelConfirm(false)} className="text-muted-foreground">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowDeactivateConfirm(false)} className="text-muted-foreground">
                 Cancel
               </Button>
-              <FormAlert state={delState} />
             </form>
           </TableCell>
         </TableRow>
@@ -286,6 +344,16 @@ function UserRow({ user, currentUserId }: { user: User; currentUserId: number })
 
 // ── Main export ─────────────────────────────────────────────────────────────
 export default function UserManagement({ users, currentUserId }: Props) {
+  // Owns the optimistic is_active flip for every row — reverts to the real
+  // `users` prop on its own once the triggering transition settles (React's
+  // useOptimistic semantics), so a rejected deactivate/reactivate snaps the
+  // badge back without any manual rollback code here.
+  const [optimisticUsers, setOptimisticActive] = useOptimistic(
+    users,
+    (state, update: { id: number; is_active: boolean }) =>
+      state.map(u => (u.id === update.id ? { ...u, is_active: update.is_active } : u))
+  )
+
   return (
     <div>
       <CreateUserForm />
@@ -302,8 +370,13 @@ export default function UserManagement({ users, currentUserId }: Props) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map(user => (
-              <UserRow key={user.id} user={user} currentUserId={currentUserId} />
+            {optimisticUsers.map(user => (
+              <UserRow
+                key={user.id}
+                user={user}
+                currentUserId={currentUserId}
+                onOptimisticActiveChange={(isActive) => setOptimisticActive({ id: user.id, is_active: isActive })}
+              />
             ))}
           </TableBody>
         </Table>

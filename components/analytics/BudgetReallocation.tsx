@@ -1,7 +1,8 @@
 'use client'
 
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { useProgressRouter } from '@/lib/navigation-progress'
 import type { BudgetReallocationResult } from '@/lib/stats/budget-reallocation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
@@ -28,12 +29,12 @@ function minSpendLabel(value: string | null): string {
 }
 
 export function MinSpendSelect({ value }: { value: number }) {
-  const router = useRouter()
+  const { push, isPending } = useProgressRouter()
   const pathname = usePathname()
 
   return (
-    <Select value={String(value)} onValueChange={v => router.push(`${pathname}?minSpend=${v}`)}>
-      <SelectTrigger className="border-border text-foreground focus-visible:ring-ring w-auto min-w-[140px]">
+    <Select value={String(value)} onValueChange={v => push(`${pathname}?minSpend=${v}`)}>
+      <SelectTrigger disabled={isPending} className="border-border text-foreground focus-visible:ring-ring w-auto min-w-[140px]">
         {/* minSpendLabel already resolves null to "Minimum spend", so the
             placeholder prop below would never actually render. */}
         <SelectValue>{minSpendLabel}</SelectValue>

@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useProgressRouter } from '@/lib/navigation-progress'
 import { SlidingTabs } from '@/components/ui/sliding-tabs'
 import {
   updatePostCategory,
@@ -1117,12 +1118,12 @@ const CONTENT_FILTER_OPTIONS: { value: ContentFilter; label: string }[] = [
 // bookmarkable and deep-linkable. router.push (not replace) so Back steps
 // through filter changes rather than skipping them.
 function FilterTabs({ current }: { current: ContentFilter }) {
-  const router = useRouter()
+  const { push, isPending } = useProgressRouter()
   const pathname = usePathname()
   return (
     <SlidingTabs
       value={current}
-      onChange={(next) => router.push(`${pathname}?filter=${next}`)}
+      onChange={(next) => push(`${pathname}?filter=${next}`)}
       options={CONTENT_FILTER_OPTIONS}
       layoutId="content-filter-indicator"
       ariaLabel="Content filter"
@@ -1131,7 +1132,7 @@ function FilterTabs({ current }: { current: ContentFilter }) {
       // interaction rule) — without it this row can trip a stray vertical
       // scrollbar on non-overlay scrollbar setups (Windows Chrome/Edge) even
       // though nothing here needs to scroll vertically.
-      className="segmented-control segmented-control--bordered mb-4 w-fit max-w-full overflow-x-auto overflow-y-hidden"
+      className={`segmented-control segmented-control--bordered mb-4 w-fit max-w-full overflow-x-auto overflow-y-hidden transition-opacity duration-150 ${isPending ? 'opacity-60' : ''}`}
       // ring-offset-1 (not a bare ring) matches every other bg-primary
       // control in this file (e.g. the primary action buttons below) — the
       // offset gap keeps the crimson focus ring visible against the
