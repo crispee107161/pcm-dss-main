@@ -500,16 +500,25 @@ model PageViewers {
 
 // Follower gender distribution snapshot (FollowerGender.csv)
 model FollowerGender {
-  id           Int    @id @default(autoincrement())
-  gender       String @unique
+  id           Int      @id @default(autoincrement())
+  gender       String   @unique
   distribution Float
+  // Raven memo 2026-08-25 (docs/raven/Three_Decisions_and_FR_Table_Writable.md
+  // §3): the source file carries no date of its own — this is the upload
+  // moment, the closest available proxy, touched on every upsert including
+  // an unchanged-value re-upload so it always reflects "last confirmed as of."
+  // Nullable: rows backfilled by migration 20260825050000 that have never
+  // been touched by a real upsert carry NULL, meaning "not recorded" rather
+  // than a fabricated date (see migration 20260825233000).
+  captured_at  DateTime?
 }
 
 // Follower territory distribution snapshot (FollowerTopTerritories.csv)
 model FollowerTerritory {
-  id           Int    @id @default(autoincrement())
-  territory    String @unique
+  id           Int      @id @default(autoincrement())
+  territory    String   @unique
   distribution Float
+  captured_at  DateTime?
 }
 
 // Age-bracket x gender distribution snapshot (Audience.csv "Age & gender" block).
@@ -521,10 +530,11 @@ model FollowerTerritory {
 // fixed, closed set (not a top-N-of-many list), so there's no "fell out of
 // this month's ranking" case to guard against.
 model FollowerAgeGender {
-  id                 Int    @id @default(autoincrement())
-  age_bracket        String @unique
+  id                 Int      @id @default(autoincrement())
+  age_bracket        String   @unique
   men_distribution   Float
   women_distribution Float
+  captured_at        DateTime?
 }
 
 // "Top X" snapshot rows from Audience.csv's "Top cities" block — same
@@ -542,10 +552,11 @@ model FollowerAgeGender {
 // top-10-of-many snapshot: upsertAudience prunes labels that fall out of a
 // given upload's top 10 rather than letting them linger.
 model FollowerAudienceRank {
-  id           Int    @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   category     String // 'city'
   label        String
   distribution Float
+  captured_at  DateTime?
 
   @@unique([category, label])
 }

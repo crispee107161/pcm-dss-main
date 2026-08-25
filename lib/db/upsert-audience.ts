@@ -39,12 +39,13 @@ async function upsertRankRows(
     const update = { distribution: row.distribution }
 
     if (!existing) {
-      await tx.followerAudienceRank.create({ data: { category, label: row.label, ...update } })
+      await tx.followerAudienceRank.create({ data: { category, label: row.label, ...update, captured_at: new Date() } })
       counts.inserted++
     } else if (isUnchanged(existing, update)) {
+      await tx.followerAudienceRank.update({ where: key, data: { captured_at: new Date() } })
       counts.unchanged++
     } else {
-      await tx.followerAudienceRank.update({ where: key, data: update })
+      await tx.followerAudienceRank.update({ where: key, data: { ...update, captured_at: new Date() } })
       counts.updated++
     }
   }
@@ -62,12 +63,13 @@ export async function upsertAudience(result: AudienceResult): Promise<UpsertCoun
         const update = { men_distribution: row.men_distribution, women_distribution: row.women_distribution }
 
         if (!existing) {
-          await tx.followerAgeGender.create({ data: { age_bracket: row.age_bracket, ...update } })
+          await tx.followerAgeGender.create({ data: { age_bracket: row.age_bracket, ...update, captured_at: new Date() } })
           counts.inserted++
         } else if (isUnchanged(existing, update)) {
+          await tx.followerAgeGender.update({ where: { age_bracket: row.age_bracket }, data: { captured_at: new Date() } })
           counts.unchanged++
         } else {
-          await tx.followerAgeGender.update({ where: { age_bracket: row.age_bracket }, data: update })
+          await tx.followerAgeGender.update({ where: { age_bracket: row.age_bracket }, data: { ...update, captured_at: new Date() } })
           counts.updated++
         }
       }
