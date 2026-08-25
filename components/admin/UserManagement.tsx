@@ -1,12 +1,13 @@
 'use client'
 
-import { useActionState, useOptimistic, useState, useTransition } from 'react'
+import { useActionState, useEffect, useOptimistic, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { createUser, updateUserRole, resetPassword, deactivateUser, reactivateUser } from '@/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 type Role = 'BUSINESS_OWNER' | 'MARKETING_TEAM' | 'MARKETING_MANAGER'
@@ -51,19 +52,24 @@ function formatDate(date: Date) {
   }).format(new Date(date))
 }
 
-function FormAlert({ state }: { state: { error?: string; success?: string } | null }) {
-  if (!state?.error && !state?.success) return null
-  return (
-    <Alert className={`mt-2 ${state.error ? 'border-status-negative/30 bg-status-negative/10 text-status-negative' : 'border-status-positive/30 bg-status-positive/10 text-status-positive'}`}>
-      <AlertDescription className="text-sm">{state.error ?? state.success}</AlertDescription>
-    </Alert>
-  )
+// useActionState's result has no built-in reset — it just sits there until
+// the action fires again. `state` is a fresh object on every dispatch, so
+// keying the effect on it fires exactly one toast per result. `toastId` is
+// stable per row/form so a repeat save replaces its previous toast instead
+// of stacking (and absorbs React StrictMode's double effect invocation in
+// dev).
+function useActionToast(state: { error?: string; success?: string } | null, toastId: string) {
+  useEffect(() => {
+    if (state?.error) toast.error(state.error, { id: toastId })
+    else if (state?.success) toast.success(state.success, { id: toastId })
+  }, [state, toastId])
 }
 
 // ── Create User form ────────────────────────────────────────────────────────
 function CreateUserForm() {
   const [state, action, pending] = useActionState(createUser, null)
   const [open, setOpen] = useState(false)
+  useActionToast(state, 'create-user')
 
   return (
     <div className="mb-8">
@@ -113,7 +119,7 @@ function CreateUserForm() {
                 <SelectTrigger id="create-user-role" className="w-full border-border focus-visible:ring-ring">
                   <SelectValue>{roleLabel}</SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent align="start" alignItemWithTrigger={false}>
                   {ROLE_OPTIONS.map(r => (
                     <SelectItem key={r.value} value={r.value} label={r.label}>{r.label}</SelectItem>
                   ))}
@@ -133,7 +139,6 @@ function CreateUserForm() {
               Cancel
             </Button>
           </div>
-          <FormAlert state={state} />
         </form>
       )}
     </div>
@@ -151,18 +156,51 @@ function UserRow({
   const isSelf = user.id === currentUserId
 
   const [roleState, roleAction, rolePending] = useActionState(updateUserRole, null)
+  useActionToast(roleState, `role-${user.id}`)
+  // Select is controlled so Save can be disabled while the picked role
+  // matches the user's current role — without this, clicking Save with
+  // nothing changed still submits the current role and reports a false
+  // "Role updated." On success revalidatePath brings the new `user.role`
+  // prop down, which already equals `selectedRole`, so Save re-disables
+  // itself with no extra code. On a rejected save the prop is unchanged, so
+  // Save stays enabled for a retry.
+  const [selectedRole, setSelectedRole] = useState<Role>(user.role)
+  const isRoleUnchanged = selectedRole === user.role
   const [pwState, pwAction, pwPending] = useActionState(resetPassword, null)
-  const [deactivateState, deactivateAction, deactivatePending] = useActionState(deactivateUser, null)
-  const [reactivateState, reactivateAction, reactivatePending] = useActionState(reactivateUser, null)
+  const [deactivateState, deactivateAction] = useActionState(deactivateUser, null)
+  const [reactivateState, reactivateAction] = useActionState(reactivateUser, null)
   // Deactivate/reactivate flips a Badge and swaps the whole action row (not
   // just button text), so it reads as "nothing happened yet" if the row
   // waits for the full round trip — this transition lets the optimistic
   // is_active flip (owned by the parent's useOptimistic) land the instant
   // the button is clicked, alongside the real action call.
   const [isActivePending, startActiveTransition] = useTransition()
+  // Which action is in flight, independent of the optimistic is_active flip
+  // above. That flip changes `user.is_active` synchronously, which is what
+  // decides whether this row renders the Deactivate button or the Reactivate
+  // form below — without this, clicking Deactivate flips is_active to false
+  // *before* the request settles, so the row instantly swaps to the
+  // Reactivate branch and shows *its* pending label ("Reactivating…") for
+  // an action nobody clicked. Tracking the actual action keeps the row
+  // showing the button that was clicked, correctly disabled and labelled,
+  // until the transition settles (cleared below once isActivePending drops).
+  const [pendingAction, setPendingAction] = useState<'activate' | 'deactivate' | null>(null)
+  useEffect(() => {
+    if (!isActivePending) setPendingAction(null)
+  }, [isActivePending])
 
+  // Each modal below reuses its open state for both the confirm step and the
+  // result step (deactivateState/reactivateState/pwState no longer feed a
+  // shared inline alert — each result renders inside the dialog that
+  // triggered it). `xSubmitted` switches a dialog from its confirm view to
+  // its result view, and is reset to false whenever the dialog is reopened
+  // (in onOpenChange) so a stale previous result doesn't flash on reopen.
   const [showPwForm, setShowPwForm] = useState(false)
+  const [pwSubmitted, setPwSubmitted] = useState(false)
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false)
+  const [deactivateSubmitted, setDeactivateSubmitted] = useState(false)
+  const [showReactivateConfirm, setShowReactivateConfirm] = useState(false)
+  const [reactivateSubmitted, setReactivateSubmitted] = useState(false)
 
   return (
     <>
@@ -187,7 +225,7 @@ function UserRow({
           ) : (
             <form action={roleAction} className="flex items-center gap-2">
               <input type="hidden" name="userId" value={user.id} />
-              <Select name="role" defaultValue={user.role}>
+              <Select name="role" value={selectedRole} onValueChange={(v) => setSelectedRole(v as Role)}>
                 {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
                     with the selected label's length — keeps the Save button lined up
                     in a straight column across rows regardless of which role is shown. */}
@@ -209,7 +247,7 @@ function UserRow({
               </Select>
               <Button
                 type="submit"
-                disabled={rolePending}
+                disabled={rolePending || isRoleUnchanged}
                 size="xs"
                 className="bg-neutral-800 hover:bg-neutral-700 text-white"
               >
@@ -217,31 +255,164 @@ function UserRow({
               </Button>
             </form>
           )}
-          {!isSelf && <FormAlert state={roleState} />}
         </TableCell>
         <TableCell className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap hidden md:table-cell">{formatDate(user.created_at)}</TableCell>
         <TableCell className="px-4 py-3">
           {!isSelf && (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => { setShowPwForm(v => !v); setShowDeactivateConfirm(false) }}
+                onClick={() => setShowPwForm(true)}
                 className="text-xs text-muted-foreground hover:text-status-warning underline underline-offset-2 transition-colors"
               >
                 Reset PW
               </button>
               <span className="text-muted-foreground/50" aria-hidden="true">|</span>
-              {user.is_active ? (
+              {(pendingAction === 'deactivate' || (pendingAction === null && user.is_active)) ? (
                 <button
-                  onClick={() => { setShowDeactivateConfirm(v => !v); setShowPwForm(false) }}
-                  className="text-xs text-status-negative hover:text-status-negative/70 underline underline-offset-2 transition-colors"
+                  onClick={() => setShowDeactivateConfirm(true)}
+                  disabled={pendingAction === 'deactivate'}
+                  className="text-xs text-status-negative hover:text-status-negative/70 underline underline-offset-2 transition-colors disabled:opacity-60"
                 >
-                  Deactivate
+                  {pendingAction === 'deactivate' ? 'Deactivating…' : 'Deactivate'}
                 </button>
               ) : (
+                <button
+                  onClick={() => setShowReactivateConfirm(true)}
+                  disabled={pendingAction === 'activate'}
+                  className="text-xs text-status-positive hover:text-status-positive/70 underline underline-offset-2 transition-colors disabled:opacity-60"
+                >
+                  {pendingAction === 'activate' ? 'Reactivating…' : 'Reactivate'}
+                </button>
+              )}
+            </div>
+          )}
+        </TableCell>
+      </TableRow>
+
+      {!isSelf && (
+        <Dialog
+          open={showPwForm}
+          onOpenChange={(open) => { setShowPwForm(open); if (open) setPwSubmitted(false) }}
+        >
+          <DialogContent>
+            {!pwSubmitted ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Reset password for {user.email}</DialogTitle>
+                  <DialogDescription>They&apos;ll need to sign in with this new password next time.</DialogDescription>
+                </DialogHeader>
+                <form action={async (fd) => { setPwSubmitted(true); await pwAction(fd) }}>
+                  <input type="hidden" name="userId" value={user.id} />
+                  <label htmlFor={`reset-password-${user.id}`} className="block text-xs font-medium text-muted-foreground mb-1">New Password</label>
+                  <Input
+                    id={`reset-password-${user.id}`}
+                    name="password"
+                    type="password"
+                    required
+                    minLength={8}
+                    placeholder="Min. 8 characters"
+                    className="border-border focus-visible:ring-ring"
+                  />
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setShowPwForm(false)} className="text-xs">
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={pwPending} className="text-xs">
+                      {pwPending ? 'Saving…' : 'Set Password'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{pwPending ? 'Resetting password…' : pwState?.error ? 'Password reset failed' : 'Password reset'}</DialogTitle>
+                  <DialogDescription className={pwPending ? undefined : pwState?.error ? 'text-status-negative' : 'text-status-positive'}>
+                    {pwPending ? `Setting a new password for ${user.email}…` : (pwState?.error ?? pwState?.success ?? '')}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter showCloseButton />
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {!isSelf && (
+        <Dialog
+          open={showDeactivateConfirm}
+          onOpenChange={(open) => { setShowDeactivateConfirm(open); if (open) setDeactivateSubmitted(false) }}
+        >
+          <DialogContent>
+            {!deactivateSubmitted ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Deactivate {user.email}?</DialogTitle>
+                  <DialogDescription>
+                    They won&apos;t be able to sign in. Their account and upload/audit history are kept, and you can
+                    reactivate them later.
+                  </DialogDescription>
+                </DialogHeader>
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()
                     const formData = new FormData(e.currentTarget)
+                    setDeactivateSubmitted(true)
+                    setPendingAction('deactivate')
+                    startActiveTransition(() => {
+                      onOptimisticActiveChange(false)
+                      deactivateAction(formData)
+                    })
+                  }}
+                >
+                  <input type="hidden" name="userId" value={user.id} />
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setShowDeactivateConfirm(false)} className="text-xs">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="bg-red-600 hover:bg-red-500 text-white text-xs">
+                      Yes, Deactivate
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    {pendingAction === 'deactivate' ? 'Deactivating…' : deactivateState?.error ? 'Deactivation failed' : 'Deactivated'}
+                  </DialogTitle>
+                  <DialogDescription className={pendingAction === 'deactivate' ? undefined : deactivateState?.error ? 'text-status-negative' : 'text-status-positive'}>
+                    {pendingAction === 'deactivate'
+                      ? `Deactivating ${user.email}…`
+                      : (deactivateState?.error ?? deactivateState?.success ?? '')}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter showCloseButton />
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {!isSelf && (
+        <Dialog
+          open={showReactivateConfirm}
+          onOpenChange={(open) => { setShowReactivateConfirm(open); if (open) setReactivateSubmitted(false) }}
+        >
+          <DialogContent>
+            {!reactivateSubmitted ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Reactivate {user.email}?</DialogTitle>
+                  <DialogDescription>They&apos;ll be able to sign in again.</DialogDescription>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const formData = new FormData(e.currentTarget)
+                    setReactivateSubmitted(true)
+                    setPendingAction('activate')
                     startActiveTransition(() => {
                       onOptimisticActiveChange(true)
                       reactivateAction(formData)
@@ -249,94 +420,33 @@ function UserRow({
                   }}
                 >
                   <input type="hidden" name="userId" value={user.id} />
-                  <button
-                    type="submit"
-                    disabled={reactivatePending || isActivePending}
-                    className="text-xs text-status-positive hover:text-status-positive/70 underline underline-offset-2 transition-colors"
-                  >
-                    {(reactivatePending || isActivePending) ? 'Reactivating…' : 'Reactivate'}
-                  </button>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setShowReactivateConfirm(false)} className="text-xs">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="text-xs">
+                      Yes, Reactivate
+                    </Button>
+                  </DialogFooter>
                 </form>
-              )}
-            </div>
-          )}
-          {/* Hoisted into this always-rendered cell (not the confirm row
-              below) — that row unmounts synchronously on submit, so a
-              FormAlert living inside it could never actually display a
-              rejected deactivate's error. */}
-          {!isSelf && <FormAlert state={deactivateState} />}
-          {!isSelf && <FormAlert state={reactivateState} />}
-        </TableCell>
-      </TableRow>
-
-      {/* Inline reset password form */}
-      {showPwForm && !isSelf && (
-        <TableRow className="border-t-0">
-          <TableCell colSpan={5} className="px-4 pb-3">
-            <form action={async (fd) => { await pwAction(fd); setShowPwForm(false) }}
-              className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex flex-wrap items-end gap-3">
-              <input type="hidden" name="userId" value={user.id} />
-              <div>
-                <label htmlFor={`reset-password-${user.id}`} className="block text-xs font-medium text-muted-foreground mb-1">New Password for {user.email}</label>
-                <Input
-                  id={`reset-password-${user.id}`}
-                  name="password"
-                  type="password"
-                  required
-                  minLength={8}
-                  placeholder="Min. 8 characters"
-                  className="border-border focus-visible:ring-ring"
-                />
-              </div>
-              <Button
-                type="submit"
-                disabled={pwPending}
-                className="bg-yellow-600 hover:bg-yellow-500 text-white"
-              >
-                {pwPending ? 'Saving…' : 'Set Password'}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowPwForm(false)} className="text-muted-foreground">
-                Cancel
-              </Button>
-              <FormAlert state={pwState} />
-            </form>
-          </TableCell>
-        </TableRow>
-      )}
-
-      {/* Inline deactivate confirmation */}
-      {showDeactivateConfirm && !isSelf && (
-        <TableRow className="border-t-0">
-          <TableCell colSpan={5} className="px-4 pb-3">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                const formData = new FormData(e.currentTarget)
-                setShowDeactivateConfirm(false)
-                startActiveTransition(() => {
-                  onOptimisticActiveChange(false)
-                  deactivateAction(formData)
-                })
-              }}
-              className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-wrap items-center gap-3">
-              <input type="hidden" name="userId" value={user.id} />
-              <p className="text-sm text-status-negative">
-                Deactivate <strong>{user.email}</strong>? They won&apos;t be able to sign in. Their account and
-                upload/audit history are kept, and you can reactivate them later.
-              </p>
-              <Button
-                type="submit"
-                disabled={deactivatePending || isActivePending}
-                className="bg-red-600 hover:bg-red-500 text-white"
-              >
-                {(deactivatePending || isActivePending) ? 'Deactivating…' : 'Yes, Deactivate'}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowDeactivateConfirm(false)} className="text-muted-foreground">
-                Cancel
-              </Button>
-            </form>
-          </TableCell>
-        </TableRow>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    {pendingAction === 'activate' ? 'Reactivating…' : reactivateState?.error ? 'Reactivation failed' : 'Reactivated'}
+                  </DialogTitle>
+                  <DialogDescription className={pendingAction === 'activate' ? undefined : reactivateState?.error ? 'text-status-negative' : 'text-status-positive'}>
+                    {pendingAction === 'activate'
+                      ? `Reactivating ${user.email}…`
+                      : (reactivateState?.error ?? reactivateState?.success ?? '')}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter showCloseButton />
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       )}
     </>
   )

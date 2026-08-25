@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "next-themes";
 import NavigationProgress from "@/components/ui/NavigationProgress";
+import { Toaster } from "@/components/ui/sonner";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' });
@@ -25,6 +26,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <NavigationProgress />
           {children}
+          <Toaster />
         </ThemeProvider>
         <Analytics />
       </body>
