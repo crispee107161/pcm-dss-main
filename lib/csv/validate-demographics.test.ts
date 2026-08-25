@@ -6,14 +6,14 @@ describe('validateDemographicsRows', () => {
     const headers = ['Gender', 'Distribution']
 
     it('passes fraction-form input through unchanged', () => {
-      const result = validateDemographicsRows(headers, [
+      const { valid } = validateDemographicsRows(headers, [
         { Gender: 'Male', Distribution: '0.75' },
         { Gender: 'Female', Distribution: '0.24' },
         { Gender: 'Other', Distribution: '0.01' },
       ])
-      expect(result.type).toBe('gender')
-      if (result.type !== 'gender') throw new Error('unreachable')
-      expect(result.rows).toEqual([
+      expect(valid.type).toBe('gender')
+      if (valid.type !== 'gender') throw new Error('unreachable')
+      expect(valid.rows).toEqual([
         { gender: 'Male', distribution: 0.75 },
         { gender: 'Female', distribution: 0.24 },
         { gender: 'Other', distribution: 0.01 },
@@ -21,21 +21,21 @@ describe('validateDemographicsRows', () => {
     })
 
     it('normalizes percent-form input to fractions (0-1)', () => {
-      const result = validateDemographicsRows(headers, [
+      const { valid } = validateDemographicsRows(headers, [
         { Gender: 'Male', Distribution: '73.70' },
         { Gender: 'Female', Distribution: '26.30' },
         { Gender: 'Other', Distribution: '0.01' },
       ])
-      expect(result.type).toBe('gender')
-      if (result.type !== 'gender') throw new Error('unreachable')
-      expect(result.rows[0].distribution).toBeCloseTo(0.737, 5)
-      expect(result.rows[1].distribution).toBeCloseTo(0.263, 5)
+      expect(valid.type).toBe('gender')
+      if (valid.type !== 'gender') throw new Error('unreachable')
+      expect(valid.rows[0].distribution).toBeCloseTo(0.737, 5)
+      expect(valid.rows[1].distribution).toBeCloseTo(0.263, 5)
       // A single row under 1 does not force it back to percent form once the
       // whole set has already been identified as percent-form by the other rows.
-      expect(result.rows[2].distribution).toBeCloseTo(0.0001, 6)
+      expect(valid.rows[2].distribution).toBeCloseTo(0.0001, 6)
     })
 
-    it('throws when the distribution values do not sum to a plausible split', () => {
+    it('throws when the distribution values do not sum to a plausible split — a whole-file structural problem, not a per-row one', () => {
       expect(() =>
         validateDemographicsRows(headers, [
           { Gender: 'Male', Distribution: '200' },
@@ -44,10 +44,17 @@ describe('validateDemographicsRows', () => {
       ).toThrow(/does not|sum/i)
     })
 
-    it('throws when Gender is missing', () => {
-      expect(() =>
-        validateDemographicsRows(headers, [{ Gender: '', Distribution: '0.5' }])
-      ).toThrow(/missing Gender/)
+    // FR-04/FR-07: a row missing its label is rejected individually, the
+    // rest of the file is still processed.
+    it('rejects a row missing Gender without discarding the rest of the file', () => {
+      const { valid, rejected } = validateDemographicsRows(headers, [
+        { Gender: '', Distribution: '0.5' },
+        { Gender: 'Male', Distribution: '0.5' },
+      ])
+      expect(valid.type).toBe('gender')
+      if (valid.type !== 'gender') throw new Error('unreachable')
+      expect(valid.rows).toEqual([{ gender: 'Male', distribution: 0.5 }])
+      expect(rejected).toEqual([{ row: 1, reason: 'missing Gender' }])
     })
   })
 
@@ -55,42 +62,47 @@ describe('validateDemographicsRows', () => {
     const headers = ['Top territories', 'Distribution']
 
     it('does not misdetect a top-N territory list (summing under 1) as percent form', () => {
-      const result = validateDemographicsRows(headers, [
+      const { valid } = validateDemographicsRows(headers, [
         { 'Top territories': 'PH', Distribution: '0.704' },
         { 'Top territories': 'Others', Distribution: '0.185' },
         { 'Top territories': 'US', Distribution: '0.032' },
       ])
-      expect(result.type).toBe('territory')
-      if (result.type !== 'territory') throw new Error('unreachable')
-      expect(result.rows[0].distribution).toBeCloseTo(0.704, 5)
+      expect(valid.type).toBe('territory')
+      if (valid.type !== 'territory') throw new Error('unreachable')
+      expect(valid.rows[0].distribution).toBeCloseTo(0.704, 5)
     })
 
     it('normalizes a percent-form territory list', () => {
-      const result = validateDemographicsRows(headers, [
+      const { valid } = validateDemographicsRows(headers, [
         { 'Top territories': 'PH', Distribution: '70.4' },
         { 'Top territories': 'Others', Distribution: '18.5' },
         { 'Top territories': 'US', Distribution: '3.2' },
       ])
-      expect(result.type).toBe('territory')
-      if (result.type !== 'territory') throw new Error('unreachable')
-      expect(result.rows[0].distribution).toBeCloseTo(0.704, 5)
+      expect(valid.type).toBe('territory')
+      if (valid.type !== 'territory') throw new Error('unreachable')
+      expect(valid.rows[0].distribution).toBeCloseTo(0.704, 5)
     })
 
-    it('throws when Top territories is missing', () => {
-      expect(() =>
-        validateDemographicsRows(headers, [{ 'Top territories': '', Distribution: '0.5' }])
-      ).toThrow(/missing Top territories/)
+    it('rejects a row missing Top territories without discarding the rest of the file', () => {
+      const { valid, rejected } = validateDemographicsRows(headers, [
+        { 'Top territories': '', Distribution: '0.5' },
+        { 'Top territories': 'PH', Distribution: '0.5' },
+      ])
+      expect(valid.type).toBe('territory')
+      if (valid.type !== 'territory') throw new Error('unreachable')
+      expect(valid.rows).toEqual([{ territory: 'PH', distribution: 0.5 }])
+      expect(rejected).toEqual([{ row: 1, reason: 'missing Top territories' }])
     })
 
     it('detects and parses the capitalized "Top Territories" header variant', () => {
       const capitalizedHeaders = ['Top Territories', 'Distribution']
-      const result = validateDemographicsRows(capitalizedHeaders, [
+      const { valid } = validateDemographicsRows(capitalizedHeaders, [
         { 'Top Territories': 'Philippines', Distribution: '0.601' },
         { 'Top Territories': 'Others', Distribution: '0.399' },
       ])
-      expect(result.type).toBe('territory')
-      if (result.type !== 'territory') throw new Error('unreachable')
-      expect(result.rows).toEqual([
+      expect(valid.type).toBe('territory')
+      if (valid.type !== 'territory') throw new Error('unreachable')
+      expect(valid.rows).toEqual([
         { territory: 'Philippines', distribution: 0.601 },
         { territory: 'Others', distribution: 0.399 },
       ])

@@ -1,4 +1,5 @@
 import { parseIsoLocalAsManila } from './timezone'
+import type { RowValidationResult } from './row-validation'
 
 export interface AdRecord {
   reporting_starts: Date
@@ -55,8 +56,18 @@ export function parseDate(value: string | undefined, fieldName: string): Date {
 
 const MESSAGING_RESULT_TYPE = 'Messaging conversations started'
 
-export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
-  return rows.map((row, index) => {
+// FR-04/FR-07 — collects a parse error per row instead of throwing on the
+// first one, so one malformed row no longer discards every other row in
+// the file. Also folds in the within-file duplicate-key check (previously
+// `assertNoDuplicateKeys`, which threw for the whole file) as a per-row
+// rejection: the first occurrence of (Ad ID, Reporting starts) wins, later
+// duplicates are rejected with a reason rather than aborting the upload.
+export function validateAdsRows(rows: Record<string, string>[]): RowValidationResult<AdRecord> {
+  const valid: AdRecord[] = []
+  const rejected: RowValidationResult<AdRecord>['rejected'] = []
+  const seenKeys = new Set<string>()
+
+  rows.forEach((row, index) => {
     try {
       const reporting_starts = parseDate(row['Reporting starts'], 'Reporting starts')
       const reporting_ends = parseDate(row['Reporting ends'], 'Reporting ends')
@@ -111,7 +122,15 @@ export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
       // sales/purchases/transaction framing — see DV-PIVOT-PLAN.md "Why this changed").
       const inquiries = null
 
-      return {
+      const dedupeKey = `${ad_id} ${reporting_starts.toISOString()}`
+      if (seenKeys.has(dedupeKey)) {
+        throw new Error(
+          `Duplicate row for Ad ID "${ad_id}" on ${reporting_starts.toISOString().slice(0, 10)} — an earlier row in this file already covers this Ad ID and Reporting starts date.`
+        )
+      }
+      seenKeys.add(dedupeKey)
+
+      valid.push({
         reporting_starts,
         reporting_ends,
         ad_id,
@@ -134,9 +153,11 @@ export function validateAdsRows(rows: Record<string, string>[]): AdRecord[] {
         results,
         cost_per_result,
         inquiries,
-      }
+      })
     } catch (err) {
-      throw new Error(`Row ${index + 1}: ${(err as Error).message}`)
+      rejected.push({ row: index + 1, reason: (err as Error).message })
     }
   })
+
+  return { valid, rejected }
 }

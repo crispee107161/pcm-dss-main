@@ -20,14 +20,50 @@ function baseRow(overrides: Record<string, string> = {}): Record<string, string>
 
 describe('validateAdsRows', () => {
   it('parses a pure ISO date (no time) as UTC midnight', () => {
-    const [record] = validateAdsRows([baseRow()])
+    const { valid: [record] } = validateAdsRows([baseRow()])
     expect(record.reporting_starts.toISOString()).toBe('2025-09-01T00:00:00.000Z')
     expect(record.reporting_ends.toISOString()).toBe('2025-09-30T00:00:00.000Z')
   })
 
   it('is deterministic regardless of process timezone', () => {
-    const [a] = validateAdsRows([baseRow()])
-    const [b] = validateAdsRows([baseRow()])
+    const { valid: [a] } = validateAdsRows([baseRow()])
+    const { valid: [b] } = validateAdsRows([baseRow()])
     expect(a.reporting_starts.getTime()).toBe(b.reporting_starts.getTime())
+  })
+
+  // FR-04/FR-07: a row that fails validation must be reported, not discard
+  // the rest of the file — docs/raven/Three_Decisions_and_FR_Table_Writable.md §1.
+  it('rejects a single malformed row without discarding the rest of the file', () => {
+    const rows = [
+      baseRow({ 'Ad ID': 'good-1' }),
+      baseRow({ 'Ad ID': '' }), // missing required field
+      baseRow({ 'Ad ID': 'good-2' }),
+    ]
+    const { valid, rejected } = validateAdsRows(rows)
+
+    expect(valid).toHaveLength(2)
+    expect(valid.map(r => r.ad_id)).toEqual(['good-1', 'good-2'])
+    expect(rejected).toHaveLength(1)
+    expect(rejected[0].row).toBe(2)
+    expect(rejected[0].reason).toMatch(/Ad ID/)
+  })
+
+  it('rejects a within-file duplicate (Ad ID, Reporting starts) as its own row, keeping the first occurrence', () => {
+    const rows = [
+      baseRow({ 'Ad ID': 'dup', 'Reporting starts': '2025-09-01' }),
+      baseRow({ 'Ad ID': 'dup', 'Reporting starts': '2025-09-01' }),
+    ]
+    const { valid, rejected } = validateAdsRows(rows)
+
+    expect(valid).toHaveLength(1)
+    expect(rejected).toHaveLength(1)
+    expect(rejected[0].row).toBe(2)
+    expect(rejected[0].reason).toMatch(/Duplicate row/)
+  })
+
+  it('returns an empty valid array with every row rejected when the whole file is malformed, rather than throwing', () => {
+    const { valid, rejected } = validateAdsRows([baseRow({ 'Ad ID': '' }), baseRow({ 'Ad ID': '' })])
+    expect(valid).toHaveLength(0)
+    expect(rejected).toHaveLength(2)
   })
 })

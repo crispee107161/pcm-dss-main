@@ -1,4 +1,5 @@
 import { parseIsoLocalAsManila } from './timezone'
+import type { RowValidationResult } from './row-validation'
 
 export interface PostRecord {
   post_id: string
@@ -55,8 +56,14 @@ function parsePublishTime(raw: string): Date {
   return parseIsoLocalAsManila(`${yyyy}-${mm}-${dd}T${hh}:${min}:00`)
 }
 
-export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] {
-  return rows.map((row, index) => {
+// FR-04/FR-07 — collects a parse error per row instead of throwing on the
+// first one, so one malformed row no longer discards every other row in
+// the file (docs/raven/Three_Decisions_and_FR_Table_Writable.md §1).
+export function validatePostsRows(rows: Record<string, string>[]): RowValidationResult<PostRecord> {
+  const valid: PostRecord[] = []
+  const rejected: RowValidationResult<PostRecord>['rejected'] = []
+
+  rows.forEach((row, index) => {
     try {
       const post_id = (row['Post ID'] ?? '').trim()
       if (!post_id) throw new Error('Missing Post ID')
@@ -87,7 +94,7 @@ export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] 
       const duration_sec = rawDuration !== null && rawDuration > 0 ? rawDuration : null
       const avg_seconds_viewed = parseFloatOrNull(row['Average Seconds viewed'])
 
-      return {
+      valid.push({
         post_id,
         publish_time,
         post_type,
@@ -102,9 +109,11 @@ export function validatePostsRows(rows: Record<string, string>[]): PostRecord[] 
         engagement_rate,
         duration_sec,
         avg_seconds_viewed,
-      }
+      })
     } catch (err) {
-      throw new Error(`Row ${index + 1}: ${(err as Error).message}`)
+      rejected.push({ row: index + 1, reason: (err as Error).message })
     }
   })
+
+  return { valid, rejected }
 }

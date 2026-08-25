@@ -1,5 +1,6 @@
 import { MONTH_INDEX } from './month-names'
 import { parseIsoLocalAsManila } from './timezone'
+import type { RowValidationResult } from './row-validation'
 
 export interface PageViewersRecord {
   date: Date
@@ -34,24 +35,36 @@ function parseNullableInt(raw: string | undefined): number | null {
   return isNaN(v) ? null : v
 }
 
+// FR-04/FR-07 — collects a parse error per row instead of throwing on the
+// first one, so one malformed row no longer discards every other row in
+// the file (docs/raven/Four_Remaining_Gaps_Please_Confirm.md §3).
 export function validatePageViewersRows(
   rows: Record<string, string>[]
-): PageViewersRecord[] {
+): RowValidationResult<PageViewersRecord> {
   if (rows.length === 0) throw new Error('Viewers CSV has no data rows')
 
-  return rows.map((row, i) => {
-    const dateRaw      = row['Date']
-    const totalRaw     = row['Total Viewers']
-    const newRaw       = row['New Viewers']
-    const returningRaw = row['Returning Viewers']
+  const valid: PageViewersRecord[] = []
+  const rejected: RowValidationResult<PageViewersRecord>['rejected'] = []
 
-    if (!dateRaw) throw new Error(`Row ${i + 1}: missing Date`)
+  rows.forEach((row, i) => {
+    try {
+      const dateRaw      = row['Date']
+      const totalRaw     = row['Total Viewers']
+      const newRaw       = row['New Viewers']
+      const returningRaw = row['Returning Viewers']
 
-    return {
-      date:              parseViewerDate(dateRaw),
-      total_viewers:     parseNullableInt(totalRaw),
-      new_viewers:       parseInt(newRaw ?? '0', 10) || 0,
-      returning_viewers: parseInt(returningRaw ?? '0', 10) || 0,
+      if (!dateRaw) throw new Error('missing Date')
+
+      valid.push({
+        date:              parseViewerDate(dateRaw),
+        total_viewers:     parseNullableInt(totalRaw),
+        new_viewers:       parseInt(newRaw ?? '0', 10) || 0,
+        returning_viewers: parseInt(returningRaw ?? '0', 10) || 0,
+      })
+    } catch (err) {
+      rejected.push({ row: i + 1, reason: (err as Error).message })
     }
   })
+
+  return { valid, rejected }
 }
