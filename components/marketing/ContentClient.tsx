@@ -776,8 +776,8 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
             type="search"
             value={search}
             onChange={(e) => updateSearch(e.target.value)}
-            placeholder="Search by title…"
-            aria-label="Search posts by title"
+            placeholder="Search captions…"
+            aria-label="Search posts by caption"
             className="h-8 max-w-xs text-xs"
           />
           <Select value={flagFilter} onValueChange={(v) => updateFlagFilter(v as FlagFilter)}>
@@ -1083,8 +1083,8 @@ function LibraryTable({ posts, canEdit, filter, baseRoute }: { posts: ContentPos
           type="search"
           value={search}
           onChange={(e) => updateSearch(e.target.value)}
-          placeholder="Search by title…"
-          aria-label="Search posts by title"
+          placeholder="Search captions…"
+          aria-label="Search posts by caption"
           className="h-8 max-w-xs text-xs"
         />
         {isFiltered && (
