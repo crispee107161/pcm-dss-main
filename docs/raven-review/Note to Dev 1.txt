@@ -1,0 +1,1 @@
+The manuscript now counts by ID, so any screen showing 297 or 24 needs to show 309 and 26. The mismatch would otherwise surface during the demo.

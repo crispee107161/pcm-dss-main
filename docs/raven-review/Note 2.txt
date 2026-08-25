@@ -1,0 +1,1 @@
+In the memo I just wrote, I dropped "no caption text" from the reason-capture list. Put it back. Under caption-only coding it is valid grounds for marking a post as having no category.
