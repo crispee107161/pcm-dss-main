@@ -6,7 +6,7 @@ import { PrismaClient } from '../app/generated/prisma/client'
 import { parseCsvBuffer } from '../lib/csv/parse'
 import { detectCsvType } from '../lib/csv/detect'
 import { validateAdsRows } from '../lib/csv/validate-ads'
-import { upsertAds, assertNoDuplicateKeys } from '../lib/db/upsert-ads'
+import { upsertAds } from '../lib/db/upsert-ads'
 
 const DATA_DIR = join(__dirname, '..', 'data', 'New_FB_Ads_Data')
 
@@ -30,8 +30,10 @@ async function main() {
       continue
     }
 
-    const records = validateAdsRows(rows)
-    assertNoDuplicateKeys(records)
+    const { valid: records, rejected } = validateAdsRows(rows)
+    if (rejected.length > 0) {
+      console.log(`${file}: ${rejected.length} row(s) rejected: ${rejected.map(r => `row ${r.row}: ${r.reason}`).join('; ')}`)
+    }
 
     const counts = await prisma.$transaction(
       (tx) => upsertAds(records, tx),

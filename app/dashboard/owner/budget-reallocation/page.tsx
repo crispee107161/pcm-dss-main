@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/nav/PageHeader'
 import MethodologyNote from '@/components/analytics/MethodologyNote'
 import { computeBudgetReallocation, MIN_SPEND_THRESHOLD_PHP } from '@/lib/stats/budget-reallocation'
 import { MinSpendSelect, BudgetReallocationView } from '@/components/analytics/BudgetReallocation'
+import { withStudyPeriodAd } from '@/lib/data/study-period'
 
 export default async function BudgetReallocationPage({
   searchParams,
@@ -21,7 +22,7 @@ export default async function BudgetReallocationPage({
   const minSpendThreshold = Number.isFinite(parsed) && parsed >= 0 ? parsed : MIN_SPEND_THRESHOLD_PHP
 
   const ads = await prisma.ad.findMany({
-    where: { total_messaging_contacts: { not: null } },
+    where: withStudyPeriodAd({ total_messaging_contacts: { not: null } }),
     select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true },
   })
 

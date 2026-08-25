@@ -1,6 +1,8 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { withStudyPeriod } from '@/lib/data/study-period'
+import { demographicSnapshotSuffix } from '@/lib/data/demographic-snapshot'
 import { PageHeader } from '@/components/nav/PageHeader'
 import Link from 'next/link'
 import DateRangeFilter from '@/components/ui/DateRangeFilter'
@@ -69,7 +71,7 @@ export default async function PageMetricsPage({
   const { from, to } = await searchParams
   const range = manilaDayRange(from, to)
   const dateWhere = { where: range ? { date: range } : undefined }
-  const postWhere = { where: range ? { publish_time: range } : undefined }
+  const postWhere = { where: withStudyPeriod(range ? { publish_time: range } : undefined) }
   const noDataMessage = range
     ? 'No data in the selected period.'
     : undefined
@@ -383,7 +385,9 @@ export default async function PageMetricsPage({
           {genderData.length > 0 ? (
             <div className="bg-card rounded-2xl card-shadow p-6">
               <h3 className="font-medium text-foreground mb-1 text-sm">Gender Distribution</h3>
-              <p className="text-xs text-muted-foreground mb-2">Follower gender breakdown</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Follower gender breakdown{demographicSnapshotSuffix(genderData)}
+              </p>
               <GenderPieChart data={genderData} />
               <div className="mt-3 space-y-1">
                 {genderData.map(g => (
@@ -405,7 +409,9 @@ export default async function PageMetricsPage({
           {territoryData.length > 0 ? (
             <div className="bg-card rounded-2xl card-shadow p-6">
               <h3 className="font-medium text-foreground mb-1 text-sm">Top Territories</h3>
-              <p className="text-xs text-muted-foreground mb-2">Followers by country/region</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Followers by country/region{demographicSnapshotSuffix(territoryData)}
+              </p>
               <TerritoryChart data={territoryData} />
               {territoryInsight && (
                 <div className="mt-3 pt-3 border-t border-border">
@@ -423,7 +429,9 @@ export default async function PageMetricsPage({
             {ageGenderData.length > 0 && (
               <div className="bg-card rounded-2xl card-shadow p-6">
                 <h3 className="font-medium text-foreground mb-1 text-sm">Age &amp; Gender</h3>
-                <p className="text-xs text-muted-foreground mb-2">Audience share by age bracket and gender</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Audience share by age bracket and gender{demographicSnapshotSuffix(ageGenderData)}
+                </p>
                 <AgeGenderChart data={ageGenderData} />
                 {ageGenderInsight && (
                   <div className="mt-3 pt-3 border-t border-border">
@@ -435,7 +443,9 @@ export default async function PageMetricsPage({
             {topCities.length > 0 && (
               <div className="bg-card rounded-2xl card-shadow p-6">
                 <h3 className="font-medium text-foreground mb-1 text-sm">Top Cities</h3>
-                <p className="text-xs text-muted-foreground mb-2">Followers by city</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Followers by city{demographicSnapshotSuffix(topCities)}
+                </p>
                 <AudienceRankChart data={topCities} />
                 {topCitiesInsight && (
                   <div className="mt-3 pt-3 border-t border-border">

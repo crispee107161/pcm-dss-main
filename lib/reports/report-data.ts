@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { STUDY_PERIOD_POST_WHERE, withStudyPeriodAd, STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
 import { getDashboardOverview } from '@/lib/data/dashboard'
 import { loadAnalysisScreenData, loadAdLifecycleData } from '@/lib/data/analysis'
 import { computeBudgetReallocation, MIN_SPEND_THRESHOLD_PHP, type BudgetReallocationResult } from '@/lib/stats/budget-reallocation'
@@ -18,16 +19,18 @@ export async function buildReportData({ role }: ReportOptions) {
   const [overview, budgetAds, adSetAds, posts, analysis, lifecycle] = await Promise.all([
     getDashboardOverview(undefined, undefined, true),
     prisma.ad.findMany({
-      where: { total_messaging_contacts: { not: null } },
+      where: withStudyPeriodAd({ total_messaging_contacts: { not: null } }),
       select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true },
     }),
     prisma.ad.findMany({
+      where: STUDY_PERIOD_AD_WHERE,
       select: {
         ad_id: true, ad_set_id: true, ad_set_name: true, campaign_id: true, campaign_name: true,
         amount_spent: true, total_messaging_contacts: true,
       },
     }),
     prisma.facebookPost.findMany({
+      where: STUDY_PERIOD_POST_WHERE,
       select: { post_type: true, reach: true, engagement_rate: true, views: true, duration_sec: true, avg_seconds_viewed: true },
     }),
     loadAnalysisScreenData(),

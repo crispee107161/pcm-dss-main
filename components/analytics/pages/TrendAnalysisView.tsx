@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
 import { PageHeader } from '@/components/nav/PageHeader'
 import TrendCharts from '@/components/marketing/TrendCharts'
 import { computeTrendInsight } from '@/lib/insights/trend-insight'
@@ -53,9 +54,11 @@ interface TrendAnalysisViewProps {
 export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnalysisViewProps) {
   const [allAds, allPosts] = await Promise.all([
     prisma.ad.findMany({
+      where: STUDY_PERIOD_AD_WHERE,
       select: { reporting_starts: true, amount_spent: true, total_messaging_contacts: true, reach: true },
     }),
     prisma.facebookPost.findMany({
+      where: STUDY_PERIOD_POST_WHERE,
       select: { publish_time: true, engagement_rate: true, reach: true },
     }),
   ])

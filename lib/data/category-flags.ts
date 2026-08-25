@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { withStudyPeriod } from '@/lib/data/study-period'
 import { resolveCaption } from '@/lib/keywords/caption'
 import { computeFlagReasons } from '@/lib/categorize/flag-reasons'
 import type { CategoryLabel, CategoryFlagReason } from '@/app/generated/prisma/client'
@@ -14,7 +15,7 @@ const ASSIGNABLE_LABELS: CategoryLabel[] = ['PRODUCT_SHOWCASE', 'PROMOTIONAL_OFF
 // live read, per FacebookPost.category_flag_reasons's doc comment.
 export async function recomputeQueueFlagReasons(): Promise<void> {
   const posts = await prisma.facebookPost.findMany({
-    where: { category_final: null },
+    where: withStudyPeriod({ category_final: null }),
     select: {
       id: true,
       title: true,

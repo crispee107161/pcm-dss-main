@@ -4,10 +4,14 @@ import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import DateRangeFilter from '@/components/ui/DateRangeFilter'
 import { manilaDayRange } from '@/lib/date-range'
+import { withStudyPeriodAd } from '@/lib/data/study-period'
 import {
   rankByCostPerInquiry,
   rankByCtr,
   rankByCostPerClick,
+  countEligibleForCostPerInquiry,
+  countEligibleForCtr,
+  countEligibleForCostPerClick,
   MIN_IMPRESSIONS_FOR_CTR,
   MIN_CLICKS_FOR_CPC,
   MIN_INQUIRIES_FOR_CPI,
@@ -31,7 +35,9 @@ export default async function CampaignRankingsPage({
 
   const { from, to } = await searchParams
   const range = manilaDayRange(from, to)
-  const adWhere = range ? { reporting_starts: range } : {}
+  // Scope_Call_Both_and_Clauses_Restored.md §2 — the date-range picker's own
+  // window still ANDs with the declared study period rather than replacing it.
+  const adWhere = withStudyPeriodAd(range ? { reporting_starts: range } : undefined)
 
   const TOP_N = 10
 
@@ -77,6 +83,9 @@ export default async function CampaignRankingsPage({
   const bestCostPerInquiry: RankRow[] = rankByCostPerInquiry(rankingPoolAds)
   const bestCtr: RankRow[] = rankByCtr(rankingPoolAds)
   const bestCostPerClick: RankRow[] = rankByCostPerClick(rankingPoolAds)
+  const eligibleForCostPerInquiry = countEligibleForCostPerInquiry(rankingPoolAds)
+  const eligibleForCtr = countEligibleForCtr(rankingPoolAds)
+  const eligibleForCostPerClick = countEligibleForCostPerClick(rankingPoolAds)
 
   const bySpend: RankRow[] = topSpendCandidates.map(a => ({
     name: a.ad_name,
@@ -209,8 +218,9 @@ export default async function CampaignRankingsPage({
               Amount spent ÷ messaging conversations, per ad. Lower is better, so ranked ascending,
               top 10. Only ads with at least {MIN_INQUIRIES_FOR_CPI} messaging conversations are
               included — below that, a single lucky conversation on tiny spend would otherwise top
-              the list. Filtered by the date range above, applied to each ad&apos;s Reporting starts
-              date.
+              the list. {eligibleForCostPerInquiry} ad{eligibleForCostPerInquiry === 1 ? '' : 's'} cleared
+              that floor in the selected range. Filtered by the date range above, applied to each
+              ad&apos;s Reporting starts date.
             </MethodologyNote>
           </div>
         </div>
@@ -232,10 +242,10 @@ export default async function CampaignRankingsPage({
             <MethodologyNote>
               Link clicks ÷ impressions, per ad. Higher is better, so ranked descending, top 10.
               Only ads with at least {MIN_IMPRESSIONS_FOR_CTR.toLocaleString()} impressions are
-              included, to filter out small-sample noise. This is calculated from the stored
-              columns, not Facebook&apos;s own reported CTR field, which isn&apos;t captured on
-              upload. Filtered by the date range above, applied to each ad&apos;s Reporting starts
-              date.
+              included, to filter out small-sample noise. {eligibleForCtr} ad{eligibleForCtr === 1 ? '' : 's'}{' '}
+              cleared that floor in the selected range. This is calculated from the stored columns,
+              not Facebook&apos;s own reported CTR field, which isn&apos;t captured on upload.
+              Filtered by the date range above, applied to each ad&apos;s Reporting starts date.
             </MethodologyNote>
           </div>
         </div>
@@ -257,8 +267,9 @@ export default async function CampaignRankingsPage({
             <MethodologyNote>
               Amount spent ÷ link clicks, per ad. Lower is better, so ranked ascending, top 10.
               Only ads with at least {MIN_CLICKS_FOR_CPC} link clicks are included, to filter out
-              small-sample noise. Filtered by the date range above, applied to each ad&apos;s
-              Reporting starts date.
+              small-sample noise. {eligibleForCostPerClick} ad{eligibleForCostPerClick === 1 ? '' : 's'}{' '}
+              cleared that floor in the selected range. Filtered by the date range above, applied to
+              each ad&apos;s Reporting starts date.
             </MethodologyNote>
           </div>
         </div>

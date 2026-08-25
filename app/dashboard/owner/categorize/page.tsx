@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { withStudyPeriod } from '@/lib/data/study-period'
 import { PageHeader } from '@/components/nav/PageHeader'
 import ContentClient from '@/components/marketing/ContentClient'
 import { parseContentFilter, whereForFilter, type ContentFilter } from '@/lib/categorize/content-filter'
@@ -30,7 +31,7 @@ export default async function OwnerCategorizePage({
   const filter = parseContentFilter(rawFilter)
 
   const posts = await prisma.facebookPost.findMany({
-    where: whereForFilter(filter),
+    where: withStudyPeriod(whereForFilter(filter)),
     orderBy: { publish_time: 'desc' },
     select: {
       id: true,

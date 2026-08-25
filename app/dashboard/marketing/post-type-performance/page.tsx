@@ -1,9 +1,10 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { STUDY_PERIOD_POST_WHERE } from '@/lib/data/study-period'
 import { PageHeader } from '@/components/nav/PageHeader'
 import MethodologyNote from '@/components/analytics/MethodologyNote'
-import { computePostTypePerformance } from '@/lib/stats/post-type-performance'
+import { computePostTypePerformance, describePostTypePerformance } from '@/lib/stats/post-type-performance'
 import { computeWatchThrough } from '@/lib/stats/watch-through'
 import PostTypePerformanceTable from '@/components/analytics/PostTypePerformanceTable'
 import WatchThroughCard from '@/components/analytics/WatchThroughCard'
@@ -15,10 +16,12 @@ export default async function MarketingPostTypePerformancePage() {
   }
 
   const posts = await prisma.facebookPost.findMany({
+    where: STUDY_PERIOD_POST_WHERE,
     select: { post_type: true, reach: true, engagement_rate: true, views: true, duration_sec: true, avg_seconds_viewed: true },
   })
 
   const rows = computePostTypePerformance(posts)
+  const callout = describePostTypePerformance(rows)
   const linksRow = rows.find(r => r.postType === 'Link' || r.postType === 'Links')
   const watchThroughEligible = posts.filter(p => p.duration_sec !== null && p.avg_seconds_viewed !== null)
   const watchThrough = watchThroughEligible.length > 0 ? computeWatchThrough(posts) : null
@@ -41,6 +44,7 @@ export default async function MarketingPostTypePerformancePage() {
       <div className="bg-card rounded-2xl card-shadow overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em]">By Post Type (n={rows.length})</p>
+          {callout && <p className="text-sm text-foreground mt-2">{callout}</p>}
         </div>
         <PostTypePerformanceTable rows={rows} />
       </div>

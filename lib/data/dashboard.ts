@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { withStudyPeriod, STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, withStudyPeriodAd } from '@/lib/data/study-period'
 import { manilaDayRange, priorEqualWindow, diffDaysInclusive, lastCompleteMonth, toISODate, type DateRangeWhere } from '@/lib/date-range'
 import { median, iqr, type Iqr } from '@/lib/stats/descriptive'
 import { MIN_INQUIRIES_FOR_CPI } from '@/lib/stats/campaign-rankings'
@@ -158,7 +159,11 @@ function calcDelta(current: number, previous: number): number | null {
 }
 
 export async function getDashboardOverview(from: string | undefined, to: string | undefined, all: boolean): Promise<DashboardOverview> {
-  const latestAdForAnchor = await prisma.ad.findFirst({ select: { reporting_ends: true }, orderBy: { reporting_ends: 'desc' } })
+  const latestAdForAnchor = await prisma.ad.findFirst({
+    where: STUDY_PERIOD_AD_WHERE,
+    select: { reporting_ends: true },
+    orderBy: { reporting_ends: 'desc' },
+  })
   const dataAnchor = latestAdForAnchor?.reporting_ends ?? new Date()
 
   const period = resolvePeriod(from, to, all, dataAnchor)
@@ -167,10 +172,13 @@ export async function getDashboardOverview(from: string | undefined, to: string 
   // `{}` (all-time) omits the where clause entirely rather than passing
   // `{ reporting_ends: {} }` — an empty scalar filter isn't the same no-op
   // in every Prisma provider, so don't rely on it matching everything.
-  const curAdWhere = all ? {} : { reporting_ends: curWindow }
-  const priorAdWhere = priorWindow ? { reporting_ends: priorWindow } : null
-  const curPostWhere = all ? {} : { publish_time: curWindow }
-  const priorPostWhere = priorWindow ? { publish_time: priorWindow } : null
+  // Scope_Call_Both_and_Clauses_Restored.md §2 — every ad query the
+  // dashboard runs is now ANDed with STUDY_PERIOD_AD_WHERE, so "all time"
+  // here means the full study period, not the full ingested range.
+  const curAdWhere = withStudyPeriodAd(all ? undefined : { reporting_ends: curWindow })
+  const priorAdWhere = priorWindow ? withStudyPeriodAd({ reporting_ends: priorWindow }) : null
+  const curPostWhere = withStudyPeriod(all ? undefined : { publish_time: curWindow })
+  const priorPostWhere = priorWindow ? withStudyPeriod({ publish_time: priorWindow }) : null
 
   const [
     earliestAd,
@@ -184,7 +192,7 @@ export async function getDashboardOverview(from: string | undefined, to: string 
     allPostsForTrend,
     allPageMetrics,
   ] = await Promise.all([
-    prisma.ad.findFirst({ select: { reporting_starts: true }, orderBy: { reporting_starts: 'asc' } }),
+    prisma.ad.findFirst({ where: STUDY_PERIOD_AD_WHERE, select: { reporting_starts: true }, orderBy: { reporting_starts: 'asc' } }),
     prisma.ad.findMany({
       where: curAdWhere,
       select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true },
@@ -199,10 +207,13 @@ export async function getDashboardOverview(from: string | undefined, to: string 
     priorPostWhere
       ? prisma.facebookPost.findMany({ where: priorPostWhere, select: { engagement_rate: true } })
       : Promise.resolve([]),
-    prisma.facebookPost.groupBy({ by: ['category_final'], _count: { _all: true } }),
+    prisma.facebookPost.groupBy({ by: ['category_final'], where: STUDY_PERIOD_POST_WHERE, _count: { _all: true } }),
     prisma.uploadLog.findMany({ orderBy: { uploaded_at: 'desc' }, take: 5, include: { user: { select: { email: true } } } }),
-    prisma.ad.findMany({ select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true, reach: true, reporting_starts: true } }),
-    prisma.facebookPost.findMany({ select: { publish_time: true, reach: true, views: true } }),
+    prisma.ad.findMany({
+      where: STUDY_PERIOD_AD_WHERE,
+      select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true, reach: true, reporting_starts: true },
+    }),
+    prisma.facebookPost.findMany({ where: STUDY_PERIOD_POST_WHERE, select: { publish_time: true, reach: true, views: true } }),
     prisma.pageMetricDaily.findMany({ select: { date: true, visits: true, follows: true } }),
   ])
 

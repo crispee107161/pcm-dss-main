@@ -6,6 +6,7 @@ import MethodologyNote from '@/components/analytics/MethodologyNote'
 import { rankByAdSet, rankByCampaign, MIN_ADS_FOR_CONFIDENCE } from '@/lib/stats/ad-set-ranking'
 import AdSetRankingTable from '@/components/analytics/AdSetRankingTable'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
 
 export default async function AdSetRankingPage() {
   const session = await auth()
@@ -14,6 +15,7 @@ export default async function AdSetRankingPage() {
   }
 
   const ads = await prisma.ad.findMany({
+    where: STUDY_PERIOD_AD_WHERE,
     select: {
       ad_id: true, ad_set_id: true, ad_set_name: true, campaign_id: true, campaign_name: true,
       amount_spent: true, total_messaging_contacts: true,

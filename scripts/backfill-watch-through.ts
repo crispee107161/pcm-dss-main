@@ -31,7 +31,10 @@ async function main() {
   for (const file of files) {
     const buffer = readFileSync(join(DATA_DIR, file))
     const { rows } = parseCsvBuffer(buffer)
-    const records = validatePostsRows(rows)
+    const { valid: records, rejected } = validatePostsRows(rows)
+    if (rejected.length > 0) {
+      console.log(`${file}: ${rejected.length} row(s) rejected: ${rejected.map(r => `row ${r.row}: ${r.reason}`).join('; ')}`)
+    }
     const counts = await upsertPosts(records)
     totalInserted += counts.inserted
     totalUpdated += counts.updated

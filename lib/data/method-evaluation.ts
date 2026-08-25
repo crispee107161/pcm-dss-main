@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { withStudyPeriod } from '@/lib/data/study-period'
 import { computeAgreement, type AgreementResult } from '@/lib/stats/agreement'
 
 export interface GroundTruthMethodEvaluationData {
@@ -15,7 +16,7 @@ export interface GroundTruthMethodEvaluationData {
 // below for why that distinction matters).
 export async function loadGroundTruthMethodEvaluation(): Promise<GroundTruthMethodEvaluationData> {
   const posts = await prisma.facebookPost.findMany({
-    where: { category_final_source: 'MANUAL_GROUND_TRUTH' },
+    where: withStudyPeriod({ category_final_source: 'MANUAL_GROUND_TRUTH' }),
     select: { category_keyword: true, category_llm: true, category_final: true },
   })
 
@@ -81,9 +82,9 @@ export interface AcceptanceRateData {
 // of category_final_assigned_at as the closest available proxy.
 export async function getSuggestionAcceptanceRate(): Promise<AcceptanceRateData> {
   const posts = await prisma.facebookPost.findMany({
-    where: {
+    where: withStudyPeriod({
       category_final_source: { in: ['ACCEPTED_SUGGESTION', 'MANUAL_OVERRIDE', 'MANUAL_CHANGE_AFTER_FINALISATION'] },
-    },
+    }),
     select: { category_keyword: true, category_llm: true, category_final: true, category_final_assigned_at: true },
   })
 
@@ -142,7 +143,7 @@ export interface MethodEvaluationData {
 // library the manager has finalised so far.
 export async function loadMethodEvaluation(): Promise<MethodEvaluationData> {
   const posts = await prisma.facebookPost.findMany({
-    where: { category_final: { not: null } },
+    where: withStudyPeriod({ category_final: { not: null } }),
     select: { category_keyword: true, category_llm: true, category_final: true },
   })
 

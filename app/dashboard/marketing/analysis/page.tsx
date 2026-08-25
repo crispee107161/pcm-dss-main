@@ -11,5 +11,5 @@ export default async function MarketingAnalysisPage() {
 
   const [data, regression] = await Promise.all([loadAnalysisScreenData(), loadRegressionAnalysis()])
 
-  return <AnalysisView data={data} regression={regression} />
+  return <AnalysisView data={data} regression={regression} hideAdEfficiency={session.user.role === 'MARKETING_TEAM'} />
 }

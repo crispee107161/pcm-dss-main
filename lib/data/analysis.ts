@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, withStudyPeriodAd } from '@/lib/data/study-period'
 import { computeRankingComparison, type RankingComparisonResult } from '@/lib/stats/ranking-comparison'
 import { computeCategoryDistribution, type CategoryDistributionRow } from '@/lib/stats/category-distribution'
 import { selectCorrelation, type CorrelationSelectionResult } from '@/lib/stats/correlation-selection'
@@ -26,15 +27,17 @@ export interface AnalysisScreenData {
 export async function loadAnalysisScreenData(): Promise<AnalysisScreenData> {
   const [posts, ads] = await Promise.all([
     prisma.facebookPost.findMany({
-      select: { views: true, engagement_rate: true, category_final: true },
+      where: STUDY_PERIOD_POST_WHERE,
+      select: { views: true, engagement_rate: true, category_final: true, reach: true },
     }),
     prisma.ad.findMany({
+      where: STUDY_PERIOD_AD_WHERE,
       select: { ad_id: true, amount_spent: true, total_messaging_contacts: true, reach: true, post_engagements: true },
     }),
   ])
 
   const ranking = computeRankingComparison(
-    posts.map(p => ({ views: p.views, organic_engagement_rate: p.engagement_rate }))
+    posts.map(p => ({ views: p.views, organic_engagement_rate: p.engagement_rate, reach: p.reach }))
   )
   const categoryDistribution = computeCategoryDistribution(
     posts.map(p => ({ views: p.views, organic_engagement_rate: p.engagement_rate, category_final: p.category_final }))
@@ -64,10 +67,12 @@ export async function loadAnalysisScreenData(): Promise<AnalysisScreenData> {
 export async function loadAdLifecycleData(): Promise<AdLifecycleResult> {
   const [lifecycleRows, frequencyRows] = await Promise.all([
     prisma.ad.findMany({
+      where: STUDY_PERIOD_AD_WHERE,
       select: { ad_id: true, reporting_starts: true, amount_spent: true, total_messaging_contacts: true },
     }),
     prisma.ad.findMany({
-      select: { frequency: true, amount_spent: true, total_messaging_contacts: true },
+      where: STUDY_PERIOD_AD_WHERE,
+      select: { ad_id: true, frequency: true, amount_spent: true, total_messaging_contacts: true },
     }),
   ])
 
@@ -90,7 +95,7 @@ export interface RegressionAnalysisData {
 // Chapter 4, never read back by the app.
 export async function loadRegressionAnalysis(): Promise<RegressionAnalysisData> {
   const ads = await prisma.ad.findMany({
-    where: { result_type: FR31_RESULT_TYPE },
+    where: withStudyPeriodAd({ result_type: FR31_RESULT_TYPE }),
     select: {
       ad_id: true,
       ad_name: true,
