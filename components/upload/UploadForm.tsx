@@ -57,6 +57,7 @@ export default function UploadForm() {
   const totalInserted  = queue.reduce((s, f) => s + (f.result?.records_inserted ?? 0), 0)
   const totalUpdated   = queue.reduce((s, f) => s + (f.result?.records_updated ?? 0), 0)
   const totalUnchanged = queue.reduce((s, f) => s + (f.result?.records_unchanged ?? 0), 0)
+  const totalRejected  = queue.reduce((s, f) => s + (f.result?.records_rejected ?? 0), 0)
   const isDone        = queue.length > 0 && pendingCount === 0 && !isPending
 
   useEffect(() => {
@@ -203,7 +204,36 @@ export default function UploadForm() {
                       <Badge variant="secondary" className="bg-muted text-muted-foreground border-border">
                         {UPLOAD_TYPE_LABELS[entry.result.upload_type] ?? entry.result.upload_type}
                       </Badge>
+                      {!!entry.result.records_rejected && entry.result.records_rejected > 0 && (
+                        <Badge variant="secondary" className="bg-status-warning/10 text-status-warning border-status-warning/30">
+                          {entry.result.records_rejected} rejected
+                        </Badge>
+                      )}
                     </div>
+                  )}
+                  {/* FR-04/FR-07 — rows that failed validation are reported, not
+                      silently dropped; capped list, per-row reason. */}
+                  {entry.result?.status === 'SUCCESS' && entry.result.rejected_rows && entry.result.rejected_rows.length > 0 && (
+                    <div className="mt-1.5 rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-xs text-foreground">
+                      <p className="font-medium text-status-warning">
+                        {entry.result.records_rejected} row{entry.result.records_rejected === 1 ? '' : 's'} rejected — the rest of the file was still processed.
+                      </p>
+                      <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                        {entry.result.rejected_rows.map((r, i) => (
+                          <li key={`${r.row}-${i}`}>Row {r.row}: {r.reason}</li>
+                        ))}
+                      </ul>
+                      {entry.result.records_rejected! > entry.result.rejected_rows.length && (
+                        <p className="mt-1 text-muted-foreground">
+                          …and {entry.result.records_rejected! - entry.result.rejected_rows.length} more.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {entry.result?.status === 'SUCCESS' && entry.result.warning_message && (
+                    <AttachmentDescription role="alert" className="text-status-warning">
+                      {entry.result.warning_message}
+                    </AttachmentDescription>
                   )}
                   {entry.result?.status === 'FAILED' && (
                     <AttachmentDescription role="alert">{entry.result.error_message}</AttachmentDescription>
@@ -305,12 +335,13 @@ export default function UploadForm() {
               </p>
               {successCount > 0 && (
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  {totalInserted === 0 && totalUpdated === 0
+                  {totalInserted === 0 && totalUpdated === 0 && totalRejected === 0
                     ? 'No changes — your data was already current.'
                     : [
                         totalInserted > 0 && `${totalInserted} records added`,
                         totalUpdated > 0 && `${totalUpdated} updated`,
                         totalUnchanged > 0 && `${totalUnchanged} already up to date`,
+                        totalRejected > 0 && `${totalRejected} rejected`,
                       ].filter(Boolean).join(', ')}
                 </p>
               )}

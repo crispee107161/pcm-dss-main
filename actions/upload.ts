@@ -10,7 +10,7 @@ import { validateFollowerHistoryRows } from '@/lib/csv/validate-follower-history
 import { validatePageViewersRows } from '@/lib/csv/validate-page-viewers'
 import { validateDemographicsRows } from '@/lib/csv/validate-demographics'
 import { validateAudienceResult } from '@/lib/csv/validate-audience'
-import { upsertAds, assertNoDuplicateKeys } from '@/lib/db/upsert-ads'
+import { upsertAds } from '@/lib/db/upsert-ads'
 import { upsertPosts } from '@/lib/db/upsert-posts'
 import { upsertPageMetric } from '@/lib/db/upsert-page-metric'
 import { upsertFollowerHistory } from '@/lib/db/upsert-follower-history'
@@ -18,8 +18,9 @@ import { upsertPageViewers } from '@/lib/db/upsert-page-viewers'
 import { upsertDemographics } from '@/lib/db/upsert-demographics'
 import { upsertAudience } from '@/lib/db/upsert-audience'
 import { prisma } from '@/lib/prisma'
+import { isInStudyPeriod } from '@/lib/data/study-period'
 import { revalidatePath } from 'next/cache'
-import type { UploadResult, UploadType } from '@/types/index'
+import type { UploadResult, UploadType, RowRejection } from '@/types/index'
 import type { AdRecord } from '@/lib/csv/validate-ads'
 import type { PostRecord } from '@/lib/csv/validate-posts'
 
@@ -156,9 +157,21 @@ export async function uploadCSV(
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
+    let records_read: number | undefined
     let records_inserted = 0
     let records_updated = 0
     let records_unchanged = 0
+    let warning_message: string | undefined
+    const rejected_rows: RowRejection[] = []
+
+    // FR-05's "rejected" figure. `rejected_rows` returned to the client is
+    // capped so a badly-formed file with thousands of bad rows doesn't
+    // balloon the response; the full count and full reasons still get
+    // recorded in UploadLog for the audit trail (FR-24).
+    const MAX_REJECTED_ROWS_SHOWN = 20
+    function recordRejections(rows: RowRejection[]) {
+      rejected_rows.push(...rows)
+    }
 
     // --- Audience.csv (UTF-16 LE, same sep=, preamble as page metrics but a
     // multi-block demographic file, not a single daily metric) — must be
@@ -167,7 +180,9 @@ export async function uploadCSV(
     if (detectIfAudienceBuffer(buffer)) {
       detectedType = 'AUDIENCE_CSV'
       const parsed = parseAudienceBuffer(buffer)
-      const validated = validateAudienceResult(parsed)
+      records_read = parsed.ageGender.length + parsed.topCities.length
+      const { valid: validated, rejected } = validateAudienceResult(parsed)
+      recordRejections(rejected)
       const { inserted, updated, unchanged } = await upsertAudience(validated)
       records_inserted  = inserted
       records_updated   = updated
@@ -177,7 +192,9 @@ export async function uploadCSV(
     } else if (detectIfPageMetricBuffer(buffer)) {
       detectedType = 'PAGE_METRIC_CSV'
       const parsed   = parsePageMetricBuffer(buffer)
-      const validated = validatePageMetricResult(parsed)
+      records_read = parsed.rows.length
+      const { valid: validated, rejected } = validatePageMetricResult(parsed)
+      recordRejections(rejected)
       const { inserted, updated, unchanged } = await upsertPageMetric(validated)
       records_inserted  = inserted
       records_updated   = updated
@@ -190,8 +207,9 @@ export async function uploadCSV(
       detectedType = csvType
 
       if (csvType === 'ADS_CSV') {
-        const parsedAdRecords = validateAdsRows(rows)
-        assertNoDuplicateKeys(parsedAdRecords)
+        const { valid: parsedAdRecords, rejected } = validateAdsRows(rows)
+        records_read = rows.length
+        recordRejections(rejected)
 
         if (!confirmed) {
           const overlap = await checkAdPeriodOverlap(parsedAdRecords)
@@ -207,7 +225,9 @@ export async function uploadCSV(
         records_unchanged = counts.unchanged
 
       } else if (csvType === 'POSTS_CSV') {
-        const postRecords = validatePostsRows(rows)
+        const { valid: postRecords, rejected } = validatePostsRows(rows)
+        records_read = rows.length
+        recordRejections(rejected)
 
         if (!confirmed) {
           const overlap = await checkPostPeriodOverlap(postRecords)
@@ -219,22 +239,36 @@ export async function uploadCSV(
         records_updated   = updated
         records_unchanged = unchanged
 
+        // FR-04a: out-of-period rows are still upserted (retain, don't
+        // delete) but flagged so an upload that silently drifts outside the
+        // declared study period is visible, not just excluded downstream.
+        const outOfPeriodCount = postRecords.filter((r) => !isInStudyPeriod(r.publish_time)).length
+        if (outOfPeriodCount > 0) {
+          warning_message = `${outOfPeriodCount} of ${postRecords.length} post${postRecords.length === 1 ? '' : 's'} in this file fall outside the declared study period (Aug 2025 – Jul 2026) and are excluded from analysis.`
+        }
+
       } else if (csvType === 'FOLLOWER_HISTORY_CSV') {
-        const records = validateFollowerHistoryRows(rows)
+        const { valid: records, rejected } = validateFollowerHistoryRows(rows)
+        records_read = rows.length
+        recordRejections(rejected)
         const { inserted, updated, unchanged } = await upsertFollowerHistory(records)
         records_inserted  = inserted
         records_updated   = updated
         records_unchanged = unchanged
 
       } else if (csvType === 'PAGE_VIEWERS_CSV') {
-        const records = validatePageViewersRows(rows)
+        const { valid: records, rejected } = validatePageViewersRows(rows)
+        records_read = rows.length
+        recordRejections(rejected)
         const { inserted, updated, unchanged } = await upsertPageViewers(records)
         records_inserted  = inserted
         records_updated   = updated
         records_unchanged = unchanged
 
       } else if (csvType === 'DEMOGRAPHICS_CSV') {
-        const result = validateDemographicsRows(headers, rows)
+        const { valid: result, rejected } = validateDemographicsRows(headers, rows)
+        records_read = rows.length
+        recordRejections(rejected)
         const { inserted, updated, unchanged } = await upsertDemographics(result)
         records_inserted  = inserted
         records_updated   = updated
@@ -245,6 +279,12 @@ export async function uploadCSV(
       }
     }
 
+    // Newline-joined, capped to a generous length so one pathological file
+    // (e.g. every row rejected) can't write an unbounded text blob.
+    const rejected_reasons = rejected_rows.length > 0
+      ? rejected_rows.map(r => `Row ${r.row}: ${r.reason}`).join('\n').slice(0, 10_000)
+      : undefined
+
     await prisma.uploadLog.create({
       data: {
         user_id: userId,
@@ -254,15 +294,22 @@ export async function uploadCSV(
         records_inserted,
         records_updated,
         records_unchanged,
+        records_rejected: rejected_rows.length,
+        rejected_reasons,
+        warning_message,
       },
     })
 
     return {
       status: 'SUCCESS',
       upload_type: detectedType,
+      records_read,
       records_inserted,
       records_updated,
       records_unchanged,
+      records_rejected: rejected_rows.length,
+      rejected_rows: rejected_rows.length > 0 ? rejected_rows.slice(0, MAX_REJECTED_ROWS_SHOWN) : undefined,
+      warning_message,
     }
   } catch (err) {
     const internalMessage = (err as Error).message

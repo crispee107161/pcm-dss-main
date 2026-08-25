@@ -74,7 +74,8 @@ export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
     userRole: log.user.role,
     summary: `${log.status === 'SUCCESS' ? 'Uploaded' : 'Failed to upload'} ${log.filename}`,
     detail: log.status === 'SUCCESS'
-      ? `${log.upload_type.replace(/_/g, ' ')} — ${log.records_inserted} inserted, ${log.records_updated} updated, ${log.records_unchanged} unchanged`
+      ? `${log.upload_type.replace(/_/g, ' ')} — ${log.records_inserted} inserted, ${log.records_updated} updated, ${log.records_unchanged} unchanged` +
+        (log.records_rejected > 0 ? `, ${log.records_rejected} rejected (${log.rejected_reasons ?? 'see file'})` : '')
       : log.error_message ?? 'Upload failed',
     status: log.status,
   }))

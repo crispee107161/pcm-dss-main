@@ -14,13 +14,35 @@ export interface UploadPeriodTotals {
   totalSpend?: number
 }
 
+// FR-04/FR-07 — a row that fails validation (or is a within-file duplicate
+// key) no longer aborts the whole upload; it's rejected individually and
+// the rest of the file is still processed. See
+// docs/raven/Three_Decisions_and_FR_Table_Writable.md §1.
+export interface RowRejection {
+  row: number
+  reason: string
+}
+
 export interface UploadResult {
   status: 'SUCCESS' | 'FAILED' | 'NEEDS_CONFIRMATION'
   upload_type: UploadType
+  // SUCCESS only — total data rows the file contained (inserted + updated +
+  // unchanged + rejected), i.e. FR-05's "records read" figure.
+  records_read?: number
   records_inserted: number
   records_updated: number
   records_unchanged: number
+  // SUCCESS only — rows that failed validation and were excluded, plus why.
+  // `rejected_rows` is capped (see actions/upload.ts) so a badly-formed
+  // file with thousands of bad rows doesn't balloon the response payload.
+  records_rejected?: number
+  rejected_rows?: RowRejection[]
   error_message?: string
+  // SUCCESS only, POSTS_CSV — FR-04a: how many of the rows just upserted
+  // fall outside the declared study period. Rows are still inserted/updated
+  // (retain, don't delete — docs/raven/FR04a_Implementation_and_731st_Post_Response_2026-08-25.md
+  // §2), so this is a visibility signal, not a rejection.
+  warning_message?: string
   // NEEDS_CONFIRMATION only — the period the incoming file covers already has
   // records on file; nothing was written yet. Re-submit with confirmed=true
   // to proceed and replace the existing figures with the incoming ones.
