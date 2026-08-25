@@ -201,6 +201,14 @@ model FacebookPost {
   /// kept for the FR-15 agreement study (Cohen's kappa, confusion matrix).
   category_keyword              CategoryLabel?
   category_llm                  CategoryLabel?
+  /// Raven's Four_Remaining_Gaps memo, FR-07: the version stamp the
+  /// lexicon-drift episode showed was missing. category_llm_model records
+  /// resolveGroqModel()'s pick (actions/classify-posts.ts's pinned
+  /// CLASSIFICATION_MODEL) at suggestion time; category_keyword_lexicon_count
+  /// records how many lib/keywords rows existed when autoCategorizeAll ran.
+  /// Both null for suggestions written before this column existed.
+  category_llm_model            String?
+  category_keyword_lexicon_count Int?
   category_final                CategoryLabel?
   /// Developer_Note_Ground_Truth_Labelling.md §4 — how category_final was set.
   /// MANUAL_GROUND_TRUTH only ever arrives via the external codebook CSV

@@ -7,6 +7,7 @@ import { detectCategoryFromText } from '@/lib/keywords/detect'
 import { resolveCaption } from '@/lib/keywords/caption'
 import { CATEGORY_NAME_TO_LABEL } from '@/lib/category-label'
 import { recomputeQueueFlagReasons, isUnflaggedAgreed } from '@/lib/data/category-flags'
+import { withStudyPeriod } from '@/lib/data/study-period'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
 
 // Ads no longer carry a category (mvp.md §5.1 — content category → ad
@@ -103,7 +104,7 @@ export async function autoCategorizeAll(): Promise<AutoCategorizeResult> {
   try {
     const [posts, keywordRows] = await Promise.all([
       prisma.facebookPost.findMany({
-        where: { category_keyword: null },
+        where: withStudyPeriod({ category_keyword: null }),
         select: { id: true, title: true, description: true },
       }),
       prisma.keyword.findMany({ include: { category: true } }),
@@ -116,11 +117,19 @@ export async function autoCategorizeAll(): Promise<AutoCategorizeResult> {
       })
       .filter((k): k is { word: string; label: CategoryLabel } => k !== null)
 
+    // FR-07 version stamp (Six_Edits_and_Chat_Feature_Decision.md §3) — the
+    // lexicon is DB-backed (prisma.keyword), not a static file with its own
+    // version number, so the term count at run time is the version stamp.
+    const lexiconTermCount = keywordRows.length
+
     await Promise.all(
       posts.map((post) => {
         const caption = resolveCaption(post.title, post.description)
         const { label } = detectCategoryFromText(caption, keywords)
-        return prisma.facebookPost.update({ where: { id: post.id }, data: { category_keyword: label } })
+        return prisma.facebookPost.update({
+          where: { id: post.id },
+          data: { category_keyword: label, category_keyword_lexicon_count: lexiconTermCount },
+        })
       })
     )
     await recomputeQueueFlagReasons()

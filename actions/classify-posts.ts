@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 import { resolveCaption } from '@/lib/keywords/caption'
 import { recomputeQueueFlagReasons } from '@/lib/data/category-flags'
+import { withStudyPeriod } from '@/lib/data/study-period'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
 
 // ALG-05 — LLM-assisted classification (FR-12, method B). Writes only
@@ -200,7 +201,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
   // error boundary — mirrors actions/upload.ts's top-level try/catch.
   try {
     const posts = await prisma.facebookPost.findMany({
-      where: { category_llm: null },
+      where: withStudyPeriod({ category_llm: null }),
       select: { id: true, post_id: true, post_type: true, title: true, description: true },
     })
     if (posts.length === 0) return { ok: true, classified: 0, unclassified: 0, batchesRun: 0, batchesRemaining: 0, batchesFailed: 0 }
@@ -266,7 +267,7 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
 
       await Promise.all(
         [...outcome.labels.entries()].map(([id, label]) =>
-          prisma.facebookPost.update({ where: { id }, data: { category_llm: label } })
+          prisma.facebookPost.update({ where: { id }, data: { category_llm: label, category_llm_model: model } })
         )
       )
       await prisma.llmClassificationRun.create({
