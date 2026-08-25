@@ -71,9 +71,14 @@ const FLAG_REASON_RANK: Record<CategoryFlagReason, number> = {
   SHORT_CAPTION: 4,
 }
 
-// Stacking every fired reason read as an undifferentiated wall of warnings
-// (docs/raven/S4_Presentation_Fix.md §1) — callers show only the first
-// (most informative) entry plus a count of the rest, expandable on demand.
+// docs/raven/S4_Presentation_Fix.md §1 originally had callers show only the
+// first (most informative) entry plus a count of the rest, expandable on
+// demand — docs/raven-review/FR07_Review_Row_Compliance.md §3.2 and
+// Needs_Review_Row_Design.md §3 overruled that for the Needs Review row
+// specifically ("+N more" hides reasons behind a click; there are at most
+// four, each a short phrase, show them all). This function's ranking is now
+// used only to pick which reason gets the emphasized/first-line treatment
+// when every reason is shown — see FlagReasonCell in ContentClient.tsx.
 export function rankFlagReasons(reasons: CategoryFlagReason[]): CategoryFlagReason[] {
   return [...reasons].sort((a, b) => FLAG_REASON_RANK[a] - FLAG_REASON_RANK[b])
 }

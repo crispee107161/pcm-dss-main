@@ -13,6 +13,7 @@ import { runLlmClassification } from '@/actions/classify-posts'
 import { FLAG_REASON_SHORT, rankFlagReasons } from '@/lib/categorize/flag-reasons'
 import {
   SELECTABLE_LABELS,
+  ASSIGNABLE_LABELS,
   selectableLabelText,
   categoryEditLabel,
   suggestedCandidates,
@@ -196,11 +197,26 @@ function SuggestionCell({ post }: { post: ContentPostRow }) {
 // display:none) so native keyboard nav (arrow keys between same-name
 // options) and focus-visible both keep working — only its box is hidden;
 // the visible pill is a sibling styled off its peer state.
+//
+// docs/raven-review/Needs_Review_Row_Design.md §1/§2.1/§2.2 — these pills
+// used to be visually identical to the static Photos/Videos type badges
+// elsewhere on the row (same shape, border, fill, weight), so two people
+// who wrote the spec themselves still read a greyed Save button as a
+// broken feature rather than "nothing selected yet." An explicit radio
+// dot — empty when unchecked, filled solid when checked — makes these
+// legible as controls at a glance, and a filled background on selection
+// (not just a border-color shift) makes the chosen answer readable from
+// across a desk, not just up close.
 function CategoryOption({
   name, value, text, checked, onSelect, disabled,
 }: { name: string; value: string; text: string; checked: boolean; onSelect: () => void; disabled?: boolean }) {
   return (
-    <label className="inline-flex">
+    // Named group (group/option) — code review (2026-08-26) flagged that an
+    // unnamed .group would match *any* ancestor .group, so if some future
+    // wrapper (a row, a card) also picks up className="group" for an
+    // unrelated reason, every pill on this row would light up together with
+    // no visible cause. Naming it makes that structurally impossible.
+    <label className="group/option inline-flex focus-within:outline-none">
       <input
         type="radio"
         name={name}
@@ -208,9 +224,19 @@ function CategoryOption({
         checked={checked}
         onChange={onSelect}
         disabled={disabled}
-        className="peer sr-only"
+        className="sr-only"
       />
-      <span className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs cursor-pointer select-none transition-[background-color,border-color,color] border-border text-muted-foreground bg-card hover:border-foreground/30 hover:text-foreground peer-checked:bg-primary/10 peer-checked:border-primary peer-checked:text-primary peer-checked:font-medium peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed">
+      <span className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs cursor-pointer select-none transition-[background-color,border-color,color] border-border text-muted-foreground bg-card hover:border-foreground/30 hover:text-foreground group-has-checked/option:bg-primary group-has-checked/option:border-primary group-has-checked/option:text-primary-foreground group-has-checked/option:font-medium group-has-focus-visible/option:outline-none group-has-focus-visible/option:ring-2 group-has-focus-visible/option:ring-ring group-has-focus-visible/option:ring-offset-1 group-has-disabled/option:opacity-50 group-has-disabled/option:cursor-not-allowed">
+        {/* Unselected affordance (docs/raven-review/Needs_Review_Row_Design.md
+            §2.1) — an empty ring reads unambiguously as "a slot waiting to be
+            filled," which nothing else on this row has, so it stops the chip
+            from being mistaken for a static badge like Photos/Videos. Fills
+            solid on selection (§2.2) rather than relying on the pill's own
+            border-color shift alone, which was too subtle on a dark
+            background to read at a glance. */}
+        <span aria-hidden="true" className="relative inline-flex size-2.5 shrink-0 rounded-full border border-current opacity-70 group-has-checked/option:opacity-100">
+          <span className="absolute inset-0.5 rounded-full bg-transparent group-has-checked/option:bg-current" />
+        </span>
         {text}
       </span>
     </label>
@@ -221,11 +247,25 @@ function CategoryOption({
 // shown as selectable, unlabelled radio options when methods disagree
 // (previously only one was visible), nothing pre-selected, chip becomes the
 // radio option itself rather than a badge next to a separate dropdown.
+// docs/raven-review/Needs_Review_Row_Design.md §4 / FR07_Review_Row_
+// Compliance.md §3.3 — Unassigned used to sit in the same chip row as the
+// four real categories, presenting "I cannot determine this" as a fifth
+// content type rather than an escape hatch. Two things suggested that
+// framing was having an effect: the bucket sat empty across the whole
+// corpus, and several posts have no caption text at all. Given its own
+// line and a one-line explanation. The chip's own label is
+// selectableLabelText('UNCLASSIFIED') (not a separately-worded string) —
+// code review (2026-08-26) caught an earlier version of this using
+// "No category applies" here while the confirm dialog/badge/dropdown all
+// called the same value "Unassigned"/"No category" independently; one
+// source of truth now, everywhere this value is displayed.
+const UNASSIGNED_CHIP_EXPLANATION = 'Cannot be determined from this post'
+
 function CategoryPicker({
   post, value, onChange, disabled,
 }: { post: ContentPostRow; value: CategoryLabel | ''; onChange: (label: CategoryLabel) => void; disabled?: boolean }) {
   const suggested = suggestedCandidates(post)
-  const others = SELECTABLE_LABELS.filter((label) => !suggested.includes(label))
+  const others = ASSIGNABLE_LABELS.filter((label) => !suggested.includes(label))
   const groupName = `category-${post.id}`
 
   return (
@@ -241,15 +281,24 @@ function CategoryPicker({
           </div>
         </div>
       )}
-      <div>
-        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-          {suggested.length > 0 ? 'Other categories' : 'Categories'}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {others.map((label) => (
-            <CategoryOption key={label} name={groupName} value={label} text={selectableLabelText(label)}
-              checked={value === label} onSelect={() => onChange(label)} disabled={disabled} />
-          ))}
+      {others.length > 0 && (
+        <div>
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+            {suggested.length > 0 ? 'Other categories' : 'Categories'}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {others.map((label) => (
+              <CategoryOption key={label} name={groupName} value={label} text={selectableLabelText(label)}
+                checked={value === label} onSelect={() => onChange(label)} disabled={disabled} />
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="pt-1 border-t border-border/60">
+        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+          <CategoryOption name={groupName} value="UNCLASSIFIED" text={selectableLabelText('UNCLASSIFIED')}
+            checked={value === 'UNCLASSIFIED'} onSelect={() => onChange('UNCLASSIFIED')} disabled={disabled} />
+          <span className="text-[10px] text-muted-foreground">{UNASSIGNED_CHIP_EXPLANATION}</span>
         </div>
       </div>
     </div>
@@ -285,11 +334,26 @@ function ManagerActionCell({ post }: { post: ContentPostRow }) {
       <CategoryPicker post={post} value={selected} onChange={setSelected} disabled={isPending} />
       <div>
         <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          {/* docs/raven-review/Needs_Review_Row_Design.md §2.3/§2.4 — a
+              button that names its own precondition ("Select a category")
+              replaces a static "Save category" label plus an implied
+              explanation, and removes an element from an already busy row.
+              The disabled state previously used bg-primary at reduced
+              opacity, which on this dark theme reads close enough to the
+              enabled red that it looked like an unresponsive button rather
+              than a waiting one — overridden here to a neutral grey so red
+              is reserved for "this will do something." */}
           <DialogTrigger
             disabled={isPending || selected === ''}
-            render={<Button type="button" size="sm" className="text-xs h-7 px-3" />}
+            render={
+              <Button
+                type="button"
+                size="sm"
+                className="text-xs h-7 px-3 disabled:opacity-100 disabled:bg-secondary disabled:text-muted-foreground disabled:border disabled:border-border"
+              />
+            }
           >
-            Save category
+            {selected === '' ? 'Select a category' : 'Save category'}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -316,22 +380,20 @@ function ManagerActionCell({ post }: { post: ContentPostRow }) {
   )
 }
 
-// docs/raven/S4_Presentation_Fix.md §2.1 — stacking every fired reason read
-// as an undifferentiated wall of warnings across rows. Show only the
-// highest-ranked (most informative) reason, with the rest available on
-// demand rather than always visible.
+// docs/raven-review/FR07_Review_Row_Compliance.md §3.2 / Needs_Review_Row_
+// Design.md §3 — "+N more" hid reasons behind a click. There are at most
+// four possible reasons and each is a short phrase, so all fired reasons
+// are now shown inline; no expand/collapse state needed.
 function FlagReasonCell({ post }: { post: ContentPostRow }) {
-  const [expanded, setExpanded] = useState(false)
-
   if (post.flagReasons.length === 0) {
     return <span className="text-muted-foreground text-xs">—</span>
   }
 
   const [primary, ...rest] = rankFlagReasons(post.flagReasons)
-  // §2.4 — every row here is flagged by definition, so a triangle on every
-  // one carries no information; dropped entirely. Warning-color emphasis is
+  // Every row here is flagged by definition, so a triangle on every one
+  // carries no information; dropped entirely. Warning-color emphasis is
   // reserved for the rank-1 DISAGREEMENT case, the strongest signal, so it
-  // still stands out from the other three, purely text-driven differences.
+  // still stands out from the other reasons, purely text-driven differences.
   const primaryIsDisagreement = primary === 'DISAGREEMENT'
 
   return (
@@ -340,24 +402,13 @@ function FlagReasonCell({ post }: { post: ContentPostRow }) {
         {FLAG_REASON_SHORT[primary]}
       </div>
       {rest.length > 0 && (
-        <>
-          {expanded && (
-            <ul className="flex flex-col gap-1 pl-4">
-              {rest.map((reason) => (
-                <li key={reason} className="text-xs text-muted-foreground">
-                  {FLAG_REASON_SHORT[reason]}
-                </li>
-              ))}
-            </ul>
-          )}
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="text-xs text-primary hover:underline text-left pl-4 w-fit"
-          >
-            {expanded ? 'Show less' : `+${rest.length} more`}
-          </button>
-        </>
+        <ul className="flex flex-col gap-1 pl-4">
+          {rest.map((reason) => (
+            <li key={reason} className="text-xs text-muted-foreground">
+              {FLAG_REASON_SHORT[reason]}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )
@@ -380,8 +431,16 @@ function ReviewCard({ post, role }: { post: ContentPostRow; role: Role }) {
           ) : (
             <span className="text-muted-foreground text-xs italic">No title</span>
           )}
+          {/* docs/raven-review/Unassigned_Labels_and_Coding_Procedure.md §1 —
+              FR-07 lets the reviewer "consult the original post where the
+              caption is not sufficient," and that's the primary action for
+              exactly the posts most likely to need it (missing/short
+              caption). A small text link under the title was easy to miss,
+              so this renders as a real action pill instead. Already opens
+              in a new tab (target="_blank"), so the reviewer never loses
+              their place in the queue. */}
           <a href={post.permalink} target="_blank" rel="noopener noreferrer"
-            className="text-primary hover:text-primary/80 hover:underline text-xs mt-0.5 inline-block">
+            className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:border-primary/40 hover:text-primary transition-colors">
             View post ↗
           </a>
         </div>
@@ -801,6 +860,10 @@ const CATEGORY_FINAL_SOURCE_DISPLAY: Record<CategoryFinalSource, string> = {
   // §6.1 — a revision made from All/Unassigned to an already-finalised post,
   // distinct from "Manual selection" (first assignment via triage).
   MANUAL_CHANGE_AFTER_FINALISATION: 'Manual revision',
+  // docs/raven-review/Content_Counts_and_Backlog.md §3.2 (A8) — researcher
+  // coding of the requeued backlog against the codebook, same procedure as
+  // the ground-truth sample but not part of the locked benchmark itself.
+  MANUAL_CODEBOOK_ASSIGNMENT: 'Codebook assignment',
 }
 
 // docs/raven/Categorisation_Workflow_Consolidation.md §3.2 — shown on the
@@ -968,7 +1031,8 @@ function CategoryEditCell({ post, canEdit, baseRoute }: { post: ContentPostRow; 
 // QueueView/ReviewTable instead, which already has its own copy.
 const LIBRARY_EMPTY_STATE: Record<Exclude<ContentFilter, 'needs-review'>, string> = {
   all: 'No organic posts uploaded yet.',
-  unassigned: 'No posts have been marked unassigned.',
+  // docs/raven-review/Unassigned_Labels_and_Coding_Procedure.md §2.1
+  unassigned: 'No posts have been marked as having no category.',
 }
 
 // The "All" / "Unassigned" filters' view — the old ContentLibraryClient's
@@ -1091,7 +1155,12 @@ function LibraryTable({ posts, canEdit, filter, baseRoute }: { posts: ContentPos
 const CONTENT_FILTER_OPTIONS: { value: ContentFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'needs-review', label: 'Needs Review' },
-  { value: 'unassigned', label: 'Unassigned' },
+  // docs/raven-review/Unassigned_Labels_and_Coding_Procedure.md §2.1 — "No
+  // category" states an outcome rather than a pending status (the original
+  // "Unassigned" misread as "not yet assigned"). Eleven characters, sits
+  // evenly beside "Needs Review". The underlying filter value/enum stays
+  // `unassigned` — this is a display-only rename.
+  { value: 'unassigned', label: 'No category' },
 ]
 
 // User-sketched spec: the active tab shouldn't just flip its own styling when

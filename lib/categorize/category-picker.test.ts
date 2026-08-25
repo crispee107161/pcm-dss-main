@@ -30,8 +30,8 @@ describe('ASSIGNABLE_LABELS vs SELECTABLE_LABELS', () => {
 })
 
 describe('selectableLabelText', () => {
-  it('renders UNCLASSIFIED as "Unassigned"', () => {
-    expect(selectableLabelText('UNCLASSIFIED')).toBe('Unassigned')
+  it('renders UNCLASSIFIED as "No category"', () => {
+    expect(selectableLabelText('UNCLASSIFIED')).toBe('No category')
   })
 
   it('renders every other label via CATEGORY_LABEL_DISPLAY', () => {

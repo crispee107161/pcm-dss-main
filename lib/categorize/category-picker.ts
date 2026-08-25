@@ -16,8 +16,14 @@ export const ASSIGNABLE_LABELS: CategoryLabel[] = ['PRODUCT_SHOWCASE', 'PROMOTIO
 // derivation must never auto-treat UNCLASSIFIED as a real answer.
 export const SELECTABLE_LABELS: CategoryLabel[] = [...ASSIGNABLE_LABELS, 'UNCLASSIFIED']
 
+// docs/raven-review/Unassigned_Labels_and_Coding_Procedure.md §2.1 renamed
+// this state to "No category" everywhere a person reads it — code review
+// (2026-08-26) caught that the rename had only reached the tab and the
+// picker chip, leaving "Unassigned" on the confirm dialog, the badge, and
+// the dropdown for the exact same value in the exact same interaction.
+// Changed once, here, so every caller stays in sync by construction.
 export function selectableLabelText(label: CategoryLabel): string {
-  return label === 'UNCLASSIFIED' ? 'Unassigned' : CATEGORY_LABEL_DISPLAY[label]
+  return label === 'UNCLASSIFIED' ? 'No category' : CATEGORY_LABEL_DISPLAY[label]
 }
 
 export function categoryEditLabel(value: string | null): string {

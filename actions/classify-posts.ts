@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 import { resolveCaption } from '@/lib/keywords/caption'
+import { captionWordCount } from '@/lib/categorize/flag-reasons'
 import { recomputeQueueFlagReasons } from '@/lib/data/category-flags'
 import { withStudyPeriod } from '@/lib/data/study-period'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
@@ -149,13 +150,56 @@ interface BatchOutcome {
   labels: Map<number, CategoryLabel>
   rawResponse: string
   succeeded: boolean
+  // Post ids stamped UNCLASSIFIED by the caption pre-filter, never sent to
+  // Groq — so the audit log can say so instead of implying rawResponse
+  // covers them.
+  captionlessSkippedIds: number[]
+}
+
+// docs/raven-review/FR07_Review_Row_Compliance.md §1 — the model has no
+// fifth "cannot determine" option in its instructions, so an empty caption
+// (5 posts corpus-wide, both Title and Description null) was being forced
+// through classifyBatch to Groq anyway, which reliably guessed one of the
+// four categories rather than abstaining — the root cause of a captionless
+// post rendering a confident-looking two-way DISAGREEMENT. A deterministic
+// pre-filter is cheaper than relying on a prompt instruction the model might
+// not reliably follow, and removes the nondeterminism risk entirely: any
+// post whose resolveCaption() output is empty never reaches Groq at all.
+// Reuses lib/categorize/flag-reasons.ts's captionWordCount rather than a
+// second, drifting definition of "this post has no caption" — that's also
+// what decides the SHORT_CAPTION flag, so both call sites now agree on
+// exactly which posts count as captionless.
+function hasCaption(post: BatchPost): boolean {
+  return captionWordCount(post.caption) > 0
 }
 
 // Retries the whole batch once on a parse failure, then marks every post in
 // it UNCLASSIFIED and logs the raw response, per ALG-05.
+//
+// Code review (2026-08-26) caught that in a *mixed* batch (some captioned,
+// some not), logging outcome.rawResponse against the full batch's post_ids
+// misattributed Groq's response to posts it never saw — a provenance bug in
+// exactly the table a Chapter 4 audit reads. sentToGroqCount/note below let
+// the caller record which posts the pre-filter actually excluded, without
+// changing post_ids away from "every post this batch run wrote a label for."
 async function classifyBatch(apiKey: string, model: string, batch: BatchPost[]): Promise<BatchOutcome> {
-  const prompt = buildPrompt(batch)
-  const byPostId = new Map(batch.map((b) => [b.post_id, b.id]))
+  const captioned = batch.filter(hasCaption)
+  const captionless = batch.filter((b) => !hasCaption(b))
+
+  const labels = new Map<number, CategoryLabel>()
+  for (const b of captionless) labels.set(b.id, 'UNCLASSIFIED')
+
+  if (captioned.length === 0) {
+    return {
+      labels,
+      rawResponse: '(all posts in this batch had an empty caption — skipped, not sent to Groq)',
+      succeeded: true,
+      captionlessSkippedIds: captionless.map((b) => b.id),
+    }
+  }
+
+  const prompt = buildPrompt(captioned)
+  const byPostId = new Map(captioned.map((b) => [b.post_id, b.id]))
 
   let rawResponse = ''
   let parsed: { results: Array<{ post_id: string; category: string }> } | null = null
@@ -165,7 +209,6 @@ async function classifyBatch(apiKey: string, model: string, batch: BatchPost[]):
     parsed = parseClassificationResponse(rawResponse)
   }
 
-  const labels = new Map<number, CategoryLabel>()
   if (parsed) {
     for (const r of parsed.results) {
       const id = byPostId.get(r.post_id)
@@ -173,11 +216,16 @@ async function classifyBatch(apiKey: string, model: string, batch: BatchPost[]):
       labels.set(id, LABELS.includes(r.category as CategoryLabel) ? (r.category as CategoryLabel) : 'UNCLASSIFIED')
     }
   }
-  for (const b of batch) {
+  for (const b of captioned) {
     if (!labels.has(b.id)) labels.set(b.id, 'UNCLASSIFIED')
   }
 
-  return { labels, rawResponse: rawResponse || '(no response)', succeeded: parsed !== null }
+  return {
+    labels,
+    rawResponse: rawResponse || '(no response)',
+    succeeded: parsed !== null,
+    captionlessSkippedIds: captionless.map((b) => b.id),
+  }
 }
 
 export async function runLlmClassification(): Promise<ClassifyPostsResult> {
@@ -270,11 +318,20 @@ export async function runLlmClassification(): Promise<ClassifyPostsResult> {
           prisma.facebookPost.update({ where: { id }, data: { category_llm: label, category_llm_model: model } })
         )
       )
+      // Code review (2026-08-26) — outcome.rawResponse is Groq's actual reply
+      // (or the synthetic all-skipped string), which only ever covers the
+      // captioned subset of a mixed batch. post_ids still lists the whole
+      // batch (every one of them got a label written this run), but a note
+      // is appended whenever some were pre-filter-skipped, so the row never
+      // implies Groq saw posts it didn't.
+      const rawResponseForLog = outcome.captionlessSkippedIds.length > 0 && outcome.captionlessSkippedIds.length < batch.length
+        ? `${outcome.rawResponse}\n\n[${outcome.captionlessSkippedIds.length} of ${batch.length} post(s) in this batch had no caption and were pre-filter-skipped — stamped UNCLASSIFIED directly, not covered by the response above. IDs: ${outcome.captionlessSkippedIds.join(', ')}]`
+        : outcome.rawResponse
       await prisma.llmClassificationRun.create({
         data: {
           model_name: model,
           post_ids: batch.map((b) => b.id),
-          raw_response: outcome.rawResponse,
+          raw_response: rawResponseForLog,
           succeeded: outcome.succeeded,
         },
       })

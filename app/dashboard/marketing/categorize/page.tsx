@@ -14,7 +14,8 @@ import { parseContentFilter, whereForFilter, type ContentFilter } from '@/lib/ca
 const FILTER_DESCRIPTIONS: Record<ContentFilter, string> = {
   'needs-review': 'Review and finalise categories for uncategorised posts.',
   all: 'Every organic post and its assigned category (excluding the locked ground-truth benchmark).',
-  unassigned: 'Posts explicitly marked as unable to be categorised.',
+  // docs/raven-review/Unassigned_Labels_and_Coding_Procedure.md §2.1
+  unassigned: 'Posts reviewed and found to have no determinable category. Reviewed, not skipped.',
 }
 
 export default async function CategorizePage({
