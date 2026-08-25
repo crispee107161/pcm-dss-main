@@ -130,9 +130,15 @@ interface SidebarProps {
   email: string
   roleLabel: string
   children: React.ReactNode
+  // Six_Edits_and_Chat_Feature_Decision.md §1 — the chat widget surfaces the
+  // same regression coefficients AnalysisView's hideAdEfficiency gate hides
+  // from Marketing Team, so it needs the same gate rather than a role check
+  // buried inside ChatBot itself. Defaults true (Owner and Marketing
+  // Manager); Marketing Team's layout passes false.
+  showChat?: boolean
 }
 
-export default function Sidebar({ navItems, email, roleLabel, children }: SidebarProps) {
+export default function Sidebar({ navItems, email, roleLabel, children, showChat = true }: SidebarProps) {
   const pathname = usePathname()
   const reduceMotion = useReducedMotion()
   // Defaults to expanded; the toggle row collapses it to the icon rail.
@@ -305,7 +311,7 @@ export default function Sidebar({ navItems, email, roleLabel, children }: Sideba
         </div>
       </motion.div>
 
-      <ChatBot />
+      {showChat && <ChatBot />}
     </div>
   )
 }

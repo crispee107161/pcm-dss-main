@@ -72,6 +72,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
         navItems={visibleNavItems}
         email={session.user.email ?? ''}
         roleLabel={isTeam ? 'Marketing Team' : 'Marketing Manager'}
+        showChat={!isTeam}
       >
         {children}
       </Sidebar>

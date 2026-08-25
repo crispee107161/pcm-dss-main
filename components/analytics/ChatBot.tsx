@@ -115,6 +115,13 @@ export default function ChatBot() {
             </button>
           </div>
 
+          {/* Six_Edits_and_Chat_Feature_Decision.md §4 condition 3 — not
+              cosmetic: the caption is the thing that lets Chapter 3 call this
+              an orientation layer rather than a second source of record. */}
+          <p className="flex-shrink-0 text-[11px] leading-snug text-gray-500 bg-gray-50 border-b border-gray-100 px-4 py-2">
+            Figures are drawn from the consolidated dataset and summarized by AI — confirm against the reports before acting on them.
+          </p>
+
           {/* Messages */}
           <ScrollArea className="flex-1">
           <div className="p-4 space-y-3">
