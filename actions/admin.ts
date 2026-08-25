@@ -109,7 +109,13 @@ export async function resetPassword(
   return { success: 'Password reset successfully.' }
 }
 
-export async function deleteUser(
+// FR-02 says "deactivate," not "delete." A hard delete also breaks
+// UploadLog.user_id's RESTRICT foreign key for any user with upload
+// history (confirmed live 2026-08-25 — such a delete already throws).
+// Deactivation preserves the user row (and every record attributed to
+// them, per FR-20's audit trail) and just blocks authentication — see
+// lib/auth.ts's is_active check.
+export async function deactivateUser(
   _prev: { error?: string; success?: string } | null,
   formData: FormData
 ): Promise<{ error?: string; success?: string }> {
@@ -123,7 +129,7 @@ export async function deleteUser(
     return { error: 'Invalid user ID.' }
   }
   if (userId === parseInt(session.user.id, 10)) {
-    return { error: "You can't delete your own account." }
+    return { error: "You can't deactivate your own account." }
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } })
@@ -131,7 +137,30 @@ export async function deleteUser(
     return { error: 'User not found.' }
   }
 
-  await prisma.user.delete({ where: { id: userId } })
+  await prisma.user.update({ where: { id: userId }, data: { is_active: false } })
   revalidatePath('/dashboard/owner/administration')
-  return { success: `User ${user.email} deleted.` }
+  return { success: `User ${user.email} deactivated.` }
+}
+
+export async function reactivateUser(
+  _prev: { error?: string; success?: string } | null,
+  formData: FormData
+): Promise<{ error?: string; success?: string }> {
+  const auth_ = await requireOwner()
+  if ('error' in auth_) return { error: auth_.error }
+
+  const userId = parseInt(formData.get('userId') as string, 10)
+
+  if (isNaN(userId)) {
+    return { error: 'Invalid user ID.' }
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  if (!user) {
+    return { error: 'User not found.' }
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { is_active: true } })
+  revalidatePath('/dashboard/owner/administration')
+  return { success: `User ${user.email} reactivated.` }
 }

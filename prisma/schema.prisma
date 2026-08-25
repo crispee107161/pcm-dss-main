@@ -108,6 +108,12 @@ model User {
   password_hash              String
   role                       Role
   created_at                 DateTime           @default(now())
+  // FR-02 says "deactivate," not "delete" — a hard delete also breaks
+  // UploadLog.user_id's RESTRICT foreign key for any user with upload
+  // history (confirmed live 2026-08-25: any such delete already throws).
+  // Soft-delete via this flag preserves the audit trail and never touches
+  // the FK. Deactivated users cannot authenticate — see lib/auth.ts.
+  is_active                  Boolean            @default(true)
   upload_logs                UploadLog[]
   simulation_results         SimulationResult[]
   category_proposals         FacebookPost[]

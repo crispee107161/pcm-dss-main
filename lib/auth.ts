@@ -21,7 +21,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { email: credentials.email as string },
         })
 
-        if (!user) {
+        if (!user || !user.is_active) {
           return null
         }
 
@@ -43,10 +43,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    // FR-02 — a deactivated user must lose access, not just be blocked from
+    // their *next* login. JWT sessions carry no server-side state by
+    // default, so without this a deactivated user's existing token stays
+    // valid until it naturally expires (maxAge below). Re-checking
+    // is_active here (not just at sign-in) costs one query per request at
+    // this account's scale (~10 staff) and closes that gap — see
+    // docs/raven/Four_Remaining_Gaps_Please_Confirm.md §4. Returning `null`
+    // invalidates the token; every page/Server Action already treats a null
+    // session as logged-out (`if (!session?.user) redirect('/login')`).
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as { role: Role }).role
         token.sub = user.id
+        return token
+      }
+      if (token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: Number(token.sub) },
+          select: { is_active: true },
+        })
+        if (!dbUser || !dbUser.is_active) {
+          return null
+        }
       }
       return token
     },
