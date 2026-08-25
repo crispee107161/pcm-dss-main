@@ -31,6 +31,12 @@ const navItems: NavItem[] = [
   // renamed there (it ranks individual ads, not campaigns).
   { label: 'Top Ads', href: '/dashboard/marketing/campaign-rankings', icon: 'ranking' },
   { label: 'Post Type Performance', href: '/dashboard/marketing/post-type-performance', icon: 'layers' },
+  // Manager-only (see TEAM_VISIBLE_HREFS below) per
+  // docs/raven/FR_Mapping_Complete_and_Category_CPI_Gap.md §5 — reuses the
+  // Owner screen's data-loader + presentational component
+  // (lib/data/category-performance.ts, CategoryPerformanceView), not a
+  // second implementation.
+  { label: 'Category Performance', href: '/dashboard/marketing/category-performance', icon: 'category' },
   { label: 'Trend Analysis', href: '/dashboard/marketing/trend-analysis', icon: 'trendUp' },
   { label: 'Page Metrics', href: '/dashboard/marketing/page-metrics', icon: 'metrics' },
   { section: 'Reports', label: 'Generate Report', href: '/dashboard/marketing/report', icon: 'report' },
