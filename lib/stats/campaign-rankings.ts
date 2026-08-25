@@ -75,3 +75,21 @@ export function rankByCostPerClick(ads: AdForRanking[], limit = DEFAULT_LIMIT): 
     .sort((a, b) => a.value - b.value)
     .slice(0, limit)
 }
+
+// FR-18/22 — eligible-pool sizes for each efficiency ranking's methodology
+// note, so "only ads with at least N ___" states how many actually cleared
+// the floor, not just the floor's value. Mirrors each rank* function's own
+// filter predicate exactly — kept as separate functions rather than having
+// rank* return a count too, so the existing RankedAd[] return shape (used
+// directly as RankRow elsewhere) doesn't need to change.
+export function countEligibleForCostPerInquiry(ads: AdForRanking[]): number {
+  return ads.filter(a => a.amount_spent > 0 && (a.total_messaging_contacts ?? 0) >= MIN_INQUIRIES_FOR_CPI).length
+}
+
+export function countEligibleForCtr(ads: AdForRanking[]): number {
+  return ads.filter(a => a.impressions >= MIN_IMPRESSIONS_FOR_CTR && (a.link_clicks ?? 0) > 0).length
+}
+
+export function countEligibleForCostPerClick(ads: AdForRanking[]): number {
+  return ads.filter(a => a.amount_spent > 0 && (a.link_clicks ?? 0) >= MIN_CLICKS_FOR_CPC).length
+}

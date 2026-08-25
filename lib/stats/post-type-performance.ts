@@ -53,3 +53,29 @@ export function computePostTypePerformance(posts: PostForTypePerformance[]): Pos
     })
     .sort((a, b) => b.n - a.n)
 }
+
+// FR-18/22 — a plain-language callout naming the highest-engagement and
+// lowest-views formats, restricted to rows with a stable estimate
+// (n >= MIN_N_FOR_CONFIDENCE). When the same format tops one measure and
+// trails the other, states it as a single contrast rather than two
+// separate sentences, since that's the more informative reading (e.g.
+// reels: highest engagement, lowest views).
+export function describePostTypePerformance(rows: PostTypeRow[]): string | null {
+  const eligible = rows.filter(r => r.n >= MIN_N_FOR_CONFIDENCE)
+  if (eligible.length < 2) return null
+
+  const byEngagement = [...eligible].sort((a, b) => b.medianEngagementRate - a.medianEngagementRate)
+  const bestEngagement = byEngagement[0]
+
+  const withViews = eligible.filter(r => r.medianViews !== null)
+  const byViews = [...withViews].sort((a, b) => a.medianViews! - b.medianViews!)
+  const lowestViews = byViews[0]
+
+  if (lowestViews && lowestViews.postType === bestEngagement.postType) {
+    return `${bestEngagement.postType} has the highest median engagement rate (${bestEngagement.medianEngagementRate.toFixed(2)}%) but the lowest median views (${lowestViews.medianViews!.toLocaleString()}) — engagement and reach don't move together here.`
+  }
+
+  const engagementSentence = `${bestEngagement.postType} has the highest median engagement rate (${bestEngagement.medianEngagementRate.toFixed(2)}%)`
+  if (!lowestViews) return `${engagementSentence}.`
+  return `${engagementSentence}; ${lowestViews.postType} has the lowest median views (${lowestViews.medianViews!.toLocaleString()}).`
+}

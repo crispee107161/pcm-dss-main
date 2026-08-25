@@ -99,6 +99,7 @@ describe('computeAdLifecycle', () => {
 
   it('computes the frequency-vs-CPI diagnostic from row-level frequency and spend/messaging-contacts', () => {
     const freqRows: AdRowForFrequency[] = Array.from({ length: 10 }, (_, i) => ({
+      ad_id: `ad-${i}`,
       frequency: 1 + i * 0.2,
       amount_spent: 200 - i * 5, // falling spend
       total_messaging_contacts: 10, // constant messaging contacts -> falling CPI as frequency rises
@@ -108,17 +109,38 @@ describe('computeAdLifecycle', () => {
 
     expect(result.frequencyDiagnostic).not.toBeNull()
     expect(result.frequencyDiagnostic!.n).toBe(10)
+    expect(result.frequencyDiagnostic!.adCount).toBe(10)
     expect(result.frequencyDiagnostic!.correlationWithCpi.rho).toBeLessThan(0) // rising freq, falling CPI
+  })
+
+  it('counts distinct advertisements separately from ad-month rows in the frequency diagnostic', () => {
+    // Same two ads, three rows each (6 ad-month rows, 2 distinct ads) —
+    // exercises the repeated-measures case the ad-month unit produces.
+    const freqRows: AdRowForFrequency[] = ['a', 'b'].flatMap(adId =>
+      Array.from({ length: 3 }, (_, i) => ({
+        ad_id: adId,
+        frequency: 1 + i * 0.3,
+        amount_spent: 100,
+        total_messaging_contacts: 10,
+      }))
+    )
+
+    const result = computeAdLifecycle([], freqRows)
+
+    expect(result.frequencyDiagnostic!.n).toBe(6)
+    expect(result.frequencyDiagnostic!.adCount).toBe(2)
   })
 
   it('excludes non-messaging rows from the frequency diagnostic — mixing in a different "cost per result" objective would corrupt the correlation', () => {
     const freqRows: AdRowForFrequency[] = [
       ...Array.from({ length: 5 }, (_, i) => ({
+        ad_id: `msg-${i}`,
         frequency: 1 + i * 0.2,
         amount_spent: 100,
         total_messaging_contacts: 10, // messaging row — eligible
       })),
       ...Array.from({ length: 5 }, (_, i) => ({
+        ad_id: `other-${i}`,
         frequency: 1 + i * 0.2,
         amount_spent: 50,
         total_messaging_contacts: null, // non-messaging row (e.g. Reach-optimised) — must be excluded
@@ -131,7 +153,7 @@ describe('computeAdLifecycle', () => {
   })
 
   it('returns a null frequencyDiagnostic when fewer than 3 rows qualify', () => {
-    const result = computeAdLifecycle([], [{ frequency: 1, amount_spent: 100, total_messaging_contacts: 10 }])
+    const result = computeAdLifecycle([], [{ ad_id: 'a', frequency: 1, amount_spent: 100, total_messaging_contacts: 10 }])
     expect(result.frequencyDiagnostic).toBeNull()
   })
 })

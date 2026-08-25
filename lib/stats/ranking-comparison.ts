@@ -4,6 +4,7 @@ import { studentTPValue } from './normal-dist'
 export interface PostForRankingComparison {
   views: number | null
   organic_engagement_rate: number
+  reach: number
 }
 
 export interface OverlapResult {
@@ -19,6 +20,13 @@ export interface RankingComparisonResult {
   rho: number
   p: number
   overlaps: OverlapResult[]
+  // FR-09 (Scope_Call_Both_and_Clauses_Restored.md §5) — Views vs. Reach,
+  // same eligible population as the Views/engagement-rate figure above
+  // (reach is a non-null column, so this never excludes further). Explains
+  // *why* Views and engagement rate rank posts differently: view count is
+  // very nearly a restatement of audience size.
+  viewsReachRho: number
+  viewsReachP: number
 }
 
 // ALG-07 (FR-19) — Spearman rank correlation between Views and
@@ -45,6 +53,12 @@ export function computeRankingComparison(posts: PostForRankingComparison[]): Ran
   const t = Math.abs(rho) >= 1 ? Infinity : (rho * Math.sqrt(n - 2)) / Math.sqrt(1 - rho * rho)
   const p = Number.isFinite(t) ? studentTPValue(t, n - 2) : 0
 
+  const reach = eligible.map(p => p.reach)
+  const rankedReach = rankArray(reach) as number[]
+  const viewsReachRho = pearsonCorrelation(rankedViews, rankedReach)
+  const viewsReachT = Math.abs(viewsReachRho) >= 1 ? Infinity : (viewsReachRho * Math.sqrt(n - 2)) / Math.sqrt(1 - viewsReachRho * viewsReachRho)
+  const viewsReachP = Number.isFinite(viewsReachT) ? studentTPValue(viewsReachT, n - 2) : 0
+
   const byViewsDesc = [...eligible].sort((a, b) => b.views - a.views)
   const byEngagementDesc = [...eligible].sort((a, b) => b.organic_engagement_rate - a.organic_engagement_rate)
 
@@ -55,5 +69,5 @@ export function computeRankingComparison(posts: PostForRankingComparison[]): Ran
     return { k: k as 10 | 20, topCount, overlapCount, overlapFraction: overlapCount / topCount }
   })
 
-  return { n, excludedNullViews, rho, p, overlaps }
+  return { n, excludedNullViews, rho, p, overlaps, viewsReachRho, viewsReachP }
 }

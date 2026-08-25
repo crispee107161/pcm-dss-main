@@ -98,6 +98,11 @@ interface KpiCardProps {
   label: string
   value: ReactNode
   sub?: string
+  // FR-18/22 — a plain-language statement of what a sample-statistic card
+  // indicates, distinct from `sub` (which states the sample size). Totals
+  // (Spend, Inquiries, Posts) don't take this — they aren't sample
+  // statistics, there's nothing to interpret beyond the number itself.
+  note?: string
   delta?: number | null
   deltaLabel?: string
   invertSentiment?: boolean
@@ -106,7 +111,7 @@ interface KpiCardProps {
   sparklineColor?: string
 }
 
-export function KpiCard({ label, value, sub, delta, deltaLabel, invertSentiment, icon, sparkline, sparklineColor = 'var(--chart-2)' }: KpiCardProps) {
+export function KpiCard({ label, value, sub, note, delta, deltaLabel, invertSentiment, icon, sparkline, sparklineColor = 'var(--chart-2)' }: KpiCardProps) {
   return (
     <Card className="rounded-2xl p-5 gap-3" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
       <div className="flex items-center justify-between">
@@ -120,6 +125,9 @@ export function KpiCard({ label, value, sub, delta, deltaLabel, invertSentiment,
           <p className="sensitive text-kpi-value font-medium tracking-tight tabular text-foreground">{value}</p>
           {sub && (
             <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>
+          )}
+          {note && (
+            <p className="text-[11px] text-muted-foreground mt-0.5">{note}</p>
           )}
           {delta !== undefined && delta !== null && (
             <div className="flex items-center mt-2.5 pt-2.5 border-t border-border">

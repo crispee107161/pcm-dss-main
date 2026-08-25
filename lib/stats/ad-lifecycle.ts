@@ -10,6 +10,7 @@ export interface AdRowForLifecycle {
 }
 
 export interface AdRowForFrequency {
+  ad_id: string
   frequency: number | null
   // amount_spent/total_messaging_contacts for THIS row, not Facebook's raw
   // "Cost per result" column — that column reflects whatever objective the
@@ -40,7 +41,10 @@ export interface SingleMonthComparison {
 }
 
 export interface FrequencyDiagnostic {
-  n: number
+  n: number // ad-month rows, not distinct advertisements — see adCount
+  adCount: number // distinct advertisements contributing those n rows; each
+  // contributes ~n/adCount observations on average, so a Spearman p-value
+  // here is anti-conservative (repeated-measures, not independent draws)
   medianFrequency: number
   correlationWithCpi: { rho: number; p: number }
 }
@@ -187,13 +191,14 @@ export function computeAdLifecycle(
 function computeFrequencyDiagnostic(rows: AdRowForFrequency[]): FrequencyDiagnostic | null {
   const eligible = rows
     .filter(
-      (r): r is { frequency: number; amount_spent: number; total_messaging_contacts: number } =>
+      (r): r is { ad_id: string; frequency: number; amount_spent: number; total_messaging_contacts: number } =>
         r.frequency !== null && r.frequency > 0 && r.total_messaging_contacts !== null && r.total_messaging_contacts > 0
     )
-    .map(r => ({ frequency: r.frequency, cost_per_result: r.amount_spent / r.total_messaging_contacts }))
+    .map(r => ({ ad_id: r.ad_id, frequency: r.frequency, cost_per_result: r.amount_spent / r.total_messaging_contacts }))
   const n = eligible.length
   if (n < 3) return null
 
+  const adCount = new Set(eligible.map(r => r.ad_id)).size
   const frequencies = eligible.map(r => r.frequency)
   const cpis = eligible.map(r => r.cost_per_result)
   const rankedFreq = rankArray(frequencies) as number[]
@@ -202,5 +207,5 @@ function computeFrequencyDiagnostic(rows: AdRowForFrequency[]): FrequencyDiagnos
   const t = Math.abs(rho) >= 1 ? Infinity : (rho * Math.sqrt(n - 2)) / Math.sqrt(1 - rho * rho)
   const p = Number.isFinite(t) ? studentTPValue(t, n - 2) : 0
 
-  return { n, medianFrequency: median(frequencies), correlationWithCpi: { rho, p } }
+  return { n, adCount, medianFrequency: median(frequencies), correlationWithCpi: { rho, p } }
 }
