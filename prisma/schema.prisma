@@ -132,6 +132,13 @@ model UploadLog {
   records_updated    Int          @default(0)
   records_unchanged  Int          @default(0)
   records_superseded Int          @default(0)
+  // FR-04/FR-07 — rows that failed per-row validation (or were a
+  // within-file duplicate key), excluded but no longer aborting the rest
+  // of the upload. rejected_reasons is a newline-joined, capped list (see
+  // actions/upload.ts) — not a relation table, since these rows were never
+  // written and have no ID to hang a child row off of.
+  records_rejected   Int          @default(0)
+  rejected_reasons   String?
   error_message      String?
   warning_message    String?
   uploaded_at        DateTime     @default(now())
