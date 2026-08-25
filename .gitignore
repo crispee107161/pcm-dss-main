@@ -70,3 +70,11 @@ dev.db
 /DESIGN.md
 /SECURITY.md
 /TODO-2026-08-04.md
+
+# Vendored Claude Code skill/agent packs and coursework — tool config and
+# non-application material, not project source (same NDA rationale as /data/
+# for docs/pdfs/, which mirrors client report data)
+/.agents/
+/docs/agent-configs/
+/aug15-copy/
+/docs/pdfs/
