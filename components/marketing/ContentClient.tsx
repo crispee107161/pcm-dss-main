@@ -7,9 +7,9 @@ import { SlidingTabs } from '@/components/ui/sliding-tabs'
 import {
   updatePostCategory,
   batchConfirmAgreed,
-  autoCategorizeAll,
 } from '@/actions/categorize'
-import { runLlmClassification } from '@/actions/classify-posts'
+import { generateAllSuggestions } from '@/actions/generate-suggestions'
+import { formatGenerateResult, type GenerateResultMessage } from '@/lib/categorize/generate-summary'
 import { FLAG_REASON_SHORT, rankFlagReasons } from '@/lib/categorize/flag-reasons'
 import {
   SELECTABLE_LABELS,
@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { CategoryLabel, CategoryFlagReason, CategoryFinalSource, Role } from '@/app/generated/prisma/client'
 
@@ -516,17 +517,14 @@ function matchesFlagFilter(post: ContentPostRow, filter: FlagFilter): boolean {
 // is always already scoped server-side to category_final: null.
 function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
   const [isPending, startTransition] = useTransition()
-  const [autoResult, setAutoResult] = useState<{ posts: number } | null>(null)
-  const [autoError, setAutoError] = useState<string | null>(null)
+  const [generateResult, setGenerateResult] = useState<GenerateResultMessage | null>(null)
   const [batchConfirmResult, setBatchConfirmResult] = useState<{ confirmed: number } | null>(null)
   const [batchConfirmError, setBatchConfirmError] = useState<string | null>(null)
-  const [llmResult, setLlmResult] = useState<string | null>(null)
-  const [llmIsError, setLlmIsError] = useState(false)
   // Gates the live countdown suffix — only true while a cooldown started by
   // this attempt is still running, so a non-retryable message never implies
   // a wait that isn't actually happening.
   const [llmCoolingDown, setLlmCoolingDown] = useState(false)
-  const [llmPending, setLlmPending] = useState(false)
+  const [generatePending, setGeneratePending] = useState(false)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [flagFilter, setFlagFilter] = useState<FlagFilter>('ALL')
@@ -566,14 +564,18 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
     setPage(1)
   }
 
-  // Auto-dismiss non-LLM toasts so a long review session doesn't accumulate
-  // stale confirmations. llmResult is excluded — it doubles as the live
-  // cooldown countdown display and must persist until the cooldown clears.
+  // Auto-dismiss the generate toast — but only when it's good news. A
+  // negative/warning toast (e.g. missing GROQ_API_KEY, a retired
+  // classification model) needs to stay on screen until the user dismisses
+  // it or runs Generate again; those failures don't always start a cooldown,
+  // so gating on cooldown state alone let them vanish unread. While
+  // llmCoolingDown is true the toast also doubles as the live countdown
+  // display and must persist until the cooldown clears.
   useEffect(() => {
-    if (!autoResult && !autoError) return
-    const timer = setTimeout(() => { setAutoResult(null); setAutoError(null) }, MESSAGE_AUTO_DISMISS_MS)
+    if (!generateResult || generateResult.tone !== 'positive' || (llmCoolingDown && llmCooldown > 0)) return
+    const timer = setTimeout(() => setGenerateResult(null), MESSAGE_AUTO_DISMISS_MS)
     return () => clearTimeout(timer)
-  }, [autoResult, autoError])
+  }, [generateResult, llmCoolingDown, llmCooldown])
 
   useEffect(() => {
     if (!batchConfirmResult && !batchConfirmError) return
@@ -585,17 +587,8 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
   // otherwise unrelated stale confirmations from an earlier action keep
   // sitting in the header while a new one renders next to them.
   function clearAllMessages() {
-    setAutoResult(null); setAutoError(null)
+    setGenerateResult(null)
     setBatchConfirmResult(null); setBatchConfirmError(null)
-  }
-
-  function handleAutoCategorize() {
-    clearAllMessages()
-    startTransition(async () => {
-      const res = await autoCategorizeAll()
-      if (res.ok) setAutoResult({ posts: res.posts })
-      else setAutoError(res.reason)
-    })
   }
 
   function handleBatchConfirm(scopeToView: boolean) {
@@ -608,38 +601,44 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
     })
   }
 
-  async function handleLlmClassify() {
+  // docs/raven/Tracker_Row_Corrections_and_Combined_Generate_Question.md §2 —
+  // one action runs both suggestion methods so a post can never end up with
+  // only one method's answer (which would make it impossible for
+  // DISAGREEMENT to ever fire on that post).
+  //
+  // docs/raven/Decouple_Both_Legs_and_Exercise_the_Merge.md §1 — the keyword
+  // leg is free, instant, and has no rate limit, so an AI cooldown is not a
+  // reason to withhold it. attemptLlm skips only the AI leg while one is
+  // still running; the keyword leg always runs.
+  async function handleGenerate() {
     clearAllMessages()
-    setLlmResult(null)
-    setLlmIsError(false)
-    setLlmCoolingDown(false)
-    setLlmPending(true)
-    const res = await runLlmClassification()
-    setLlmPending(false)
+    const attemptLlm = llmCooldown <= 0
+    setGeneratePending(true)
+    const res = await generateAllSuggestions(attemptLlm)
+    setGeneratePending(false)
 
-    if (res.ok) {
-      setLlmResult(
-        res.batchesRun === 0
-          ? 'Nothing new to classify'
-          : `Classified ${res.classified} post${res.classified !== 1 ? 's' : ''} (${res.unclassified} unclassified)` +
-            (res.batchesFailed > 0 ? ` — ${res.batchesFailed} batch${res.batchesFailed !== 1 ? 'es' : ''} failed, retry to pick them up` : '')
-      )
-      // Only pace the next click when this attempt actually reached Groq
-      // (batchesRun > 0) — "nothing new to classify" never spent tokens.
-      if (res.batchesRun > 0) {
-        setLlmCoolingDown(true)
-        beginLlmCooldown(LLM_COOLDOWN_SECONDS)
-      }
+    setGenerateResult(formatGenerateResult(res))
+
+    if (!attemptLlm) {
+      // Skipped — the earlier run's cooldown is still counting down, so
+      // leave llmCoolingDown as-is rather than recomputing it from this
+      // attempt's (skipped) llm outcome.
       return
     }
 
-    setLlmResult(res.reason)
-    setLlmIsError(true)
-    // Always floor at the full pacing window, never Groq's shorter
-    // retry-after value — mirrors KeywordsClient's handleAnalyze.
-    if (res.retryable) {
+    setLlmCoolingDown(false)
+    const llm = res.llm
+    if (llm.ok && (llm.batchesRun > 0 || llm.batchesFailed > 0)) {
+      // Pace the next click whenever this attempt actually reached Groq,
+      // whether the batches succeeded or failed — "nothing new to classify"
+      // (batchesRun === 0 && batchesFailed === 0) never spent tokens.
       setLlmCoolingDown(true)
-      beginLlmCooldown(Math.max(LLM_COOLDOWN_SECONDS, res.retryAfterSeconds ?? 0))
+      beginLlmCooldown(LLM_COOLDOWN_SECONDS)
+    } else if (!llm.ok && llm.retryable) {
+      // Always floor at the full pacing window, never Groq's shorter
+      // retry-after value — mirrors KeywordsClient's handleAnalyze.
+      setLlmCoolingDown(true)
+      beginLlmCooldown(Math.max(LLM_COOLDOWN_SECONDS, llm.retryAfterSeconds ?? 0))
     }
   }
 
@@ -655,118 +654,101 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
           </p>
         </div>
 
-        {/* items-start, not items-center: "Batch confirm agreed" is a plain
-            single-line button, but "Generate suggestions" / "Generate AI
-            suggestions" are each a button plus a caption line stacked below
-            it — center-aligning the row put the shorter Batch confirm
-            button's top below the other two buttons' tops instead of flush
-            with them. */}
-        {/* self-center on the toast <p>s below: the row itself is
-            items-start (to top-align the buttons, see above), but these are
-            plain single-line pills much shorter than the button blocks —
-            self-center keeps them centered against the row's full height
-            instead of hanging flush at the top with everything else. */}
-        <div className="flex items-start gap-3 flex-wrap">
-          {autoResult && (
-            <p className="self-center animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
-              {autoResult.posts === 0 ? 'Nothing new to categorise' : `Applied to ${autoResult.posts} post${autoResult.posts !== 1 ? 's' : ''}`}
-            </p>
-          )}
-          {autoError && (
-            <p role="alert" className="self-center animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
-              {autoError}
+        <div className="flex items-center gap-3 flex-wrap">
+          {generateResult && (
+            <p role={generateResult.tone !== 'positive' ? 'alert' : undefined} className={`animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
+              generateResult.tone === 'negative'
+                ? 'text-status-negative bg-status-negative/10 border-status-negative/30'
+                : generateResult.tone === 'warning'
+                  ? 'text-status-warning bg-status-warning/10 border-status-warning/30'
+                  : 'text-status-positive bg-green-500/10 border-green-500/30'
+            }`}>
+              {generateResult.text}{llmCoolingDown && llmCooldown > 0 ? ` Try again in ${llmCooldown}s.` : ''}
             </p>
           )}
           {batchConfirmResult && (
-            <p className="self-center animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
+            <p className="animate-fade-slide-up text-xs text-status-positive font-medium bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-1.5">
               Confirmed {batchConfirmResult.confirmed} post{batchConfirmResult.confirmed !== 1 ? 's' : ''}
             </p>
           )}
           {batchConfirmError && (
-            <p role="alert" className="self-center animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
+            <p role="alert" className="animate-fade-slide-up text-xs text-status-negative font-medium bg-status-negative/10 border border-status-negative/30 rounded-lg px-3 py-1.5">
               {batchConfirmError}
             </p>
           )}
-          {llmResult && (
-            <p role={llmIsError ? 'alert' : undefined} className={`self-center animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
-              llmIsError
-                ? 'text-status-warning bg-status-warning/10 border-status-warning/30'
-                : 'text-status-positive bg-green-500/10 border-green-500/30'
-            }`}>
-              {llmResult}{llmCoolingDown && llmCooldown > 0 ? ` Try again in ${llmCooldown}s.` : ''}
-            </p>
-          )}
 
-          {role === 'MARKETING_MANAGER' && batchConfirmCountInView > 0 && (
-            // Matches the size/shape of "Generate suggestions" / "Generate AI
-            // suggestions" below (same button padding/weight, own caption
-            // line) — it previously used the smaller shadcn Button component
-            // with no caption, which made it look visually lighter-weight
-            // than the other two despite being an equally significant action.
-            <div className="flex flex-col items-start gap-0.5">
-              <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
-                <DialogTrigger
-                  disabled={isPending}
-                  render={
-                    <button
-                      type="button"
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                    />
-                  }
+          <TooltipProvider>
+            {role === 'MARKETING_MANAGER' && batchConfirmCountInView > 0 && (
+              // Matches the size/shape of "Generate suggestions" below (same
+              // button padding/weight) — it previously used the smaller
+              // shadcn Button component, which made it look visually
+              // lighter-weight than the other despite being an equally
+              // significant action.
+              <Tooltip>
+                <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
+                  <TooltipTrigger
+                    render={
+                      <DialogTrigger
+                        disabled={isPending || generatePending}
+                        render={
+                          <button
+                            type="button"
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                          />
+                        }
+                      />
+                    }
+                  >
+                    {isFiltered ? `Batch confirm in view (${batchConfirmCountInView})` : `Batch confirm agreed (${batchConfirmCountInView})`}
+                  </TooltipTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Confirm {batchConfirmCountInView} unflagged, agreed post{batchConfirmCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
+                      <DialogDescription>
+                        Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
+                        {isFiltered && batchConfirmCountOutsideView > 0 && (
+                          <> {batchConfirmCountOutsideView} more eligible post{batchConfirmCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to confirm everything.</>
+                        )}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setConfirmBatchOpen(false)} className="text-xs">
+                        Cancel
+                      </Button>
+                      <Button type="button" onClick={() => handleBatchConfirm(isFiltered)} className="text-xs">
+                        Confirm {batchConfirmCountInView}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <TooltipContent>Finalizes unflagged, agreed posts</TooltipContent>
+              </Tooltip>
+            )}
+
+            {role === 'MARKETING_MANAGER' && (
+              // docs/FR16_Rewording_and_NFR_Questions.md §2 — an always-visible
+              // caption instead of a hover-only tooltip, so the cooldown
+              // explanation is readable without hovering (touch devices never
+              // trigger a hover tooltip at all).
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={generatePending || posts.length === 0}
+                  // hover:bg-[var(--primary-hover)] — see app/globals.css
+                  // for why (a real darker shade, not an opacity fade).
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                 >
-                  {isFiltered ? `Batch confirm in view (${batchConfirmCountInView})` : `Batch confirm agreed (${batchConfirmCountInView})`}
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Confirm {batchConfirmCountInView} unflagged, agreed post{batchConfirmCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
-                    <DialogDescription>
-                      Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
-                      {isFiltered && batchConfirmCountOutsideView > 0 && (
-                        <> {batchConfirmCountOutsideView} more eligible post{batchConfirmCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to confirm everything.</>
-                      )}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setConfirmBatchOpen(false)} className="text-xs">
-                      Cancel
-                    </Button>
-                    <Button type="button" onClick={() => handleBatchConfirm(isFiltered)} className="text-xs">
-                      Confirm {batchConfirmCountInView}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-              <span className="text-xs text-muted-foreground pl-1">Finalizes unflagged, agreed posts</span>
-            </div>
-          )}
-
-          {role === 'MARKETING_MANAGER' && (
-            <div className="flex flex-col items-start gap-0.5">
-              <button
-                onClick={handleAutoCategorize}
-                disabled={isPending || posts.length === 0}
-                // hover:bg-[var(--primary-hover)] — see app/globals.css for
-                // why (a real darker shade, not an opacity fade).
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-              >
-                {isPending ? 'Categorising…' : 'Generate suggestions'}
-              </button>
-              <span className="text-xs text-muted-foreground pl-1">Matches your keyword lists</span>
-            </div>
-          )}
-
-          {role === 'MARKETING_MANAGER' && (
-            <div className="flex flex-col items-start gap-0.5">
-              <button
-                onClick={handleLlmClassify}
-                disabled={llmPending || posts.length === 0 || llmCooldown > 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-              >
-                {llmPending ? 'Classifying…' : llmCooldown > 0 ? `Wait ${llmCooldown}s` : 'Generate AI suggestions'}
-              </button>
-              <span className="text-xs text-muted-foreground pl-1">Uses AI to read each post</span>
-            </div>
-          )}
+                  {generatePending ? 'Generating…' : 'Generate suggestions'}
+                </button>
+                <p className="text-xs text-muted-foreground max-w-56">
+                  {llmCooldown > 0
+                    ? `Keyword matching runs now — AI is cooling down after the last run, wait ${llmCooldown}s to finish that half`
+                    : 'Runs keyword matching and AI on every post missing a suggestion'}
+                </p>
+              </div>
+            )}
+          </TooltipProvider>
         </div>
       </div>
 
