@@ -654,7 +654,12 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        {/* flex-col on mobile: flex's default align-items:stretch then makes
+            each toast/button fill the row's width instead of shrinking to
+            content and sitting stuck on the left with empty space beside it.
+            sm:flex-row switches back to natural inline sizing once there's
+            room for them side by side. */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-wrap">
           {generateResult && (
             <p role={generateResult.tone !== 'positive' ? 'alert' : undefined} className={`animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
               generateResult.tone === 'negative'
@@ -679,11 +684,14 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
 
           <TooltipProvider>
             {role === 'MARKETING_MANAGER' && batchConfirmCountInView > 0 && (
-              // Matches the size/shape of "Generate suggestions" below (same
-              // button padding/weight) — it previously used the smaller
-              // shadcn Button component, which made it look visually
-              // lighter-weight than the other despite being an equally
-              // significant action.
+              // On mobile this is deliberately smaller/lower-weight than
+              // "Generate suggestions" below — two equal-size full-width
+              // pills stacked read as competing primaries and ate a lot of
+              // vertical space above the queue. self-start (overriding the
+              // flex-col parent's default stretch) plus the compact
+              // chip-style sizing signal "secondary, less frequent action";
+              // sm: reverts to matching "Generate suggestions"'s size once
+              // they sit side by side and the hierarchy issue disappears.
               <Tooltip>
                 <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
                   <TooltipTrigger
@@ -693,7 +701,7 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
                         render={
                           <button
                             type="button"
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                            className="inline-flex self-start items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:self-auto sm:gap-2 sm:px-4 sm:py-2 sm:rounded-xl sm:text-sm sm:font-semibold sm:w-auto"
                           />
                         }
                       />
@@ -725,29 +733,39 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
               </Tooltip>
             )}
 
-            {role === 'MARKETING_MANAGER' && (
-              // docs/FR16_Rewording_and_NFR_Questions.md §2 — an always-visible
-              // caption instead of a hover-only tooltip, so the cooldown
-              // explanation is readable without hovering (touch devices never
-              // trigger a hover tooltip at all).
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={generatePending || posts.length === 0}
-                  // hover:bg-[var(--primary-hover)] — see app/globals.css
-                  // for why (a real darker shade, not an opacity fade).
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                >
-                  {generatePending ? 'Generating…' : 'Generate suggestions'}
-                </button>
-                <p className="text-xs text-muted-foreground max-w-56">
-                  {llmCooldown > 0
-                    ? `Keyword matching runs now — AI is cooling down after the last run, wait ${llmCooldown}s to finish that half`
-                    : 'Runs keyword matching and AI on every post missing a suggestion'}
-                </p>
-              </div>
-            )}
+            {role === 'MARKETING_MANAGER' && (() => {
+              const generateHint = llmCooldown > 0
+                ? `Keyword matching runs now — AI is cooling down after the last run, wait ${llmCooldown}s to finish that half`
+                : 'Runs keyword matching and AI on every post missing a suggestion'
+              return (
+                <div className="flex flex-col gap-1 w-full sm:w-auto">
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <button
+                          type="button"
+                          onClick={handleGenerate}
+                          disabled={generatePending || posts.length === 0}
+                          // hover:bg-[var(--primary-hover)] — see app/globals.css
+                          // for why (a real darker shade, not an opacity fade).
+                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                        />
+                      }
+                    >
+                      {generatePending ? 'Generating…' : 'Generate suggestions'}
+                    </TooltipTrigger>
+                    <TooltipContent>{generateHint}</TooltipContent>
+                  </Tooltip>
+                  {/* A fine pointer (mouse/trackpad) gets the hover tooltip above;
+                      a coarse pointer (touch) never triggers hover at all, so the
+                      same text is shown as a caption instead — pointer-fine:hidden
+                      keeps it from also appearing on desktop. */}
+                  <p className="text-xs text-muted-foreground max-w-56 pointer-fine:hidden">
+                    {generateHint}
+                  </p>
+                </div>
+              )
+            })()}
           </TooltipProvider>
         </div>
       </div>
@@ -1085,22 +1103,31 @@ function LibraryTable({ posts, canEdit, filter, baseRoute }: { posts: ContentPos
         </div>
       ) : (
         <div className="bg-card rounded-2xl card-shadow overflow-hidden">
-          <Table>
+          {/* table-fixed + explicit column widths, not table-layout's auto
+              default: auto sizes each column from its widest *unwrapped*
+              cell content, which ignores max-w/truncate entirely — a single
+              long post title was blowing this table out past 1400px wide and
+              taking the whole page with it on mobile instead of staying
+              inside .table-scroll's own horizontal scrollbar (see
+              components/ui/table.tsx). min-w-[760px] keeps columns legible
+              at that computed width; .table-scroll (Table's own wrapper)
+              handles the resulting overflow within this card. */}
+          <Table className="table-fixed min-w-[760px]">
             <TableHeader>
               <TableRow className="bg-secondary/50">
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Post Details</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Date</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 text-right">Views</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 text-right">Engagement</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Category</TableHead>
-                <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Provenance</TableHead>
+                <TableHead className="w-[26%] text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Post Details</TableHead>
+                <TableHead className="w-[10%] text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Type</TableHead>
+                <TableHead className="w-[10%] text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Date</TableHead>
+                <TableHead className="w-[10%] text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 text-right">Views</TableHead>
+                <TableHead className="w-[12%] text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 text-right">Engagement</TableHead>
+                <TableHead className="w-[16%] text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Category</TableHead>
+                <TableHead className="w-[16%] text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Provenance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pagedPosts.map((post) => (
                 <TableRow key={post.id} className="hover:bg-secondary/50 border-t border-border">
-                  <TableCell className="px-4 py-3 max-w-xs">
+                  <TableCell className="px-4 py-3">
                     {post.title ? (
                       <div className="font-medium text-foreground text-sm truncate" title={post.title}>{post.title}</div>
                     ) : (
@@ -1122,7 +1149,7 @@ function LibraryTable({ posts, canEdit, filter, baseRoute }: { posts: ContentPos
                       date), and nowrap would force them onto one long line
                       that pushes the whole table wider instead of wrapping
                       within this bounded column width. */}
-                  <TableCell className="px-4 py-3 whitespace-normal max-w-[200px]"><ProvenanceCell post={post} /></TableCell>
+                  <TableCell className="px-4 py-3 whitespace-normal"><ProvenanceCell post={post} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>

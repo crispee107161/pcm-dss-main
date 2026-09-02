@@ -295,8 +295,13 @@ export default function Sidebar({ navItems, email, roleLabel, children, showChat
         // TopBar's sticky positioning context instead of the real scrollport,
         // breaking `sticky top-0` (TopBar.tsx) with no visible symptom until
         // you actually scroll. 'clip' clips the same as 'hidden' without
-        // that cross-axis side effect.
-        className="flex-1 min-h-screen print:ml-0 flex flex-col overflow-x-clip"
+        // that cross-axis side effect. min-w-0 overrides flexbox's default
+        // min-width:auto on a flex item, which otherwise refuses to shrink
+        // below its content's intrinsic width — without it, any descendant
+        // with its own wide/scrollable content (e.g. a min-w-[...] table)
+        // drags this whole flex item wider than the viewport instead of
+        // scrolling within its own bounded container.
+        className="flex-1 min-w-0 min-h-screen print:ml-0 flex flex-col overflow-x-clip"
       >
         <TopBar
           navItems={navItems}
