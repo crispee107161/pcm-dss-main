@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV !== "production";
 
 // All data fetching (including the Groq API calls in actions/chat.ts,
-// ai-insights.ts, keywords.ts) happens server-side in Server Actions, so the
+// keywords.ts) happens server-side in Server Actions, so the
 // browser never needs to reach an external host directly — connect-src can
 // stay 'self'. 'unsafe-eval' is only needed for the dev server's HMR/webpack
 // runtime and is dropped in production builds.

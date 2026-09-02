@@ -1,5 +1,5 @@
 // Resolves which Groq chat model to use, adapting to Groq deprecating/renaming
-// models (see actions/{chat,classify-posts,keywords,ai-insights}.ts, all of
+// models (see actions/{chat,classify-posts,keywords}.ts, all of
 // which call resolveGroqModel instead of hardcoding a model id).
 //
 // This is a preference-ordered ALLOWLIST, not "whatever Groq has today": we ask
