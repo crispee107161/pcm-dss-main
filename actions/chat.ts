@@ -26,6 +26,12 @@ export async function sendChatMessage(history: ChatMessage[], userMessage: strin
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return 'AI chat unavailable — GROQ_API_KEY not configured.'
 
+  // SSDLC planning doc SR-D8/R-07 ("only caption text reaches the LLM") is
+  // scoped to the caption-categorization call (classify-posts.ts) — the
+  // whole point of this assistant is answering questions about spend/CPI/
+  // reach, so those aggregate figures are sent deliberately, not by gap.
+  // Disclosed to the client per SR-D8's disclosure clause.
+
   const [allAds, postAgg, followerHistory, dailyMetrics] = await Promise.all([
     prisma.ad.findMany({
       where: STUDY_PERIOD_AD_WHERE,

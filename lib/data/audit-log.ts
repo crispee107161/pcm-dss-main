@@ -27,6 +27,31 @@ export type AuditEvent =
       summary: string
       detail: string
     }
+  | {
+      kind: 'SECURITY'
+      id: number
+      at: Date
+      userEmail: string
+      userRole: string
+      summary: string
+      detail: string
+      status: 'SUCCESS' | 'FAILED'
+    }
+
+const SECURITY_EVENT_LABEL: Record<string, string> = {
+  SIGN_IN_SUCCESS: 'Signed in',
+  SIGN_IN_FAILURE: 'Sign-in failed',
+  SIGN_OUT: 'Signed out',
+  ACCOUNT_LOCKED: 'Account locked',
+  ACCOUNT_UNLOCKED: 'Account unlocked',
+  PASSWORD_CHANGE: 'Password changed',
+  PASSWORD_RESET: 'Password reset by admin',
+  ACCOUNT_CREATED: 'Account created',
+  ROLE_CHANGED: 'Role changed',
+  ACCOUNT_DEACTIVATED: 'Account deactivated',
+  ACCOUNT_REACTIVATED: 'Account reactivated',
+  AUTHORIZATION_DENIED: 'Authorization denied',
+}
 
 const CATEGORY_ACTION_LABEL: Record<string, string> = {
   PROPOSE: 'Proposed category',
@@ -48,10 +73,11 @@ export interface AuditLogPage {
   events: AuditEvent[]
   totalUploads: number
   totalCategoryActions: number
+  totalSecurityEvents: number
 }
 
 export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
-  const [uploads, categoryActions, totalUploads, totalCategoryActions] = await Promise.all([
+  const [uploads, categoryActions, securityEvents, totalUploads, totalCategoryActions, totalSecurityEvents] = await Promise.all([
     prisma.uploadLog.findMany({
       orderBy: { uploaded_at: 'desc' },
       take: limit,
@@ -62,8 +88,18 @@ export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
       take: limit,
       include: { user: { select: { email: true, role: true } } },
     }),
+    // SR-L1/L2/L3 — auth and account-admin events (sign-in, lockout, role
+    // change, etc.), merged into the same timeline as uploads/category
+    // decisions. user is nullable (a failed sign-in against an unknown
+    // email has no row to join), so actor_email is the display fallback.
+    prisma.securityEventLog.findMany({
+      orderBy: { at: 'desc' },
+      take: limit,
+      include: { user: { select: { email: true, role: true } } },
+    }),
     prisma.uploadLog.count(),
     prisma.categoryAuditLog.count(),
+    prisma.securityEventLog.count(),
   ])
 
   const uploadEvents: AuditEvent[] = uploads.map((log) => ({
@@ -90,9 +126,20 @@ export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
     detail: `${categoryLabel(log.previous_category)} → ${categoryLabel(log.new_category)}`,
   }))
 
-  const events = [...uploadEvents, ...categoryEvents]
+  const securityLogEvents: AuditEvent[] = securityEvents.map((log) => ({
+    kind: 'SECURITY',
+    id: log.id,
+    at: log.at,
+    userEmail: log.user?.email ?? log.actor_email ?? 'unknown',
+    userRole: log.user?.role ?? '—',
+    summary: SECURITY_EVENT_LABEL[log.event_type] ?? log.event_type,
+    detail: log.detail ?? '',
+    status: log.outcome === 'SUCCESS' ? 'SUCCESS' : 'FAILED',
+  }))
+
+  const events = [...uploadEvents, ...categoryEvents, ...securityLogEvents]
     .sort((a, b) => b.at.getTime() - a.at.getTime())
     .slice(0, limit)
 
-  return { events, totalUploads, totalCategoryActions }
+  return { events, totalUploads, totalCategoryActions, totalSecurityEvents }
 }

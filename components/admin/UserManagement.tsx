@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useOptimistic, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { createUser, updateUserRole, resetPassword, deactivateUser, reactivateUser } from '@/actions/admin'
+import { createUser, updateUserRole, resetPassword, deactivateUser, reactivateUser, unlockUser } from '@/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -18,6 +18,29 @@ interface User {
   role: Role
   created_at: Date
   is_active: boolean
+  is_locked: boolean
+}
+
+// SR-A9 — every action below that modifies an existing account requires the
+// acting Owner to re-enter their own current password. One shared field so
+// every form/dialog asks for it the same way.
+function ReauthField() {
+  return (
+    <div className="mt-3">
+      <label htmlFor="reauth_password" className="block text-xs font-medium text-muted-foreground mb-1">
+        Confirm your password
+      </label>
+      <Input
+        id="reauth_password"
+        name="reauth_password"
+        type="password"
+        required
+        autoComplete="current-password"
+        placeholder="Your current password"
+        className="border-border focus-visible:ring-ring"
+      />
+    </div>
+  )
 }
 
 interface Props {
@@ -108,8 +131,8 @@ function CreateUserForm() {
                 name="password"
                 type="password"
                 required
-                minLength={8}
-                placeholder="Min. 8 characters"
+                minLength={12}
+                placeholder="Min. 12 characters"
                 className="w-full border-border focus-visible:ring-ring"
               />
             </div>
@@ -156,7 +179,6 @@ function UserRow({
   const isSelf = user.id === currentUserId
 
   const [roleState, roleAction, rolePending] = useActionState(updateUserRole, null)
-  useActionToast(roleState, `role-${user.id}`)
   // Select is controlled so Save can be disabled while the picked role
   // matches the user's current role — without this, clicking Save with
   // nothing changed still submits the current role and reports a false
@@ -201,6 +223,11 @@ function UserRow({
   const [deactivateSubmitted, setDeactivateSubmitted] = useState(false)
   const [showReactivateConfirm, setShowReactivateConfirm] = useState(false)
   const [reactivateSubmitted, setReactivateSubmitted] = useState(false)
+  const [showRoleConfirm, setShowRoleConfirm] = useState(false)
+  const [roleSubmitted, setRoleSubmitted] = useState(false)
+  const [unlockState, unlockAction, unlockPending] = useActionState(unlockUser, null)
+  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false)
+  const [unlockSubmitted, setUnlockSubmitted] = useState(false)
 
   return (
     <>
@@ -214,6 +241,11 @@ function UserRow({
                 Inactive
               </Badge>
             )}
+            {user.is_locked && (
+              <Badge className="bg-status-negative/10 text-status-negative border-status-negative/30 rounded-full text-[10px] font-medium h-auto py-0 px-2">
+                Locked
+              </Badge>
+            )}
           </div>
           {isSelf && <span className="text-xs text-status-negative">(you)</span>}
         </TableCell>
@@ -223,8 +255,7 @@ function UserRow({
               {roleLabel(user.role)}
             </Badge>
           ) : (
-            <form action={roleAction} className="flex items-center gap-2">
-              <input type="hidden" name="userId" value={user.id} />
+            <div className="flex items-center gap-2">
               <Select name="role" value={selectedRole} onValueChange={(v) => setSelectedRole(v as Role)}>
                 {/* Fixed width (not just min-w) so the trigger box doesn't grow/shrink
                     with the selected label's length — keeps the Save button lined up
@@ -246,14 +277,15 @@ function UserRow({
                 </SelectContent>
               </Select>
               <Button
-                type="submit"
+                type="button"
+                onClick={() => setShowRoleConfirm(true)}
                 disabled={rolePending || isRoleUnchanged}
                 size="xs"
                 className="bg-neutral-800 hover:bg-neutral-700 text-white"
               >
                 {rolePending ? '…' : 'Save'}
               </Button>
-            </form>
+            </div>
           )}
         </TableCell>
         <TableCell className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap hidden md:table-cell">{formatDate(user.created_at)}</TableCell>
@@ -266,6 +298,17 @@ function UserRow({
               >
                 Reset PW
               </button>
+              {user.is_locked && (
+                <>
+                  <span className="text-muted-foreground/50" aria-hidden="true">|</span>
+                  <button
+                    onClick={() => setShowUnlockConfirm(true)}
+                    className="text-xs text-status-warning hover:text-status-warning/70 underline underline-offset-2 transition-colors"
+                  >
+                    Unlock
+                  </button>
+                </>
+              )}
               <span className="text-muted-foreground/50" aria-hidden="true">|</span>
               {(pendingAction === 'deactivate' || (pendingAction === null && user.is_active)) ? (
                 <button
@@ -299,7 +342,10 @@ function UserRow({
               <>
                 <DialogHeader>
                   <DialogTitle>Reset password for {user.email}</DialogTitle>
-                  <DialogDescription>They&apos;ll need to sign in with this new password next time.</DialogDescription>
+                  <DialogDescription>
+                    This sets a temporary password. They must change it within 24 hours of their next sign-in, and it
+                    also clears any account lockout.
+                  </DialogDescription>
                 </DialogHeader>
                 <form action={async (fd) => { setPwSubmitted(true); await pwAction(fd) }}>
                   <input type="hidden" name="userId" value={user.id} />
@@ -309,10 +355,11 @@ function UserRow({
                     name="password"
                     type="password"
                     required
-                    minLength={8}
-                    placeholder="Min. 8 characters"
+                    minLength={12}
+                    placeholder="Min. 12 characters"
                     className="border-border focus-visible:ring-ring"
                   />
+                  <ReauthField />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setShowPwForm(false)} className="text-xs">
                       Cancel
@@ -366,6 +413,7 @@ function UserRow({
                   }}
                 >
                   <input type="hidden" name="userId" value={user.id} />
+                  <ReauthField />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setShowDeactivateConfirm(false)} className="text-xs">
                       Cancel
@@ -420,6 +468,7 @@ function UserRow({
                   }}
                 >
                   <input type="hidden" name="userId" value={user.id} />
+                  <ReauthField />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setShowReactivateConfirm(false)} className="text-xs">
                       Cancel
@@ -440,6 +489,87 @@ function UserRow({
                     {pendingAction === 'activate'
                       ? `Reactivating ${user.email}…`
                       : (reactivateState?.error ?? reactivateState?.success ?? '')}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter showCloseButton />
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {!isSelf && (
+        <Dialog
+          open={showRoleConfirm}
+          onOpenChange={(open) => { setShowRoleConfirm(open); if (open) setRoleSubmitted(false) }}
+        >
+          <DialogContent>
+            {!roleSubmitted ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Change {user.email}&apos;s role to {roleLabel(selectedRole)}?</DialogTitle>
+                  <DialogDescription>This takes effect on their next request, even mid-session.</DialogDescription>
+                </DialogHeader>
+                <form action={async (fd) => { setRoleSubmitted(true); await roleAction(fd) }}>
+                  <input type="hidden" name="userId" value={user.id} />
+                  <input type="hidden" name="role" value={selectedRole} />
+                  <ReauthField />
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setShowRoleConfirm(false)} className="text-xs">
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={rolePending} className="text-xs">
+                      {rolePending ? 'Saving…' : 'Confirm'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{rolePending ? 'Updating role…' : roleState?.error ? 'Role change failed' : 'Role updated'}</DialogTitle>
+                  <DialogDescription className={rolePending ? undefined : roleState?.error ? 'text-status-negative' : 'text-status-positive'}>
+                    {rolePending ? `Updating ${user.email}…` : (roleState?.error ?? roleState?.success ?? '')}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter showCloseButton />
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {!isSelf && user.is_locked && (
+        <Dialog
+          open={showUnlockConfirm}
+          onOpenChange={(open) => { setShowUnlockConfirm(open); if (open) setUnlockSubmitted(false) }}
+        >
+          <DialogContent>
+            {!unlockSubmitted ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Unlock {user.email}?</DialogTitle>
+                  <DialogDescription>Clears the lockout and resets their failed sign-in count. Their password is unchanged.</DialogDescription>
+                </DialogHeader>
+                <form action={async (fd) => { setUnlockSubmitted(true); await unlockAction(fd) }}>
+                  <input type="hidden" name="userId" value={user.id} />
+                  <ReauthField />
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setShowUnlockConfirm(false)} className="text-xs">
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={unlockPending} className="text-xs">
+                      {unlockPending ? 'Unlocking…' : 'Unlock'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{unlockPending ? 'Unlocking…' : unlockState?.error ? 'Unlock failed' : 'Unlocked'}</DialogTitle>
+                  <DialogDescription className={unlockPending ? undefined : unlockState?.error ? 'text-status-negative' : 'text-status-positive'}>
+                    {unlockPending ? `Unlocking ${user.email}…` : (unlockState?.error ?? unlockState?.success ?? '')}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter showCloseButton />

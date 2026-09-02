@@ -1,14 +1,31 @@
 import Papa from 'papaparse'
 import type { ReportData } from '@/lib/reports/report-data'
 
+// SR-D6 — values like ad/ad-set names originate from the client's own
+// Facebook exports and are rendered verbatim into CSV cells; a name that
+// happens to start with =, +, -, or @ would otherwise be interpreted as a
+// formula by Excel/Sheets on open (CSV/spreadsheet formula injection).
+// Prefixing with a single quote forces those tools to treat it as text.
+const FORMULA_PREFIX_RE = /^[=+\-@\t\r]/
+export function neutralizeFormula(value: unknown): unknown {
+  if (typeof value === 'string' && FORMULA_PREFIX_RE.test(value)) {
+    return `'${value}`
+  }
+  return value
+}
+
 // FR-23 — CSV export of the same analytical results shown on screen/PDF.
 // One CSV per report, laid out as labelled blocks (title row, header row,
 // data rows, blank separator) rather than one flat table, since the
 // underlying results are different shapes (KPIs, quartiles, group rankings,
 // correlations) that don't share a common row schema.
 function block(title: string, rows: unknown[][]): string {
-  const titleLine = Papa.unparse([[title]])
-  const dataLines = rows.length > 0 ? Papa.unparse(rows) : ''
+  const sanitizedRows = rows.map((row) => row.map(neutralizeFormula))
+  // Every call site today passes a static or numeric-interpolated literal,
+  // so this is currently a no-op — sanitizing anyway removes the implicit
+  // "titles are always safe" assumption a future dynamic title could break.
+  const titleLine = Papa.unparse([[neutralizeFormula(title)]])
+  const dataLines = sanitizedRows.length > 0 ? Papa.unparse(sanitizedRows) : ''
   return dataLines ? `${titleLine}\n${dataLines}` : titleLine
 }
 

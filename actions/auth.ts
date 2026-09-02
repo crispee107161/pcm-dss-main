@@ -4,6 +4,7 @@ import { signIn, signOut, auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { rateLimit } from '@/lib/rate-limit'
+import { logSecurityEvent } from '@/lib/security-log'
 import type { Role } from '@/types/index'
 
 // MARKETING_TEAM has no dedicated route tree yet (mvp.md §3 S3/S6 are its
@@ -88,6 +89,7 @@ export async function loginAction(
 }
 
 export async function logoutAction() {
+  await logSignOut()
   await signOut({ redirect: false })
   redirect('/login?reason=logout')
 }
@@ -96,6 +98,18 @@ export async function logoutAction() {
 // the "signed out due to inactivity" notice — a user who explicitly clicks
 // Sign Out already knows why they're back at /login.
 export async function idleLogoutAction() {
+  await logSignOut()
   await signOut({ redirect: false })
   redirect('/login?reason=idle')
+}
+
+async function logSignOut() {
+  const session = await auth()
+  if (!session?.user) return
+  await logSecurityEvent({
+    eventType: 'SIGN_OUT',
+    userId: parseInt(session.user.id, 10),
+    actorEmail: session.user.email,
+    outcome: 'SUCCESS',
+  })
 }

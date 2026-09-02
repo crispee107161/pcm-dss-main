@@ -81,9 +81,11 @@ interface ReportViewProps {
   data: ReportData
   // mvp.md §3 S9: MARKETING_TEAM sees Reports but cannot export (View only).
   canExport?: boolean
+  // SR-Z2: monetary data (spend, CPI, budget reallocation) is Owner/Manager-only.
+  hideMonetary?: boolean
 }
 
-export default function ReportView({ variant, role, data, canExport = true }: ReportViewProps) {
+export default function ReportView({ variant, role, data, canExport = true, hideMonetary = false }: ReportViewProps) {
   const meta = ROLE_META[role]
   const isPrint = variant === 'print'
   const th = isPrint ? reportTh : 'text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-3 py-3 bg-gray-50'
@@ -112,10 +114,10 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
 
       <Section variant={variant} title="Executive Summary" noBreak>
         <MetricGrid variant={variant} items={[
-          { label: 'Total Ad Spend', value: formatPHP(overview.kpis.spend.value) },
+          ...(hideMonetary ? [] : [{ label: 'Total Ad Spend', value: formatPHP(overview.kpis.spend.value) }]),
           { label: 'Total Messaging Conversations', value: overview.kpis.inquiries.value.toLocaleString() },
           { label: 'Total Ad Reach', value: totalReach.toLocaleString(), sub: 'unique people, monthly sum' },
-          { label: 'Median Cost per Conversation', value: overview.kpis.medianCpi.value !== null ? formatPHP(overview.kpis.medianCpi.value) : '—', sub: `n=${overview.kpis.medianCpi.n}` },
+          ...(hideMonetary ? [] : [{ label: 'Median Cost per Conversation', value: overview.kpis.medianCpi.value !== null ? formatPHP(overview.kpis.medianCpi.value) : '—', sub: `n=${overview.kpis.medianCpi.n}` }]),
         ]} />
       </Section>
 
@@ -135,10 +137,10 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
               <tr className={isPrint ? undefined : 'bg-gray-50'}>
                 <th className={th}>Period</th>
                 <th className={`${thRight} hidden sm:table-cell`}>Ads Run</th>
-                <th className={thRight}>Total Spend</th>
+                {!hideMonetary && <th className={thRight}>Total Spend</th>}
                 <th className={thRight}>Messaging Conversations</th>
                 <th className={`${thRight} hidden sm:table-cell`}>Reach</th>
-                <th className={`${thRight} hidden sm:table-cell`}>CPI</th>
+                {!hideMonetary && <th className={`${thRight} hidden sm:table-cell`}>CPI</th>}
               </tr>
             </thead>
             <tbody>
@@ -146,10 +148,10 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
                 <tr key={row.period} className={isPrint ? undefined : 'hover:bg-gray-50'}>
                   <td className={`${td} font-medium`}>{row.period}</td>
                   <td className={`${tdRight} hidden sm:table-cell`}>{row.ad_count}</td>
-                  <td className={`${tdRight} font-medium`}>{formatPHP(row.total_spend)}</td>
+                  {!hideMonetary && <td className={`${tdRight} font-medium`}>{formatPHP(row.total_spend)}</td>}
                   <td className={`${tdRight} font-semibold`}>{row.total_inquiries}</td>
                   <td className={`${tdRight} hidden sm:table-cell`}>{row.total_reach.toLocaleString()}</td>
-                  <td className={`${tdRight} hidden sm:table-cell`}>{row.total_inquiries > 0 ? formatPHP(row.total_spend / row.total_inquiries) : '—'}</td>
+                  {!hideMonetary && <td className={`${tdRight} hidden sm:table-cell`}>{row.total_inquiries > 0 ? formatPHP(row.total_spend / row.total_inquiries) : '—'}</td>}
                 </tr>
               ))}
             </tbody>
@@ -157,7 +159,7 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
         </div>
       </Section>
 
-      {overview.topAds.length > 0 && (
+      {!hideMonetary && overview.topAds.length > 0 && (
         <Section variant={variant} title="Top Ads by Cost per Messaging Conversation">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -186,7 +188,7 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
         </Section>
       )}
 
-      <Section variant={variant} title="Budget Reallocation">
+      {!hideMonetary && <Section variant={variant} title="Budget Reallocation">
         <MetricGrid variant={variant} items={budgetReallocation.quartiles.map((q) => ({
           label: `Q${q.quartile} (n=${q.n})`,
           value: q.cpi > 0 ? formatPHP(q.cpi) : '—',
@@ -204,7 +206,7 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
           messaging conversation and split into four equal-size groups. The minimum-spend filter guards against regression to the
           mean — an unfiltered split would put low-volume, noisy-CPI ads in the worst quartile regardless of quality.
         </Caveat>
-      </Section>
+      </Section>}
 
       <Section variant={variant} title="Ad Set &amp; Campaign Ranking">
         <div className="overflow-x-auto">
@@ -213,9 +215,9 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
               <tr className={isPrint ? undefined : 'bg-gray-50'}>
                 <th className={th}>Ad Set</th>
                 <th className={`${thRight} hidden sm:table-cell`}>Ads</th>
-                <th className={thRight}>Spend</th>
+                {!hideMonetary && <th className={thRight}>Spend</th>}
                 <th className={thRight}>Messaging Conversations</th>
-                <th className={thRight}>CPI</th>
+                {!hideMonetary && <th className={thRight}>CPI</th>}
               </tr>
             </thead>
             <tbody>
@@ -225,9 +227,9 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
                     {row.name}{row.lowConfidence ? <span className="text-xs text-status-warning ml-1">(low confidence)</span> : null}
                   </td>
                   <td className={`${tdRight} hidden sm:table-cell`}>{row.adCount}</td>
-                  <td className={tdRight}>{formatPHP(row.spend)}</td>
+                  {!hideMonetary && <td className={tdRight}>{formatPHP(row.spend)}</td>}
                   <td className={`${tdRight} font-semibold`}>{row.inquiries}</td>
-                  <td className={tdRight}>{row.cpi !== null ? formatPHP(row.cpi) : '—'}</td>
+                  {!hideMonetary && <td className={tdRight}>{row.cpi !== null ? formatPHP(row.cpi) : '—'}</td>}
                 </tr>
               ))}
             </tbody>
@@ -320,7 +322,7 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
         </div>
       </Section>
 
-      {lifecycle && (
+      {!hideMonetary && lifecycle && (
         <Section variant={variant} title="Ad Lifecycle">
           <div className="space-y-3">
             <p className={`text-sm ${isPrint ? 'text-neutral-700' : 'text-gray-700'}`}>
@@ -358,13 +360,13 @@ export default function ReportView({ variant, role, data, canExport = true }: Re
 
       <Section variant={variant} title="Key Takeaways">
         <ul className={`space-y-2 text-sm ${isPrint ? 'text-neutral-700' : 'text-gray-700'}`}>
-          {overview.kpis.medianCpi.value !== null && (
+          {!hideMonetary && overview.kpis.medianCpi.value !== null && (
             <li className="flex gap-2">
               <span className={isPrint ? 'text-neutral-400 mt-0.5' : 'text-primary mt-0.5'}>•</span>
               Median cost per messaging conversation across the period: <strong className={isPrint ? 'text-neutral-900' : ''}>{formatPHP(overview.kpis.medianCpi.value)}</strong> (n={overview.kpis.medianCpi.n}).
             </li>
           )}
-          {budgetReallocation.n > 0 && (
+          {!hideMonetary && budgetReallocation.n > 0 && (
             <li className="flex gap-2">
               <span className={isPrint ? 'text-neutral-400 mt-0.5' : 'text-primary mt-0.5'}>•</span>
               Reallocating a portion of Q4 spend toward Q1&apos;s rate would have generated an estimated {Math.round(budgetReallocation.additionalInquiries)} additional conversations, based on recorded results.

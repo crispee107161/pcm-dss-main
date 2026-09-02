@@ -123,11 +123,71 @@ model User {
   // Soft-delete via this flag preserves the audit trail and never touches
   // the FK. Deactivated users cannot authenticate — see lib/auth.ts.
   is_active                  Boolean            @default(true)
+  // SR-A6: consecutive-failure counter, reset on any successful sign-in or
+  // whenever the 15-minute window (measured from last_failed_login_at) has
+  // elapsed. is_locked is a manual gate, not a timer — SR-A6 says a locked
+  // account is released by unlocking it, not auto-released after a delay, so
+  // there's no locked-until timestamp. Administration (including unlock) is
+  // BUSINESS_OWNER-only — see actions/admin.ts's requireOwner() — with
+  // scripts/emergency-unlock.ts as the DB-shell fallback if that one account
+  // locks itself out.
+  failed_login_attempts      Int                @default(0)
+  last_failed_login_at       DateTime?
+  is_locked                  Boolean            @default(false)
+  locked_at                  DateTime?
+  // SR-A8: an admin-issued temporary password. must_change_password gates
+  // the forced /dashboard/change-password redirect (see middleware.ts);
+  // temp_password_expires_at makes the temp credential itself unusable
+  // after 24h even if never changed — checked in lib/auth.ts's authorize().
+  must_change_password       Boolean            @default(false)
+  temp_password_expires_at   DateTime?
   upload_logs                UploadLog[]
   simulation_results         SimulationResult[]
   category_proposals         FacebookPost[]
   category_audit_logs        CategoryAuditLog[]
   category_final_assignments FacebookPost[]     @relation("CategoryFinalAssignedBy")
+  security_events            SecurityEventLog[]
+}
+
+// SR-L1/L2/L3: single centralized log for authentication and account-
+// administration events — distinct from UploadLog/CategoryAuditLog, which
+// cover data-ingestion and categorization activity. user_id is nullable
+// because a sign-in failure against an unknown email has no user row to
+// attribute to; actor_email is captured directly (not just via the relation)
+// so the record is still readable if the account is later deactivated, and
+// so a failed attempt against a nonexistent email is still traceable.
+enum SecurityEventType {
+  SIGN_IN_SUCCESS
+  SIGN_IN_FAILURE
+  SIGN_OUT
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  PASSWORD_CHANGE
+  PASSWORD_RESET
+  ACCOUNT_CREATED
+  ROLE_CHANGED
+  ACCOUNT_DEACTIVATED
+  ACCOUNT_REACTIVATED
+  AUTHORIZATION_DENIED
+}
+
+model SecurityEventLog {
+  id             Int               @id @default(autoincrement())
+  at             DateTime          @default(now())
+  event_type     SecurityEventType
+  user_id        Int?
+  user           User?             @relation(fields: [user_id], references: [id])
+  actor_email    String?
+  // Plain scalar, no relation — mirrors CategoryAuditLog.facebook_post_id:
+  // the log must survive independently of the target user row (e.g. after
+  // a later deactivation), and a target may differ from the acting user_id
+  // (an Owner resetting someone else's password).
+  target_user_id Int?
+  outcome        String
+  detail         String?
+
+  @@index([at])
+  @@index([user_id])
 }
 
 model UploadLog {

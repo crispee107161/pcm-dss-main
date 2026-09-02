@@ -10,7 +10,13 @@ const roleRoutes: Record<Role, string> = {
   BUSINESS_OWNER: '/dashboard/owner',
 }
 
-type JwtToken = { role: Role; sub: string } | null
+type JwtToken = { role: Role; sub: string; mustChangePassword?: boolean } | null
+
+// SR-A8 — an admin-issued temporary password forces a change before any
+// other dashboard route is reachable. Kept under /dashboard so it inherits
+// the isLoggedIn check above, but exempted from the per-role path scoping
+// below since both roles land here regardless of their normal dashboard root.
+const FORCE_PASSWORD_CHANGE_PATH = '/dashboard/change-password'
 
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
@@ -63,7 +69,11 @@ export default async function middleware(req: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    if (userRole) {
+    if (token?.mustChangePassword && pathname !== FORCE_PASSWORD_CHANGE_PATH) {
+      return NextResponse.redirect(new URL(FORCE_PASSWORD_CHANGE_PATH, req.nextUrl))
+    }
+
+    if (userRole && pathname !== FORCE_PASSWORD_CHANGE_PATH) {
       const allowedPath = roleRoutes[userRole]
       if (allowedPath && !pathname.startsWith(allowedPath)) {
         return NextResponse.redirect(new URL(allowedPath, req.nextUrl))

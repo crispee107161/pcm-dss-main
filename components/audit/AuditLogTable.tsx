@@ -9,6 +9,13 @@ function formatDate(date: Date): string {
 const KIND_BADGE: Record<AuditEvent['kind'], string> = {
   UPLOAD: 'bg-secondary text-foreground',
   CATEGORY: 'bg-primary/10 text-primary',
+  SECURITY: 'bg-status-warning/10 text-status-warning',
+}
+
+const KIND_LABEL: Record<AuditEvent['kind'], string> = {
+  UPLOAD: 'Upload',
+  CATEGORY: 'Category',
+  SECURITY: 'Security',
 }
 
 export default function AuditLogTable({ events }: { events: AuditEvent[] }) {
@@ -35,7 +42,7 @@ export default function AuditLogTable({ events }: { events: AuditEvent[] }) {
               <td className="px-4 py-3 text-foreground text-xs">{event.userEmail}</td>
               <td className="px-4 py-3">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${KIND_BADGE[event.kind]}`}>
-                  {event.kind === 'UPLOAD' ? 'Upload' : 'Category'}
+                  {KIND_LABEL[event.kind]}
                 </span>
               </td>
               <td className="px-4 py-3 text-foreground text-xs max-w-xs truncate" title={event.summary}>{event.summary}</td>

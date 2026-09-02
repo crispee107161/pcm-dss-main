@@ -37,6 +37,10 @@ export async function generateAIInsights(data: InsightData): Promise<AIInsightRe
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) return { ok: false, reason: 'AI insights are not configured for this deployment.' }
 
+  // SSDLC planning doc SR-D8/R-07 ("only caption text reaches the LLM") is
+  // scoped to the caption-categorization call (classify-posts.ts) — this
+  // feature exists to interpret aggregate spend/CPI/reach figures, so those
+  // are sent deliberately, not by gap. Disclosed to the client per SR-D8.
   const systemPrompt = `You are a business analyst summarizing Facebook ad campaign performance and advertising efficiency for PC Merchandise, a small Philippine merchandise business. The business uses Facebook ads to generate customer messaging conversations; the metric counts customers who started a Messenger conversation after seeing an ad (Facebook's "Messaging conversations started" result type) — not purchases or sales. Write 3-4 concise, actionable sentences in plain English for a non-technical business owner. Interpret what the numbers mean and what action to take — do not just repeat raw numbers.`
 
   const userPrompt = [

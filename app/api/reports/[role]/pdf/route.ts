@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireUsableSession } from '@/lib/auth-guard'
 import { launchBrowser } from '@/lib/pdf/browser'
 import { rateLimit } from '@/lib/rate-limit'
 import type { Role } from '@/types/index'
@@ -38,7 +38,7 @@ function buildFilename(role: string): string {
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ role: string }> }) {
-  const session = await auth()
+  const session = await requireUsableSession()
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

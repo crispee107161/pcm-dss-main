@@ -71,7 +71,7 @@ async function main() {
     )
   }
   for (const [label, pw] of [['SEED_MARKETING_PASSWORD', marketingPw], ['SEED_MARKETING_TEAM_PASSWORD', teamPw], ['SEED_OWNER_PASSWORD', ownerPw]]) {
-    if (pw.length < 8) throw new Error(`${label} must be at least 8 characters.`)
+    if (pw.length < 12) throw new Error(`${label} must be at least 12 characters.`)
   }
 
   // The MVP v2 role migration renamed SALES_DIRECTOR -> MARKETING_TEAM on the
