@@ -63,14 +63,19 @@ async function main() {
   const marketingPw = process.env.SEED_MARKETING_PASSWORD
   const teamPw      = process.env.SEED_MARKETING_TEAM_PASSWORD
   const ownerPw     = process.env.SEED_OWNER_PASSWORD
+  // Second BUSINESS_OWNER account (docs/raven/Two_Engagement_Rates_and_Owner_Deadlock.md
+  // §2): with only one Owner, a self-lockout is unrecoverable without direct
+  // DB access, since unlocking requires an Owner. A second Owner lets either
+  // unlock the other through the UI.
+  const owner2Pw    = process.env.SEED_OWNER2_PASSWORD
 
-  if (!marketingPw || !teamPw || !ownerPw) {
+  if (!marketingPw || !teamPw || !ownerPw || !owner2Pw) {
     throw new Error(
-      'Seed requires SEED_MARKETING_PASSWORD, SEED_MARKETING_TEAM_PASSWORD, and SEED_OWNER_PASSWORD env vars. ' +
+      'Seed requires SEED_MARKETING_PASSWORD, SEED_MARKETING_TEAM_PASSWORD, SEED_OWNER_PASSWORD, and SEED_OWNER2_PASSWORD env vars. ' +
       'Set them in .env before running the seed.'
     )
   }
-  for (const [label, pw] of [['SEED_MARKETING_PASSWORD', marketingPw], ['SEED_MARKETING_TEAM_PASSWORD', teamPw], ['SEED_OWNER_PASSWORD', ownerPw]]) {
+  for (const [label, pw] of [['SEED_MARKETING_PASSWORD', marketingPw], ['SEED_MARKETING_TEAM_PASSWORD', teamPw], ['SEED_OWNER_PASSWORD', ownerPw], ['SEED_OWNER2_PASSWORD', owner2Pw]]) {
     if (pw.length < 12) throw new Error(`${label} must be at least 12 characters.`)
   }
 
@@ -93,6 +98,7 @@ async function main() {
     { email: 'marketing@pcmerchandise.com', password: marketingPw, role: 'MARKETING_MANAGER' as const },
     { email: 'team@pcmerchandise.com',      password: teamPw,      role: 'MARKETING_TEAM' as const },
     { email: 'owner@pcmerchandise.com',     password: ownerPw,     role: 'BUSINESS_OWNER' as const },
+    { email: 'owner2@pcmerchandise.com',    password: owner2Pw,    role: 'BUSINESS_OWNER' as const },
   ]
 
   for (const user of users) {

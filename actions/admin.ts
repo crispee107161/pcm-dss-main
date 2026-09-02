@@ -34,6 +34,21 @@ async function requireOwner() {
   return { session }
 }
 
+// Raven's Owner_Deadlock memo (2026-09-02) — NFR-12 requires at least one
+// account holding release authority remaining able to act "at all times,"
+// a property of the system, not of who happens to exist in it today. Two
+// Owner accounts satisfy that by accident; this makes it structurally true
+// by requiring at least one other BUSINESS_OWNER, besides the acting user,
+// who is both active and unlocked — is_active alone isn't enough, since a
+// locked-out Owner can't sign in to unlock anyone (lib/auth.ts rejects
+// is_locked at authorize() and the JWT callback kills the session for it).
+async function wouldLeaveFewerThanTwoCapableOwners(actorId: number): Promise<boolean> {
+  const otherCapableOwners = await prisma.user.count({
+    where: { role: 'BUSINESS_OWNER', is_active: true, is_locked: false, id: { not: actorId } },
+  })
+  return otherCapableOwners < 1
+}
+
 // SR-A9 — re-authentication is required before account management actions,
 // role changes, and (per the same requirement) dataset deletion. All of
 // this file's mutating actions except createUser (provisioning a brand-new
@@ -84,8 +99,29 @@ export async function updateUserRole(
     return { error: "You can't change your own role." }
   }
 
+  const targetBefore = await prisma.user.findUnique({ where: { id: userId } })
+  if (!targetBefore) {
+    return { error: 'User not found.' }
+  }
+
   const reauthError = await verifyReauth(actorId, session.user.email, formData)
   if (reauthError) return { error: reauthError }
+
+  if (
+    targetBefore.role === 'BUSINESS_OWNER' &&
+    role !== 'BUSINESS_OWNER' &&
+    (await wouldLeaveFewerThanTwoCapableOwners(actorId))
+  ) {
+    await logSecurityEvent({
+      eventType: 'AUTHORIZATION_DENIED',
+      userId: actorId,
+      actorEmail: session.user.email,
+      targetUserId: userId,
+      outcome: 'FAILURE',
+      detail: 'refused role change — would leave fewer than two active, unlocked owner accounts',
+    })
+    return { error: 'At least two active Owner accounts are required, so one can always unlock or restore the other.' }
+  }
 
   const target = await prisma.user.update({ where: { id: userId }, data: { role } })
   await logSecurityEvent({
@@ -266,6 +302,18 @@ export async function deactivateUser(
 
   const reauthError = await verifyReauth(actorId, session.user.email, formData)
   if (reauthError) return { error: reauthError }
+
+  if (user.role === 'BUSINESS_OWNER' && (await wouldLeaveFewerThanTwoCapableOwners(actorId))) {
+    await logSecurityEvent({
+      eventType: 'AUTHORIZATION_DENIED',
+      userId: actorId,
+      actorEmail: session.user.email,
+      targetUserId: userId,
+      outcome: 'FAILURE',
+      detail: 'refused deactivation — would leave fewer than two active, unlocked owner accounts',
+    })
+    return { error: 'At least two active Owner accounts are required, so one can always unlock or restore the other.' }
+  }
 
   await prisma.user.update({ where: { id: userId }, data: { is_active: false } })
   await logSecurityEvent({
