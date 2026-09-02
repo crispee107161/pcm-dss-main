@@ -110,7 +110,7 @@ describe('fitFr31Regression — primary spec (n=108) against published reference
     expect(fit.normality.shapiroWilk!.w).toBeCloseTo(0.9375, 3)
   })
 
-  it('reproduces in-sample and baseline accuracy exactly (deterministic, no shuffle involved)', () => {
+  it('reproduces in-sample accuracy exactly (deterministic, no shuffle involved)', () => {
     if (fit.status !== 'ok') throw new Error('unreachable')
     expect(fit.accuracy).not.toBeNull()
     const acc = fit.accuracy!
@@ -118,11 +118,25 @@ describe('fitFr31Regression — primary spec (n=108) against published reference
     expect(acc.inSample.mae).toBeCloseTo(3.93, 2)
     expect(acc.inSample.rmse).toBeCloseTo(6.20, 2)
     expect(acc.inSample.mape).toBeCloseTo(18.2, 1)
+  })
 
-    expect(acc.baselineMedian.mae).toBeCloseTo(5.83, 2)
-    expect(acc.baselineMedian.rmse).toBeCloseTo(8.77, 2)
-    expect(acc.baselineMedian.mape).toBeCloseTo(26.9, 1)
+  it('computes the baseline per-fold, out-of-fold, using the same seeded split as the model (docs/raven/Two_Engagement_Rates_and_Owner_Deadlock.md §3)', () => {
+    if (fit.status !== 'ok') throw new Error('unreachable')
+    const acc = fit.accuracy!
+    // These no longer match the earlier in-sample figures (₱5.83/₱8.77/26.9%):
+    // the baseline is now the median of each fold's training partition scored
+    // on that fold's held-out partition, the same way crossValidated.mae is —
+    // so both sides of maeImprovementVsBaseline are out-of-fold.
+    expect(acc.baselineMedian.mae).toBeCloseTo(5.86, 2)
+    expect(acc.baselineMedian.rmse).toBeCloseTo(8.79, 2)
+    expect(acc.baselineMedian.mape).toBeCloseTo(27.1, 1)
     expect(acc.baselineMedian.rSquared).toBeNull()
+
+    // The headline Chapter 4 figure — both sides are seeded and deterministic
+    // for this fixture (unlike crossValidated's own metrics, which only need
+    // a tolerance band because they won't byte-match a Python/sklearn
+    // shuffle), so this is pinned exactly rather than bounded.
+    expect(acc.maeImprovementVsBaseline * 100).toBeCloseTo(28.5, 1)
   })
 
   it('cross-validated accuracy lands in the shuffle-dependent tolerance band', () => {

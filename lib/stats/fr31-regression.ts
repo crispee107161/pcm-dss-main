@@ -523,6 +523,34 @@ export function crossValidate(
   return { ...metrics, folds, seed, foldSizes: foldIndices.map(f => f.length) }
 }
 
+// Per-fold median baseline (docs/raven/Two_Engagement_Rates_and_Owner_Deadlock.md
+// §3): the model's MAE is out-of-fold, so the baseline it's compared against
+// must be scored the same way — median of each fold's training partition,
+// predicted onto that fold's held-out partition — rather than the median of
+// all n observations scored against those same n.
+function crossValidateBaseline(
+  actualCpi: readonly number[],
+  folds: number,
+  seed: number
+): AccuracyMetrics {
+  const n = actualCpi.length
+  const foldIndices = seededKFoldIndices(n, folds, seed)
+  const outOfFoldPredictedCpi = new Array(n).fill(NaN)
+
+  for (let f = 0; f < foldIndices.length; f++) {
+    const testIdx = new Set(foldIndices[f])
+    const trainCpi = actualCpi.filter((_, i) => !testIdx.has(i))
+    const foldMedian = median(trainCpi)
+    foldIndices[f].forEach(i => {
+      outOfFoldPredictedCpi[i] = foldMedian
+    })
+  }
+
+  // rSquared intentionally null: the median doesn't minimize SSE, so a
+  // computed R^2 would come out slightly negative (spec §5.4 shows "-").
+  return accuracyMetrics(actualCpi, outOfFoldPredictedCpi, false)
+}
+
 // ─── Full FR-31 fit ─────────────────────────────────────────────────────
 
 function designMatrix(observations: readonly RegressionObservation[]): number[][] {
@@ -652,10 +680,7 @@ function fitOneSpecification(
     }
     const crossValidated = crossValidate(X, lnY, actualCpi, cvFolds, cvSeed)
     const medianCpi = median(actualCpi)
-    const baselinePredicted = actualCpi.map(() => medianCpi)
-    // rSquared intentionally null: the median doesn't minimize SSE, so a
-    // computed R^2 would come out slightly negative (spec §5.4 shows "-").
-    const baselineMedian = accuracyMetrics(actualCpi, baselinePredicted, false)
+    const baselineMedian = crossValidateBaseline(actualCpi, cvFolds, cvSeed)
     const maeImprovementVsBaseline = 1 - crossValidated.mae / baselineMedian.mae
     accuracy = { inSample, crossValidated, baselineMedian, medianCpi, maeImprovementVsBaseline }
   }
