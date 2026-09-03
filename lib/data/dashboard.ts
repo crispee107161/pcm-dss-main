@@ -63,7 +63,12 @@ export interface DashboardOverview {
 // so ranking or medianing raw rows treats each month as an independent ad
 // and produces a different (wrong) population. Verified against mvp.md §8's
 // reference figure this way: n=187, median ₱21.39 across the full dataset.
-function aggregateAdsById(ads: { ad_id: string; ad_name: string; ad_set_name: string; amount_spent: number; total_messaging_contacts: number | null }[]) {
+// Named distinctly from lib/stats/campaign-rankings.ts's exported
+// aggregateAdsById (this module already imports MIN_INQUIRIES_FOR_CPI from
+// there) — same sum-then-divide idea, but this one only needs spend/messaging
+// for the dashboard's KPI cards and CPI distribution, not the fuller
+// per-ad shape (impressions, reach, months) that screen's ranking tables need.
+function sumSpendAndMessagingByAdId(ads: { ad_id: string; ad_name: string; ad_set_name: string; amount_spent: number; total_messaging_contacts: number | null }[]) {
   const perAd = new Map<string, { ad_name: string; ad_set_name: string; spend: number; messaging: number }>()
   for (const ad of ads) {
     const existing = perAd.get(ad.ad_id) ?? { ad_name: ad.ad_name, ad_set_name: ad.ad_set_name, spend: 0, messaging: 0 }
@@ -196,8 +201,8 @@ export async function getDashboardOverview(from: string | undefined, to: string 
   const priorSpend = priorAdRows.reduce((s, a) => s + a.amount_spent, 0)
   const priorInquiries = priorAdRows.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
 
-  const curPerAd = aggregateAdsById(curAdRows)
-  const priorPerAd = aggregateAdsById(priorAdRows)
+  const curPerAd = sumSpendAndMessagingByAdId(curAdRows)
+  const priorPerAd = sumSpendAndMessagingByAdId(priorAdRows)
 
   const curCpiPopulation = [...curPerAd.values()].filter(a => a.messaging > 0).map(a => a.spend / a.messaging)
   const priorCpiPopulation = [...priorPerAd.values()].filter(a => a.messaging > 0).map(a => a.spend / a.messaging)
@@ -226,7 +231,7 @@ export async function getDashboardOverview(from: string | undefined, to: string 
   // disappear just because the user is looking at month 9.
   const uncategorizedCount = postCategoryCounts.find(c => c.category_final === null)?._count._all ?? 0
 
-  const allPerAd = aggregateAdsById(allAdsForGaps)
+  const allPerAd = sumSpendAndMessagingByAdId(allAdsForGaps)
   const spendNoResultAds = [...allPerAd.values()]
     .filter(a => a.spend > 0 && a.messaging === 0)
     .sort((a, b) => b.spend - a.spend)

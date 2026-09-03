@@ -1,84 +1,190 @@
 import { describe, it, expect } from 'vitest'
 import {
+  aggregateAdsById,
+  rankBySpend,
+  rankByMessagingContacts,
+  rankByReach,
   rankByCostPerInquiry,
   rankByCtr,
   rankByCostPerClick,
+  countEligibleForCostPerInquiry,
+  countEligibleForCtr,
+  countEligibleForCostPerClick,
   type AdForRanking,
+  type AggregatedAd,
 } from './campaign-rankings'
 
-function ad(overrides: Partial<AdForRanking> & { ad_name: string }): AdForRanking {
+function adRow(overrides: Partial<AdForRanking> & { ad_id: string; ad_name: string }): AdForRanking {
   return {
     ad_set_name: 'set-1',
     amount_spent: 0,
     impressions: 0,
     link_clicks: null,
     total_messaging_contacts: null,
+    reach: null,
     reporting_starts: new Date('2026-01-01'),
-    reporting_ends: new Date('2026-01-01'),
+    reporting_ends: new Date('2026-01-31'),
     ...overrides,
   }
 }
 
+function ad(overrides: Partial<AggregatedAd> & { name: string }): AggregatedAd {
+  return {
+    ad_id: overrides.name,
+    adSetName: 'set-1',
+    amountSpent: 0,
+    impressions: 0,
+    linkClicks: 0,
+    messagingContacts: 0,
+    reach: 0,
+    monthsRan: 1,
+    ...overrides,
+  }
+}
+
+describe('aggregateAdsById', () => {
+  it('sums an advertisement\'s monthly rows into one aggregate, keyed by ad_id not ad_name', () => {
+    const rows = [
+      adRow({
+        ad_id: 'a1', ad_name: 'summer promo', amount_spent: 100, total_messaging_contacts: 5, reach: 1000,
+        reporting_starts: new Date('2026-01-01'), reporting_ends: new Date('2026-01-31'),
+      }),
+      adRow({
+        ad_id: 'a1', ad_name: 'summer promo', amount_spent: 200, total_messaging_contacts: 10, reach: 800,
+        reporting_starts: new Date('2026-02-01'), reporting_ends: new Date('2026-02-28'),
+      }),
+    ]
+    const [aggregated] = aggregateAdsById(rows)
+    expect(aggregated.amountSpent).toBe(300)
+    expect(aggregated.messagingContacts).toBe(15)
+    expect(aggregated.reach).toBe(1800)
+    expect(aggregated.monthsRan).toBe(2)
+  })
+
+  it('counts distinct calendar months, not rows — two rows in the same month count once', () => {
+    const rows = [
+      adRow({
+        ad_id: 'a1', ad_name: 'daily-grain ad',
+        reporting_starts: new Date('2026-01-01'), reporting_ends: new Date('2026-01-01'),
+      }),
+      adRow({
+        ad_id: 'a1', ad_name: 'daily-grain ad',
+        reporting_starts: new Date('2026-01-15'), reporting_ends: new Date('2026-01-15'),
+      }),
+    ]
+    const [aggregated] = aggregateAdsById(rows)
+    expect(aggregated.monthsRan).toBe(1)
+  })
+
+  it('keeps two different ads with the same name as two separate aggregates', () => {
+    const rows = [
+      adRow({ ad_id: 'a1', ad_name: 'reused name', amount_spent: 100 }),
+      adRow({ ad_id: 'a2', ad_name: 'reused name', amount_spent: 900 }),
+    ]
+    const aggregated = aggregateAdsById(rows)
+    expect(aggregated).toHaveLength(2)
+    expect(aggregated.map(a => a.amountSpent).sort((x, y) => x - y)).toEqual([100, 900])
+  })
+
+  it('treats null link_clicks/messaging/reach as zero, not skipped', () => {
+    const rows = [adRow({ ad_id: 'a1', ad_name: 'no-clicks', amount_spent: 50 })]
+    const [aggregated] = aggregateAdsById(rows)
+    expect(aggregated.linkClicks).toBe(0)
+    expect(aggregated.messagingContacts).toBe(0)
+    expect(aggregated.reach).toBe(0)
+  })
+})
+
+describe('rankBySpend', () => {
+  it('ranks descending and respects the limit', () => {
+    const ads = [ad({ name: 'low', amountSpent: 10 }), ad({ name: 'high', amountSpent: 90 })]
+    expect(rankBySpend(ads).map(r => r.name)).toEqual(['high', 'low'])
+    expect(rankBySpend(ads, 1)).toHaveLength(1)
+  })
+
+  it('excludes ads with zero spend', () => {
+    const ads = [ad({ name: 'zero', amountSpent: 0 })]
+    expect(rankBySpend(ads)).toEqual([])
+  })
+
+  it('carries monthsRan through to the ranked row', () => {
+    const ads = [ad({ name: 'multi-month', amountSpent: 100, monthsRan: 4 })]
+    expect(rankBySpend(ads)[0].monthsRan).toBe(4)
+  })
+})
+
+describe('rankByMessagingContacts', () => {
+  it('ranks descending and excludes zero', () => {
+    const ads = [
+      ad({ name: 'none', messagingContacts: 0 }),
+      ad({ name: 'few', messagingContacts: 2 }),
+      ad({ name: 'many', messagingContacts: 20 }),
+    ]
+    expect(rankByMessagingContacts(ads).map(r => r.name)).toEqual(['many', 'few'])
+  })
+})
+
+describe('rankByReach', () => {
+  it('ranks descending and excludes zero', () => {
+    const ads = [ad({ name: 'none', reach: 0 }), ad({ name: 'some', reach: 500 })]
+    expect(rankByReach(ads).map(r => r.name)).toEqual(['some'])
+  })
+})
+
 describe('rankByCostPerInquiry', () => {
   it('ranks ascending — cheapest cost per inquiry first', () => {
     const ads = [
-      ad({ ad_name: 'expensive', amount_spent: 1000, total_messaging_contacts: 10 }), // 100/inquiry
-      ad({ ad_name: 'cheap',     amount_spent: 100,  total_messaging_contacts: 10 }), // 10/inquiry
+      ad({ name: 'expensive', amountSpent: 1000, messagingContacts: 10 }), // 100/inquiry
+      ad({ name: 'cheap', amountSpent: 100, messagingContacts: 10 }), // 10/inquiry
     ]
     const ranked = rankByCostPerInquiry(ads)
     expect(ranked.map(r => r.name)).toEqual(['cheap', 'expensive'])
     expect(ranked[0].value).toBe(10)
   })
 
-  it('excludes ads below the minimum inquiry sample size', () => {
+  it('excludes ads below the minimum inquiry sample size, summed across months', () => {
     const ads = [
       // 1 inquiry at very low spend looks amazing but is noise, not signal
-      ad({ ad_name: 'lucky-fluke', amount_spent: 5, total_messaging_contacts: 1 }),
-      ad({ ad_name: 'proven',      amount_spent: 500, total_messaging_contacts: 50 }),
+      ad({ name: 'lucky-fluke', amountSpent: 5, messagingContacts: 1 }),
+      ad({ name: 'proven', amountSpent: 500, messagingContacts: 50 }),
     ]
     const ranked = rankByCostPerInquiry(ads)
     expect(ranked.map(r => r.name)).toEqual(['proven'])
   })
 
-  it('skips ads with null or zero inquiries, and zero spend, without producing Infinity/NaN', () => {
+  it('skips ads with zero inquiries and zero spend, without producing Infinity/NaN', () => {
     const ads = [
-      ad({ ad_name: 'no-inquiries', amount_spent: 100, total_messaging_contacts: null }),
-      ad({ ad_name: 'zero-inquiries', amount_spent: 100, total_messaging_contacts: 0 }),
-      ad({ ad_name: 'zero-spend', amount_spent: 0, total_messaging_contacts: 10 }),
+      ad({ name: 'zero-inquiries', amountSpent: 100, messagingContacts: 0 }),
+      ad({ name: 'zero-spend', amountSpent: 0, messagingContacts: 10 }),
     ]
-    const ranked = rankByCostPerInquiry(ads)
-    expect(ranked).toEqual([])
+    expect(rankByCostPerInquiry(ads)).toEqual([])
   })
 
   it('respects the limit and returns [] for empty input', () => {
-    const ads = Array.from({ length: 15 }, (_, i) =>
-      ad({ ad_name: `ad-${i}`, amount_spent: 100, total_messaging_contacts: 10 })
-    )
+    const ads = Array.from({ length: 15 }, (_, i) => ad({ name: `ad-${i}`, amountSpent: 100, messagingContacts: 10 }))
     expect(rankByCostPerInquiry(ads)).toHaveLength(10)
     expect(rankByCostPerInquiry(ads, 3)).toHaveLength(3)
     expect(rankByCostPerInquiry([])).toEqual([])
   })
 
-  it('ranks month-spanning rows normally — every Ad row is one month of the monthly export', () => {
-    // Post-schema-rework, there is no daily grain left to distinguish from —
-    // a row spanning a full calendar month is the norm, not a stale outlier.
-    const ads = [
-      ad({
-        ad_name: 'best-month', amount_spent: 100, total_messaging_contacts: 100,
-        reporting_starts: new Date('2025-09-01'), reporting_ends: new Date('2025-09-30'),
-      }),
-      ad({ ad_name: 'worse-month', amount_spent: 500, total_messaging_contacts: 50 }),
+  it('sums spend and messaging across an ad\'s months before dividing, not the mean of per-month ratios', () => {
+    const rows = [
+      adRow({ ad_id: 'a1', ad_name: 'multi-month', amount_spent: 10, total_messaging_contacts: 10 }), // 1/inquiry
+      adRow({ ad_id: 'a1', ad_name: 'multi-month', amount_spent: 990, total_messaging_contacts: 1 }), // 990/inquiry
     ]
-    const ranked = rankByCostPerInquiry(ads)
-    expect(ranked.map(r => r.name)).toEqual(['best-month', 'worse-month'])
+    const [aggregated] = aggregateAdsById(rows)
+    const ranked = rankByCostPerInquiry([aggregated])
+    // sum-then-divide: (10 + 990) / (10 + 1) = 90.9...
+    // mean-of-ratios (wrong): (1 + 990) / 2 = 495.5
+    expect(ranked[0].value).toBeCloseTo(1000 / 11, 6)
   })
 })
 
 describe('rankByCtr', () => {
   it('ranks descending — highest CTR first', () => {
     const ads = [
-      ad({ ad_name: 'low-ctr',  impressions: 10000, link_clicks: 200 }), // 2%
-      ad({ ad_name: 'high-ctr', impressions: 10000, link_clicks: 500 }), // 5%
+      ad({ name: 'low-ctr', impressions: 10000, linkClicks: 200 }), // 2%
+      ad({ name: 'high-ctr', impressions: 10000, linkClicks: 500 }), // 5%
     ]
     const ranked = rankByCtr(ads)
     expect(ranked.map(r => r.name)).toEqual(['high-ctr', 'low-ctr'])
@@ -88,26 +194,23 @@ describe('rankByCtr', () => {
   it('does not let a low-impression ad with a lucky CTR outrank a high-impression, high-volume ad', () => {
     const ads = [
       // 1 click out of 12 impressions = 8.3% CTR, but far too small a sample to trust
-      ad({ ad_name: 'small-sample-fluke', impressions: 12, link_clicks: 1 }),
-      ad({ ad_name: 'real-performer',     impressions: 80000, link_clicks: 3040 }), // 3.8%
+      ad({ name: 'small-sample-fluke', impressions: 12, linkClicks: 1 }),
+      ad({ name: 'real-performer', impressions: 80000, linkClicks: 3040 }), // 3.8%
     ]
     const ranked = rankByCtr(ads)
     expect(ranked.map(r => r.name)).toEqual(['real-performer'])
   })
 
-  it('skips ads with null/zero link_clicks or zero impressions', () => {
+  it('skips ads with zero link_clicks or zero impressions', () => {
     const ads = [
-      ad({ ad_name: 'no-clicks', impressions: 5000, link_clicks: null }),
-      ad({ ad_name: 'zero-clicks', impressions: 5000, link_clicks: 0 }),
-      ad({ ad_name: 'zero-impressions', impressions: 0, link_clicks: 10 }),
+      ad({ name: 'zero-clicks', impressions: 5000, linkClicks: 0 }),
+      ad({ name: 'zero-impressions', impressions: 0, linkClicks: 10 }),
     ]
     expect(rankByCtr(ads)).toEqual([])
   })
 
   it('respects the limit and returns [] for empty input', () => {
-    const ads = Array.from({ length: 15 }, (_, i) =>
-      ad({ ad_name: `ad-${i}`, impressions: 5000, link_clicks: 100 })
-    )
+    const ads = Array.from({ length: 15 }, (_, i) => ad({ name: `ad-${i}`, impressions: 5000, linkClicks: 100 }))
     expect(rankByCtr(ads)).toHaveLength(10)
     expect(rankByCtr(ads, 4)).toHaveLength(4)
     expect(rankByCtr([])).toEqual([])
@@ -117,8 +220,8 @@ describe('rankByCtr', () => {
 describe('rankByCostPerClick', () => {
   it('ranks ascending — cheapest cost per click first', () => {
     const ads = [
-      ad({ ad_name: 'expensive', amount_spent: 1000, link_clicks: 50 }), // 20/click
-      ad({ ad_name: 'cheap',     amount_spent: 200,  link_clicks: 50 }), // 4/click
+      ad({ name: 'expensive', amountSpent: 1000, linkClicks: 50 }), // 20/click
+      ad({ name: 'cheap', amountSpent: 200, linkClicks: 50 }), // 4/click
     ]
     const ranked = rankByCostPerClick(ads)
     expect(ranked.map(r => r.name)).toEqual(['cheap', 'expensive'])
@@ -127,28 +230,47 @@ describe('rankByCostPerClick', () => {
 
   it('excludes ads below the minimum click sample size', () => {
     const ads = [
-      ad({ ad_name: 'lucky-fluke', amount_spent: 1, link_clicks: 1 }),
-      ad({ ad_name: 'proven', amount_spent: 300, link_clicks: 100 }),
+      ad({ name: 'lucky-fluke', amountSpent: 1, linkClicks: 1 }),
+      ad({ name: 'proven', amountSpent: 300, linkClicks: 100 }),
     ]
     const ranked = rankByCostPerClick(ads)
     expect(ranked.map(r => r.name)).toEqual(['proven'])
   })
 
-  it('skips ads with null/zero link_clicks or zero spend', () => {
+  it('skips ads with zero link_clicks or zero spend', () => {
     const ads = [
-      ad({ ad_name: 'no-clicks', amount_spent: 100, link_clicks: null }),
-      ad({ ad_name: 'zero-clicks', amount_spent: 100, link_clicks: 0 }),
-      ad({ ad_name: 'zero-spend', amount_spent: 0, link_clicks: 50 }),
+      ad({ name: 'zero-clicks', amountSpent: 100, linkClicks: 0 }),
+      ad({ name: 'zero-spend', amountSpent: 0, linkClicks: 50 }),
     ]
     expect(rankByCostPerClick(ads)).toEqual([])
   })
 
   it('respects the limit and returns [] for empty input', () => {
-    const ads = Array.from({ length: 15 }, (_, i) =>
-      ad({ ad_name: `ad-${i}`, amount_spent: 100, link_clicks: 50 })
-    )
+    const ads = Array.from({ length: 15 }, (_, i) => ad({ name: `ad-${i}`, amountSpent: 100, linkClicks: 50 }))
     expect(rankByCostPerClick(ads)).toHaveLength(10)
     expect(rankByCostPerClick(ads, 2)).toHaveLength(2)
     expect(rankByCostPerClick([])).toEqual([])
+  })
+})
+
+describe('countEligibleFor*', () => {
+  it('mirrors each rank function\'s own filter', () => {
+    const ads = [
+      ad({ name: 'eligible-cpi', amountSpent: 100, messagingContacts: 10 }),
+      ad({ name: 'not-eligible-cpi', amountSpent: 100, messagingContacts: 1 }),
+    ]
+    expect(countEligibleForCostPerInquiry(ads)).toBe(1)
+
+    const ctrAds = [
+      ad({ name: 'eligible-ctr', impressions: 2000, linkClicks: 10 }),
+      ad({ name: 'not-eligible-ctr', impressions: 100, linkClicks: 10 }),
+    ]
+    expect(countEligibleForCtr(ctrAds)).toBe(1)
+
+    const cpcAds = [
+      ad({ name: 'eligible-cpc', amountSpent: 100, linkClicks: 40 }),
+      ad({ name: 'not-eligible-cpc', amountSpent: 100, linkClicks: 5 }),
+    ]
+    expect(countEligibleForCostPerClick(cpcAds)).toBe(1)
   })
 })

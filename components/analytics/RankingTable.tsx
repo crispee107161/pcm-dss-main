@@ -1,8 +1,7 @@
 import type { RankedAd } from '@/lib/stats/campaign-rankings'
 
-function formatDate(date: Date | null) {
-  if (!date) return '—'
-  return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
+function formatMonthsRan(monthsRan: number) {
+  return `${monthsRan} month${monthsRan === 1 ? '' : 's'}`
 }
 
 export function RankBadge({ rank }: { rank: number }) {
@@ -33,7 +32,7 @@ export function RankingTable({ rows, valueLabel, formatValue, emptyMessage }: {
           <tr className="bg-secondary">
             <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 w-10">#</th>
             <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Ad Name</th>
-            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Period</th>
+            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Months Active</th>
             <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">{valueLabel}</th>
           </tr>
         </thead>
@@ -46,7 +45,7 @@ export function RankingTable({ rows, valueLabel, formatValue, emptyMessage }: {
                 <div className="text-xs text-muted-foreground truncate" title={row.adSetName}>{row.adSetName}</div>
               </td>
               <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                {formatDate(row.reportingStarts)} – {formatDate(row.reportingEnds)}
+                {formatMonthsRan(row.monthsRan)}
               </td>
               <td className="px-4 py-3 text-right font-semibold text-foreground whitespace-nowrap">{formatValue(row.value)}</td>
             </tr>

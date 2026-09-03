@@ -25,6 +25,11 @@ interface DateRangeFilterProps {
   // window, owner/page.tsx) so every preset returns real rows. Omitted by
   // every other caller, which keeps their today-relative behavior unchanged.
   anchor?: string
+  // ISO date pair to show beneath the "All time" label once it resolves to a
+  // fixed bound rather than literally everything (docs/raven/Top_Ads_Review.md
+  // §4) — e.g. a declared data window whose end has already passed. Omitted
+  // by every caller where "All time" really does mean unbounded.
+  allTimeRange?: { from: string; to: string }
 }
 
 function addDays(d: Date, days: number): Date {
@@ -76,7 +81,7 @@ function buildPresets(ref: Date): Preset[] {
   ]
 }
 
-export default function DateRangeFilter({ from, to, className = '', anchor }: DateRangeFilterProps) {
+export default function DateRangeFilter({ from, to, className = '', anchor, allTimeRange }: DateRangeFilterProps) {
   const { push, isPending } = useProgressRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -128,10 +133,12 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
   // page actually queried without the two having to be threaded separately.
   const isExplicitAllTime = searchParams.get('all') === '1'
 
-  const activeLabel = isExplicitAllTime
+  const isAllTime = isExplicitAllTime || (!from && !to && !anchor)
+
+  const activeLabel = isAllTime
     ? 'All time'
     : (!from && !to)
-      ? (anchor ? 'Last complete month' : 'All time')
+      ? 'Last complete month'
       : activePreset?.label ?? 'Custom range'
 
   const windowDays = from && to ? diffDaysInclusive(from, to) : null
@@ -183,9 +190,11 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
         <DropdownMenuTrigger className="flex items-center gap-2 text-sm border border-border rounded-lg px-3 py-1.5 text-foreground bg-card hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <span className="flex flex-col items-start leading-tight">
             <span>{activeLabel}</span>
-            {from && to && ISO_DAY.test(from) && ISO_DAY.test(to) && (
+            {from && to && ISO_DAY.test(from) && ISO_DAY.test(to) ? (
               <span className="text-[10px] font-normal text-muted-foreground tabular">{formatResolvedRange(from, to)}</span>
-            )}
+            ) : isAllTime && allTimeRange ? (
+              <span className="text-[10px] font-normal text-muted-foreground tabular">{formatResolvedRange(allTimeRange.from, allTimeRange.to)}</span>
+            ) : null}
           </span>
           <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </DropdownMenuTrigger>

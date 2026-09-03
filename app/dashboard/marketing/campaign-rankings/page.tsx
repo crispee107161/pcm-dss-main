@@ -4,8 +4,12 @@ import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import DateRangeFilter from '@/components/ui/DateRangeFilter'
 import { manilaDayRange } from '@/lib/date-range'
-import { withStudyPeriodAd } from '@/lib/data/study-period'
+import { withStudyPeriodAd, STUDY_PERIOD_START_DAY, STUDY_PERIOD_END_DAY } from '@/lib/data/study-period'
 import {
+  aggregateAdsById,
+  rankBySpend,
+  rankByMessagingContacts,
+  rankByReach,
   rankByCostPerInquiry,
   rankByCtr,
   rankByCostPerClick,
@@ -39,84 +43,46 @@ export default async function CampaignRankingsPage({
   // window still ANDs with the declared study period rather than replacing it.
   const adWhere = withStudyPeriodAd(range ? { reporting_starts: range } : undefined)
 
-  const TOP_N = 10
+  // Every ranking and count on this screen is per advertisement, not per
+  // monthly row — an ad running four months contributes four rows sharing
+  // one ad_id, so they must be summed before ranking (docs/raven/
+  // Top_Ads_Review.md §1). One query fetches the full filtered set of
+  // monthly rows; aggregateAdsById sums each metric per ad_id once, and
+  // every panel/count below derives from that single aggregated array —
+  // Prisma's own orderBy/take can't do this grouping, since the ranking
+  // value (spend, reach, or a ratio) only exists after the sum.
+  //
+  // total_messaging_contacts, not the deprecated `inquiries` field — this
+  // export has no "Purchases" column, so `inquiries` is permanently null
+  // (see DV-PIVOT-PLAN.md).
+  const adMonthRows = await prisma.ad.findMany({
+    where: adWhere,
+    select: {
+      ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, impressions: true,
+      link_clicks: true, total_messaging_contacts: true, reach: true, reporting_starts: true, reporting_ends: true,
+    },
+  })
 
-  const [topSpendCandidates, topInquiriesCandidates, topReachCandidates, rankingPoolAds, totalAds, totalSpend, adsWithInquiries] = await Promise.all([
-    prisma.ad.findMany({
-      where: adWhere,
-      orderBy: { amount_spent: 'desc' },
-      take: TOP_N,
-      select: { ad_name: true, ad_set_name: true, amount_spent: true, reporting_starts: true, reporting_ends: true },
-    }),
-    // total_messaging_contacts, not the deprecated `inquiries` field — this
-    // export has no "Purchases" column, so `inquiries` is permanently null
-    // (see DV-PIVOT-PLAN.md). Querying it here always returned an empty table.
-    prisma.ad.findMany({
-      where: { ...adWhere, total_messaging_contacts: { gt: 0 } },
-      orderBy: { total_messaging_contacts: 'desc' },
-      take: TOP_N,
-      select: { ad_name: true, ad_set_name: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true },
-    }),
-    prisma.ad.findMany({
-      where: { ...adWhere, reach: { not: null } },
-      orderBy: { reach: 'desc' },
-      take: TOP_N,
-      select: { ad_name: true, ad_set_name: true, reach: true, reporting_starts: true, reporting_ends: true },
-    }),
-    // Efficiency rankings (cost/inquiry, CTR, cost/click) are computed ratios,
-    // which Prisma cannot `orderBy` — fetch the full filtered set and rank in JS.
-    prisma.ad.findMany({
-      where: adWhere,
-      select: {
-        ad_name: true, ad_set_name: true, amount_spent: true, impressions: true,
-        link_clicks: true, total_messaging_contacts: true, reporting_starts: true, reporting_ends: true,
-      },
-    }),
-    prisma.ad.count({ where: adWhere }),
-    prisma.ad.aggregate({ where: adWhere, _sum: { amount_spent: true } }),
-    prisma.ad.count({ where: { ...adWhere, total_messaging_contacts: { gt: 0 } } }),
-  ])
+  const aggregatedAds = aggregateAdsById(adMonthRows)
 
-  // rankBy* already returns RankRow's exact shape (RankRow = RankedAd), so
-  // no remapping is needed here — unlike bySpend/byInquiries/byReach below,
-  // which do rename Prisma's snake_case selection into RankRow's fields.
-  const bestCostPerInquiry: RankRow[] = rankByCostPerInquiry(rankingPoolAds)
-  const bestCtr: RankRow[] = rankByCtr(rankingPoolAds)
-  const bestCostPerClick: RankRow[] = rankByCostPerClick(rankingPoolAds)
-  const eligibleForCostPerInquiry = countEligibleForCostPerInquiry(rankingPoolAds)
-  const eligibleForCtr = countEligibleForCtr(rankingPoolAds)
-  const eligibleForCostPerClick = countEligibleForCostPerClick(rankingPoolAds)
+  const bySpend: RankRow[] = rankBySpend(aggregatedAds)
+  const byInquiries: RankRow[] = rankByMessagingContacts(aggregatedAds)
+  const byReach: RankRow[] = rankByReach(aggregatedAds)
+  const bestCostPerInquiry: RankRow[] = rankByCostPerInquiry(aggregatedAds)
+  const bestCtr: RankRow[] = rankByCtr(aggregatedAds)
+  const bestCostPerClick: RankRow[] = rankByCostPerClick(aggregatedAds)
+  const eligibleForCostPerInquiry = countEligibleForCostPerInquiry(aggregatedAds)
+  const eligibleForCtr = countEligibleForCtr(aggregatedAds)
+  const eligibleForCostPerClick = countEligibleForCostPerClick(aggregatedAds)
 
-  const bySpend: RankRow[] = topSpendCandidates.map(a => ({
-    name: a.ad_name,
-    adSetName: a.ad_set_name,
-    value: a.amount_spent,
-    reportingStarts: a.reporting_starts,
-    reportingEnds: a.reporting_ends,
-  }))
-
-  const byInquiries: RankRow[] = topInquiriesCandidates.map(a => ({
-    name: a.ad_name,
-    adSetName: a.ad_set_name,
-    value: a.total_messaging_contacts ?? 0,
-    reportingStarts: a.reporting_starts,
-    reportingEnds: a.reporting_ends,
-  }))
-
-  const byReach: RankRow[] = topReachCandidates.map(a => ({
-    name: a.ad_name,
-    adSetName: a.ad_set_name,
-    value: a.reach ?? 0,
-    reportingStarts: a.reporting_starts,
-    reportingEnds: a.reporting_ends,
-  }))
-
-  const totalSpendValue = totalSpend._sum.amount_spent ?? 0
+  const totalAds = aggregatedAds.length
+  const adsWithInquiries = aggregatedAds.filter(a => a.messagingContacts > 0).length
+  const totalSpendValue = aggregatedAds.reduce((s, a) => s + a.amountSpent, 0)
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <PageHeader title="Campaign Rankings" description="Top 10 ads by volume (spend, messaging conversations, reach) and by efficiency (cost per messaging conversation, click-through rate, cost per click)" />
-      <DateRangeFilter from={from} to={to} className="mb-6" />
+      <PageHeader title="Top Ads" description="Top 10 ads by volume (spend, messaging conversations, reach) and by efficiency (cost per messaging conversation, click-through rate, cost per click)" />
+      <DateRangeFilter from={from} to={to} className="mb-6" allTimeRange={{ from: STUDY_PERIOD_START_DAY, to: STUDY_PERIOD_END_DAY }} />
 
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
@@ -151,9 +117,9 @@ export default async function CampaignRankingsPage({
           <RankingTable rows={bySpend} valueLabel="Amount Spent" formatValue={v => formatPHP(v)} />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              From the &quot;Amount spent (PHP)&quot; column of each uploaded Facebook Ads CSV row, ranked
-              highest first, top 10. Filtered by the date range above, applied to each ad&apos;s
-              Reporting starts date.
+              From the &quot;Amount spent (PHP)&quot; column of each uploaded Facebook Ads CSV row, summed
+              per advertisement across every month it ran, ranked highest first, top 10. Filtered by
+              the date range above, applied to each row&apos;s Reporting starts date before summing.
             </MethodologyNote>
           </div>
         </div>
@@ -170,11 +136,12 @@ export default async function CampaignRankingsPage({
           <RankingTable rows={byInquiries} valueLabel="Messaging Conversations" formatValue={v => v.toLocaleString()} />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              From the daily Facebook Ads export&apos;s &quot;Results&quot; column, counted only for rows
+              From the Facebook Ads export&apos;s &quot;Results&quot; column, counted only for rows
               where &quot;Result type&quot; is &quot;Messaging conversations started&quot; — Facebook&apos;s
-              indicator that someone started a Messenger conversation after seeing the ad. Only ads
-              with at least 1 messaging conversation are included, ranked highest first, top 10.
-              Filtered by the date range above, applied to each ad&apos;s Reporting starts date.
+              indicator that someone started a Messenger conversation after seeing the ad. Summed per
+              advertisement across every month it ran. Only ads with at least 1 messaging conversation
+              are included, ranked highest first, top 10. Filtered by the date range above, applied to
+              each row&apos;s Reporting starts date before summing.
             </MethodologyNote>
           </div>
         </div>
@@ -191,9 +158,11 @@ export default async function CampaignRankingsPage({
           <RankingTable rows={byReach} valueLabel="Reach" formatValue={v => v.toLocaleString()} />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              From the &quot;Reach&quot; column — the number of unique accounts that saw the ad — ranked
-              highest first, top 10. Filtered by the date range above, applied to each ad&apos;s
-              Reporting starts date.
+              From the &quot;Reach&quot; column — the number of unique accounts that saw the ad in a given
+              month — summed across every month the advertisement ran, ranked highest first, top 10.
+              An account reached in more than one month is counted once per month, not deduplicated
+              across the full period. Filtered by the date range above, applied to each row&apos;s
+              Reporting starts date before summing.
             </MethodologyNote>
           </div>
         </div>
@@ -215,12 +184,13 @@ export default async function CampaignRankingsPage({
           <RankingTable rows={bestCostPerInquiry} valueLabel="Cost / Msg. Conv." formatValue={v => formatPHP(v)} />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              Amount spent ÷ messaging conversations, per ad. Lower is better, so ranked ascending,
-              top 10. Only ads with at least {MIN_INQUIRIES_FOR_CPI} messaging conversations are
-              included — below that, a single lucky conversation on tiny spend would otherwise top
-              the list. {eligibleForCostPerInquiry} ad{eligibleForCostPerInquiry === 1 ? '' : 's'} cleared
+              Spend and messaging conversations are summed per advertisement across every month it ran,
+              then divided (amount spent ÷ messaging conversations). Lower is better, so ranked
+              ascending, top 10. Only ads with at least {MIN_INQUIRIES_FOR_CPI} total messaging
+              conversations are included — below that, a single lucky conversation on tiny spend would
+              otherwise top the list. {eligibleForCostPerInquiry} ad{eligibleForCostPerInquiry === 1 ? '' : 's'} cleared
               that floor in the selected range. Filtered by the date range above, applied to each
-              ad&apos;s Reporting starts date.
+              row&apos;s Reporting starts date before summing.
             </MethodologyNote>
           </div>
         </div>
@@ -240,12 +210,14 @@ export default async function CampaignRankingsPage({
           />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              Link clicks ÷ impressions, per ad. Higher is better, so ranked descending, top 10.
-              Only ads with at least {MIN_IMPRESSIONS_FOR_CTR.toLocaleString()} impressions are
+              Link clicks and impressions are summed per advertisement across every month it ran, then
+              divided (link clicks ÷ impressions). Higher is better, so ranked descending, top 10. Only
+              ads with at least {MIN_IMPRESSIONS_FOR_CTR.toLocaleString()} total impressions are
               included, to filter out small-sample noise. {eligibleForCtr} ad{eligibleForCtr === 1 ? '' : 's'}{' '}
               cleared that floor in the selected range. This is calculated from the stored columns,
               not Facebook&apos;s own reported CTR field, which isn&apos;t captured on upload.
-              Filtered by the date range above, applied to each ad&apos;s Reporting starts date.
+              Filtered by the date range above, applied to each row&apos;s Reporting starts date before
+              summing.
             </MethodologyNote>
           </div>
         </div>
@@ -265,11 +237,12 @@ export default async function CampaignRankingsPage({
           />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              Amount spent ÷ link clicks, per ad. Lower is better, so ranked ascending, top 10.
-              Only ads with at least {MIN_CLICKS_FOR_CPC} link clicks are included, to filter out
+              Spend and link clicks are summed per advertisement across every month it ran, then
+              divided (amount spent ÷ link clicks). Lower is better, so ranked ascending, top 10.
+              Only ads with at least {MIN_CLICKS_FOR_CPC} total link clicks are included, to filter out
               small-sample noise. {eligibleForCostPerClick} ad{eligibleForCostPerClick === 1 ? '' : 's'}{' '}
               cleared that floor in the selected range. Filtered by the date range above, applied to
-              each ad&apos;s Reporting starts date.
+              each row&apos;s Reporting starts date before summing.
             </MethodologyNote>
           </div>
         </div>

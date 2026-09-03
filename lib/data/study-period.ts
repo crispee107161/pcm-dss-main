@@ -79,3 +79,16 @@ export const STUDY_PERIOD_PAGE_METRIC_WHERE: Prisma.PageMetricDailyWhereInput = 
 export function withStudyPeriodPageMetric(where?: Prisma.PageMetricDailyWhereInput): Prisma.PageMetricDailyWhereInput {
   return where ? { AND: [where, STUDY_PERIOD_PAGE_METRIC_WHERE] } : STUDY_PERIOD_PAGE_METRIC_WHERE
 }
+
+// Manila-anchored YYYY-MM-DD strings for the two constants above — the same
+// day-level format lib/date-range.ts's toISODate produces, but computed via
+// Asia/Manila rather than server-local time so `.getFullYear()`/`.getDate()`
+// (UTC on Vercel) can't read STUDY_PERIOD_START's UTC instant as the day
+// before, the same trap month-buckets.ts's manilaYearMonth documents. Lets a
+// caller show "resolved range" text under an "All time" selector (docs/raven/
+// Top_Ads_Review.md §4) without exposing the study period concept itself —
+// just the two boundary dates, matching §0.3's "state the operational
+// consequence, not the methodology" rule.
+const MANILA_DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' })
+export const STUDY_PERIOD_START_DAY = MANILA_DAY_FMT.format(STUDY_PERIOD_START)
+export const STUDY_PERIOD_END_DAY = MANILA_DAY_FMT.format(STUDY_PERIOD_END)
