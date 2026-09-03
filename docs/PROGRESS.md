@@ -4,6 +4,19 @@ Tracks the build order from `mvp.md` §7 (which supersedes the earlier §14 orde
 
 Legend: ✅ Done and verified · 🟡 Partial / legacy code needs rework · ⬜ Not started
 
+## Doneness summary (2026-09-03)
+
+**~99% done.** All 14 build-order steps below and every item in `mvp.md` §8's Definition of Done are ✅, live-verified against the real DB (see the table and checklist below — `mvp.md` itself is left unedited as a frozen snapshot per its own convention, so it still shows unchecked boxes; this tracker is the current source of truth). Security hardening + the NFR-12 last-active-Owner guard (row below the 14-step table) are also ✅, committed, and pushed (`6d6975c`, `560241b`, `80ba9f8`).
+
+Closed today: the `owner2` seed account was created/password-set and verified sign-in-capable on the live prod DB; both FR-06 facts (sum-before-divide on the ad-side engagement rate, no shared column name with the organic rate) were confirmed directly from code for Raven; a code review of the doc updates below caught and fixed 4 factual errors (a stale "erd_schema.sql not regenerated" claim, a baseline-percentage arithmetic mismatch, a wrong model count, and a wrong SET-NULL-uniqueness claim) before they were committed; the Neon auto-suspend delay was confirmed from the console (5 minutes, default); and NFR-04 was re-measured against the actual deployed production URL (`https://pcm-dss.vercel.app/dashboard/owner/analysis`) — cold 3.88s, warm 3.59s/2.63s/2.67s, reproducing the pre-deployment figures closely and confirming Raven's proposed four-second-warm fallback wording holds on the real deployment. Write-up: `docs/raven/NFR04_and_Neon_Autosuspend_2026-09-03.md`.
+
+**What's left is not code:**
+- The Safari/iOS manual check (NFR-06) — deliberately deferred, to be done by hand later.
+- Raven's independent validation spot-check of the new baseline figures, and the manuscript/Chapter reconciliation — hers to close, not the developer's.
+- Minor doc-hygiene nits flagged but not fixed (lower priority): the two new ERD narrative docs disagree about which supersedes the other, both have the security-hardening commit dated a day late, and whether the ~826 KB of rendered diagram binaries should be tracked in git is still an open question (same shape as the existing `aug15-copy/docs/pdfs` gitignore question).
+
+Nothing structural, unbuilt, or functionally incomplete remains.
+
 ## Build order
 
 | # | Step | FR / ALG | Status | Notes |
