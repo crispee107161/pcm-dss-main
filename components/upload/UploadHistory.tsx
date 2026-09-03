@@ -81,11 +81,18 @@ export default function UploadHistory({ logs }: UploadHistoryProps) {
             </TableCell>
             {/* FR-05 requires 5 figures: read, stored, updated, rejected, and
                 identified as duplicates (docs/raven/Executive_Dashboard_Review.md
-                A3) — records_read is persisted (UploadLog.records_read),
-                not derived, so a future reshaping upsert can't silently
-                desync it from the sum of the other four. */}
+                A3), records_read is persisted (UploadLog.records_read), not
+                derived, so a future reshaping upsert can't silently desync
+                it from the sum of the other four. Rows uploaded before that
+                column existed default to 0 while their other four columns
+                are non-zero, which reads as a contradiction (Read 0 against
+                a non-zero Duplicate count) rather than "not recorded" -
+                shown as an em dash instead of a misleading 0
+                (docs/dashboard/Dashboard_Plain_Language_and_Notation.md §6.1). */}
             <TableCell className="px-4 py-3 text-gray-700 text-center hidden md:table-cell">
-              {log.records_read}
+              {log.records_read === 0 && (log.records_inserted + log.records_updated + log.records_unchanged + log.records_rejected) > 0
+                ? <span title="Not recorded for uploads before this column was added">—</span>
+                : log.records_read}
             </TableCell>
             <TableCell className="px-4 py-3 text-gray-700 text-center hidden sm:table-cell">
               {log.records_inserted}

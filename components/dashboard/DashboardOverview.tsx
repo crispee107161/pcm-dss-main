@@ -1,9 +1,13 @@
 import { getGreeting } from '@/lib/greeting'
 import { getDashboardOverview } from '@/lib/data/dashboard'
 import { STUDY_PERIOD_LABEL } from '@/lib/data/study-period'
+import { MIN_SPEND_THRESHOLD_PHP } from '@/lib/stats/budget-reallocation'
+import {
+  interpretCpiDistribution, interpretFollowsRatio, interpretCategoryPerformance, interpretReachViewsTrend,
+} from '@/lib/dashboard/interpretations'
 import { KpiCard, formatPhp, formatPhpPrecise, formatNumber } from '@/components/kpi/KpiCard'
 import { SpendMessagingTrend } from '@/components/marketing/TrendCharts'
-import { CpiDistributionChart, CategoryPerformanceChart, PostReachViewsTrendChart, PageFunnelChart } from '@/components/dashboard/DashboardCharts'
+import { CpiDistributionChart, CategoryPerformanceChart, PostReachViewsTrendChart, PageFunnelChart, LOW_CONFIDENCE_N } from '@/components/dashboard/DashboardCharts'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import DateRangeFilter from '@/components/ui/DateRangeFilter'
 import UploadHistory from '@/components/upload/UploadHistory'
@@ -28,17 +32,30 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function AdTable({ title, subtitle, ads, emptyMessage }: {
+function AdTable({ title, subtitle, ads, emptyMessage, dimBelowSpend }: {
   title: string
   subtitle: string
   ads: { ad_id: string; ad_name: string; ad_set_name: string; spend: number; messaging: number; cpi: number }[]
   emptyMessage: string
+  // Least Efficient Ads only (docs/dashboard/Dashboard_Plain_Language_and_Notation.md
+  // §5): a CPI computed from a handful of conversations is unstable, and an
+  // undimmed table reads as "these ads are wasteful, cut them" when the
+  // honest answer is there isn't enough data to say. Dims rows below the
+  // same minimum-spend threshold the Analysis screen and FR-12 already use,
+  // rather than inventing a second number.
+  dimBelowSpend?: number
 }) {
+  const hasDimmedRows = dimBelowSpend !== undefined && ads.some(a => a.spend < dimBelowSpend)
   return (
     <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
       <div className="p-5 pb-0">
         <SectionLabel>{title}</SectionLabel>
         <p className="text-xs text-muted-foreground -mt-3 mb-1">{subtitle}</p>
+        {hasDimmedRows && (
+          <p className="text-xs text-muted-foreground mb-1">
+            Advertisements spending under {formatPhp(dimBelowSpend!)} are shown dimmed. Their cost per inquiry rests on very few conversations and moves sharply with one more or one fewer.
+          </p>
+        )}
       </div>
       {ads.length === 0 ? (
         <p className="text-sm text-muted-foreground px-5 py-6">{emptyMessage}</p>
@@ -54,20 +71,27 @@ function AdTable({ title, subtitle, ads, emptyMessage }: {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ads.map((ad, i) => (
-              <TableRow key={ad.ad_id} className="border-t border-border hover:bg-secondary/50">
-                <TableCell className="px-5 py-3">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold bg-secondary text-muted-foreground">{i + 1}</span>
-                </TableCell>
-                <TableCell className="px-3 py-3">
-                  <div className="font-semibold text-foreground text-sm max-w-[160px] truncate" title={ad.ad_name}>{ad.ad_name}</div>
-                  <div className="text-xs text-muted-foreground truncate max-w-[160px]">{ad.ad_set_name}</div>
-                </TableCell>
-                <TableCell className="sensitive px-3 py-3 text-right text-muted-foreground tabular text-xs">{formatNumber(ad.messaging)}</TableCell>
-                <TableCell className="px-3 py-3 text-right"><span className="sensitive font-semibold text-foreground tabular text-xs">{formatPhpPrecise(ad.cpi)}</span></TableCell>
-                <TableCell className="sensitive px-5 py-3 text-right font-semibold text-foreground tabular">{formatPhp(ad.spend)}</TableCell>
-              </TableRow>
-            ))}
+            {ads.map((ad, i) => {
+              const isDimmed = dimBelowSpend !== undefined && ad.spend < dimBelowSpend
+              return (
+                <TableRow
+                  key={ad.ad_id}
+                  className={`border-t border-border hover:bg-secondary/50 ${isDimmed ? 'opacity-45' : ''}`}
+                  title={isDimmed ? `Spend under ${formatPhp(dimBelowSpend!)}, cost per inquiry is unstable at this sample size.` : undefined}
+                >
+                  <TableCell className="px-5 py-3">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold bg-secondary text-muted-foreground">{i + 1}</span>
+                  </TableCell>
+                  <TableCell className="px-3 py-3">
+                    <div className="font-semibold text-foreground text-sm max-w-[160px] truncate" title={ad.ad_name}>{ad.ad_name}</div>
+                    <div className="text-xs text-muted-foreground truncate max-w-[160px]">{ad.ad_set_name}</div>
+                  </TableCell>
+                  <TableCell className="sensitive px-3 py-3 text-right text-muted-foreground tabular text-xs">{formatNumber(ad.messaging)}</TableCell>
+                  <TableCell className="px-3 py-3 text-right"><span className="sensitive font-semibold text-foreground tabular text-xs">{formatPhpPrecise(ad.cpi)}</span></TableCell>
+                  <TableCell className="sensitive px-5 py-3 text-right font-semibold text-foreground tabular">{formatPhp(ad.spend)}</TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       )}
@@ -82,6 +106,15 @@ export default async function DashboardOverview({ role, displayName, from, to, a
   const reportHref = role === 'BUSINESS_OWNER' ? '/dashboard/owner/report' : '/dashboard/marketing/report'
 
   const { kpis } = data
+
+  // FR-18 plain-language interpretations (docs/dashboard/
+  // Dashboard_Plain_Language_and_Notation.md §1), computed from the same
+  // figures each chart plots so a sentence can never disagree with its
+  // chart or go stale when the period selector moves.
+  const cpiInterpretation = interpretCpiDistribution(data.cpiDistribution, kpis.medianCpi.iqr, data.periodLabel)
+  const followsInterpretation = interpretFollowsRatio(data.pageFunnelTrend)
+  const categoryInterpretation = interpretCategoryPerformance(data.categoryPerformance, data.periodLabel, LOW_CONFIDENCE_N)
+  const reachViewsInterpretation = interpretReachViewsTrend(data.postReachViewsTrend)
 
   return (
     <div className="p-5 md:p-7 md:px-8 md:pb-12 max-w-[1440px] mx-auto space-y-[22px]">
@@ -122,7 +155,9 @@ export default async function DashboardOverview({ role, displayName, from, to, a
         <KpiCard
           label="Median Cost / Inquiry"
           value={kpis.medianCpi.value !== null ? formatPhpPrecise(kpis.medianCpi.value) : '—'}
-          sub={kpis.medianCpi.iqr ? `IQR ${formatPhpPrecise(kpis.medianCpi.iqr.q1)} – ${formatPhpPrecise(kpis.medianCpi.iqr.q3)} (n=${kpis.medianCpi.n}) — no minimum spend filter` : `n=${kpis.medianCpi.n} — no minimum spend filter`}
+          sub={kpis.medianCpi.iqr
+            ? `Half of the ${kpis.medianCpi.n} advertisements cost between ${formatPhpPrecise(kpis.medianCpi.iqr.q1)} and ${formatPhpPrecise(kpis.medianCpi.iqr.q3)}. No minimum spend filter.`
+            : `No ads with enough data this period. No minimum spend filter.`}
           note={kpis.medianCpi.value !== null ? 'Half of ads this period cost less than this per inquiry, half cost more.' : undefined}
           delta={kpis.medianCpi.delta} deltaLabel={data.deltaWindowLabel ?? undefined} invertSentiment
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0a3 3 0 106 0m-6 0a3 3 0 016 0M9 13h6" /></svg>}
@@ -130,7 +165,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
         <KpiCard
           label="Median Organic Engagement"
           value={kpis.medianEngagement.value !== null ? `${kpis.medianEngagement.value.toFixed(2)}%` : '—'}
-          sub={`n=${kpis.medianEngagement.n} posts`}
+          sub={`${kpis.medianEngagement.n} posts`}
           note={kpis.medianEngagement.value !== null ? 'Half of posts this period perform above this rate, half below.' : undefined}
           delta={kpis.medianEngagement.delta} deltaLabel={data.deltaWindowLabel ?? undefined}
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>}
@@ -172,12 +207,14 @@ export default async function DashboardOverview({ role, displayName, from, to, a
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-stretch">
         <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Cost-per-Inquiry Distribution</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-3 mb-3">Per-ad CPI, {data.periodLabel} — histogram and box plot of the same population as the KPI above. Computed per advertisement per month with no minimum expenditure filter, unlike the study-wide analysis.</p>
+          <p className="text-xs text-muted-foreground -mt-3 mb-3">
+            {cpiInterpretation} No minimum spend filter applies here, however little an ad spent it is included. The Analysis screen covers the full twelve months and only counts advertisements above {formatPhp(MIN_SPEND_THRESHOLD_PHP)}, so its figures are lower.
+          </p>
           <CpiDistributionChart data={data.cpiDistribution} />
         </div>
         <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Organic Reach &amp; Views Trend</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-3 mb-3">Always shows the last 3 months of uploaded post data, independent of the period selector above.</p>
+          <p className="text-xs text-muted-foreground -mt-3 mb-3">{reachViewsInterpretation} Always the last 3 months of uploaded post data, independent of the period selector above.</p>
           <div className="flex-1 min-h-0">
             <PostReachViewsTrendChart data={data.postReachViewsTrend} />
           </div>
@@ -190,14 +227,14 @@ export default async function DashboardOverview({ role, displayName, from, to, a
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-stretch">
         <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Performance by Content Category</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-3 mb-3">Median organic engagement rate, {data.periodLabel} — n labelled per bar since sample sizes differ.</p>
+          <p className="text-xs text-muted-foreground -mt-3 mb-3">{categoryInterpretation}</p>
           <div className="flex-1 min-h-[240px]">
             <CategoryPerformanceChart data={data.categoryPerformance} />
           </div>
         </div>
         <div className="bg-card rounded-2xl p-5" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Follows per 100 Page Visits</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-3 mb-3">Full study period ({STUDY_PERIOD_LABEL}) — visits, follows, and the ratio, monthly, independent of the period selector above.</p>
+          <p className="text-xs text-muted-foreground -mt-3 mb-3">Full study period ({STUDY_PERIOD_LABEL}), visits, follows, and the ratio, monthly, independent of the period selector above. {followsInterpretation}</p>
           <PageFunnelChart data={data.pageFunnelTrend} />
         </div>
       </div>
@@ -206,15 +243,16 @@ export default async function DashboardOverview({ role, displayName, from, to, a
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-start">
         <AdTable
           title="Most Efficient Ads"
-          subtitle={`Lowest cost per inquiry, ${data.periodLabel} — lower is better.`}
+          subtitle={`Lowest cost per inquiry, ${data.periodLabel}, lower is better.`}
           ads={data.topAds}
           emptyMessage="No ads with enough inquiries to rank in this period."
         />
         <AdTable
           title="Least Efficient Ads"
-          subtitle={`Highest cost per inquiry, ${data.periodLabel} — these advertisements cost the most per conversation started.`}
+          subtitle={`Highest cost per inquiry, ${data.periodLabel}, these advertisements cost the most per conversation started.`}
           ads={data.bottomAds}
           emptyMessage="Not enough ranked ads yet to show a bottom list."
+          dimBelowSpend={MIN_SPEND_THRESHOLD_PHP}
         />
       </div>
 

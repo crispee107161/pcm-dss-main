@@ -117,9 +117,11 @@ export function CpiDistributionChart({ data }: { data: number[] }) {
 export interface CategoryBarDatum { label: string; medianEngagement: number; n: number }
 
 // Same threshold PostTypePerformanceTable/ad-set-ranking use for "low
-// confidence" — a bar built on this few observations shouldn't look as
+// confidence", a bar built on this few observations shouldn't look as
 // authoritative as one built on dozens (docs/raven/Executive_Dashboard_Review.md B6).
-const LOW_CONFIDENCE_N = 3
+// Exported so DashboardOverview's generated interpretation sentence (FR-18)
+// names the same category the chart itself dims.
+export const LOW_CONFIDENCE_N = 3
 
 export function CategoryPerformanceChart({ data }: { data: CategoryBarDatum[] }) {
   if (data.length === 0 || data.every(d => d.n === 0)) {
@@ -136,7 +138,7 @@ export function CategoryPerformanceChart({ data }: { data: CategoryBarDatum[] })
           cursor={false}
           content={<ChartTooltipContent hideLabel formatter={(value, _name, item) => {
             const n = (item.payload as CategoryBarDatum).n
-            const suffix = n === 0 ? ' — no posts this period' : n < LOW_CONFIDENCE_N ? ` — low confidence (n=${n})` : ` (n=${n})`
+            const suffix = n === 0 ? ', no posts this period' : n < LOW_CONFIDENCE_N ? `, low confidence (${n} post${n === 1 ? '' : 's'})` : ` (${n} post${n === 1 ? '' : 's'})`
             return <ChartTooltipRow color={CHART_COLORS.orange} label="Median Engagement Rate" value={`${Number(value).toFixed(2)}%${suffix}`} />
           }} />}
         />
@@ -150,7 +152,7 @@ export function CategoryPerformanceChart({ data }: { data: CategoryBarDatum[] })
             offset={8}
             className="fill-muted-foreground"
             fontSize={10}
-            formatter={(v: unknown) => (Number(v) === 0 ? 'no posts' : `n=${v}`)}
+            formatter={(v: unknown) => (Number(v) === 0 ? 'no posts' : `${v} post${Number(v) === 1 ? '' : 's'}`)}
           />
         </Bar>
       </BarChart>
@@ -298,7 +300,7 @@ export function PageFunnelChart({ data }: { data: PageFunnelPoint[] }) {
         </LineChart>
       </ChartContainer>
       <p className="text-[11px] text-muted-foreground">
-        Visits and follows are independently tracked daily metrics with no per-user link between them — this is not a conversion funnel.
+        Visits and follows are independently tracked daily metrics with no per-user link between them, so this is not a conversion funnel.
       </p>
     </div>
   )

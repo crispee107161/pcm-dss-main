@@ -10,25 +10,49 @@ function fmtShort(d: Date): string {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
 }
 
+// Every stored timestamp is a UTC instant representing a Manila wall-clock
+// time (lib/csv/timezone.ts's parseIsoLocalAsManila) — Manila midnight on
+// the 1st of a month is 16:00 UTC the day before, so reading year/month off
+// the raw Date with .getFullYear()/.getMonth() (server-local, UTC on
+// Vercel) bucketed early-month rows into the previous month. This mirrors
+// STUDY_PERIOD_LABEL's own Asia/Manila-anchored formatter so a row's month
+// bucket always matches the wall-clock month it was uploaded against
+// (docs/dashboard/Dashboard_Plain_Language_and_Notation.md §6.2 — the
+// Follows chart's leftmost tick read "Jul 2025" against a study period that
+// starts Aug 2025).
+const MANILA_TZ = 'Asia/Manila'
+const MANILA_YEAR_MONTH_FMT = new Intl.DateTimeFormat('en-US', { timeZone: MANILA_TZ, year: 'numeric', month: '2-digit' })
+const MANILA_MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', { timeZone: MANILA_TZ, month: 'short', year: 'numeric' })
+
+function manilaYearMonth(d: Date): { year: number; month: number } {
+  const parts = MANILA_YEAR_MONTH_FMT.formatToParts(d)
+  const year = Number(parts.find(p => p.type === 'year')!.value)
+  const month = Number(parts.find(p => p.type === 'month')!.value)
+  return { year, month }
+}
+
 function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  const { year, month } = manilaYearMonth(d)
+  return `${year}-${String(month).padStart(2, '0')}`
 }
 
 interface TargetMonth { label: string; year: number; month: number }
 
 // Shared by every "monthly series" chart on the dashboard — buckets rows by
-// calendar month using each row's own date field, most-recent-first, then
-// returns the labelled months in chronological order for charting.
+// calendar month (Manila wall-clock, see manilaYearMonth above) using each
+// row's own date field, most-recent-first, then returns the labelled months
+// in chronological order for charting.
 function distinctMonths<T>(rows: T[], getDate: (row: T) => Date, limit?: number): TargetMonth[] {
   const seen = new Set<string>()
   const months: TargetMonth[] = []
   const sorted = [...rows].sort((a, b) => getDate(b).getTime() - getDate(a).getTime())
   for (const row of sorted) {
     const d = getDate(row)
-    const key = monthKey(d)
+    const { year, month } = manilaYearMonth(d)
+    const key = `${year}-${String(month).padStart(2, '0')}`
     if (!seen.has(key)) {
       seen.add(key)
-      months.push({ label: new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(d), year: d.getFullYear(), month: d.getMonth() + 1 })
+      months.push({ label: MANILA_MONTH_LABEL_FMT.format(d), year, month })
       if (limit && months.length === limit) break
     }
   }
@@ -36,11 +60,9 @@ function distinctMonths<T>(rows: T[], getDate: (row: T) => Date, limit?: number)
 }
 
 function rowsInMonth<T>(rows: T[], getDate: (row: T) => Date, target: TargetMonth): T[] {
-  const start = new Date(target.year, target.month - 1, 1)
-  const end = new Date(target.year, target.month, 0, 23, 59, 59)
   return rows.filter(row => {
-    const d = getDate(row)
-    return d >= start && d <= end
+    const { year, month } = manilaYearMonth(getDate(row))
+    return year === target.year && month === target.month
   })
 }
 
@@ -318,14 +340,21 @@ export async function getDashboardOverview(from: string | undefined, to: string 
   const missingMonths: string[] = []
   if (earliestAdDate) {
     const latestAd = allAdsForGaps.reduce((max, a) => (a.reporting_starts > max ? a.reporting_starts : max), earliestAdDate)
-    const cursor = new Date(earliestAdDate.getFullYear(), earliestAdDate.getMonth(), 1)
-    const end = new Date(latestAd.getFullYear(), latestAd.getMonth(), 1)
-    while (cursor <= end) {
-      const key = monthKey(cursor)
+    const start = manilaYearMonth(earliestAdDate)
+    const stop = manilaYearMonth(latestAd)
+    // UTC-noon anchor for each candidate month — far enough from both the
+    // Manila and UTC day boundaries that formatting it back through the
+    // Manila-anchored formatter always resolves to the intended month.
+    let year = start.year
+    let month = start.month
+    while (year < stop.year || (year === stop.year && month <= stop.month)) {
+      const cursor = new Date(Date.UTC(year, month - 1, 1, 12))
+      const key = `${year}-${String(month).padStart(2, '0')}`
       if (!coveredMonths.has(key)) {
-        missingMonths.push(new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(cursor))
+        missingMonths.push(MANILA_MONTH_LABEL_FMT.format(cursor))
       }
-      cursor.setMonth(cursor.getMonth() + 1)
+      month += 1
+      if (month > 12) { month = 1; year += 1 }
     }
   }
 

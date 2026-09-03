@@ -9,6 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { SlidingTabs } from '@/components/ui/sliding-tabs'
 import { ChartTooltipRow } from '@/lib/chart-tooltip'
 import { CHART_COLORS, formatCompactCount, formatCompactPhp } from '@/lib/chart-axis'
+import { interpretSpendMessagingCompare } from '@/lib/dashboard/interpretations'
 
 // Empty on purpose — every chart below passes its own color via the Bar/Line
 // `fill`/`stroke` prop (matching the CHART_COLORS tokens used app-wide)
@@ -233,8 +234,18 @@ function buildIndexedData<T extends { period: string }>(data: T[], series: Index
 // gives `h-full` here something definite (not `auto`) to resolve against,
 // so the line chart grows to match the bars view instead of looking small
 // next to it.
-function IndexedComparisonChart<T extends { period: string }>({ data, series }: { data: T[]; series: [IndexedSeriesSpec, IndexedSeriesSpec] }) {
+function IndexedComparisonChart<T extends { period: string }>({
+  data, series, interpret,
+}: {
+  data: T[]
+  series: [IndexedSeriesSpec, IndexedSeriesSpec]
+  // Overrides the generic "indexed to {basePeriod}" caption with a computed
+  // finding sentence (docs/dashboard/Dashboard_Plain_Language_and_Notation.md
+  // §1/§2) built from the same rows the chart plots.
+  interpret?: (data: T[], basePeriod: string) => string
+}) {
   const { rows: indexedData, basePeriod } = useMemo(() => buildIndexedData(data, series), [data, series])
+  const caption = interpret ? interpret(data, basePeriod) : `Indexed to ${basePeriod} = 100%, so both trends are comparable on one scale.`
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 min-h-0">
@@ -242,7 +253,26 @@ function IndexedComparisonChart<T extends { period: string }>({ data, series }: 
           <LineChart accessibilityLayer data={indexedData} margin={{ left: 12, right: 12 }}>
             <CartesianGrid vertical={false} />
             <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} />
-            <YAxis tickFormatter={v => `${v}%`} tickLine={false} axisLine={false} tickMargin={8} />
+            {/* Scaled to the data range, not a fixed 0-based domain - this
+                only ever plots two or three monthly points whose values can
+                sit entirely within a narrow band (e.g. 77-102%), and a
+                0-based axis compresses that band into the top of the plot,
+                hiding the decline it exists to show
+                (docs/dashboard/Dashboard_Plain_Language_and_Notation.md §2).
+                Each accessor pads 10 beyond its own rounded bound (not just
+                floor/ceil to the nearest 10) so the domain can never
+                collapse to a single point when every series happens to sit
+                at the same index value (a one-row or perfectly flat trend) -
+                Recharts calls dataMin/dataMax independently, so the padding
+                has to be baked into each accessor rather than compared
+                across them. Number.isFinite guards an empty dataset, where
+                Recharts reports dataMin/dataMax as +/-Infinity. */}
+            <YAxis
+              domain={[
+                (dataMin: number) => Number.isFinite(dataMin) ? Math.max(0, Math.floor(dataMin / 10) * 10 - 10) : 0,
+                (dataMax: number) => Number.isFinite(dataMax) ? Math.ceil(dataMax / 10) * 10 + 10 : 100,
+              ]}
+              tickFormatter={v => `${v}%`} tickLine={false} axisLine={false} tickMargin={8} />
             <ChartTooltip
               cursor={false}
               content={
@@ -263,9 +293,7 @@ function IndexedComparisonChart<T extends { period: string }>({ data, series }: 
           </LineChart>
         </ChartContainer>
       </div>
-      <p className="text-[11px] text-muted-foreground mt-2">
-        Indexed to {basePeriod} = 100%, so both trends are comparable on one scale.
-      </p>
+      <p className="text-[11px] text-muted-foreground mt-2">{caption}</p>
     </div>
   )
 }
@@ -302,7 +330,7 @@ export function SpendMessagingTrend({ data, heading, showReach }: { data: Monthl
           {heading ?? <h2 className="font-semibold text-foreground">Ad Spend vs. Messaging Conversations by Reporting Period</h2>}
           <p className="text-xs text-muted-foreground">
             {view === 'bars'
-              ? `Total ad spend${showReach ? ', resulting messaging conversations, and reach' : ' and resulting messaging conversations'} — different units, shown as ${showReach ? 'three charts' : 'two charts'} sharing the same period axis`
+              ? `Total ad spend${showReach ? ', resulting messaging conversations, and reach' : ' and resulting messaging conversations'}, different units, shown as ${showReach ? 'three charts' : 'two charts'} sharing the same period axis`
               : 'Both series indexed to the first month, so their trend shapes are directly comparable'}
           </p>
         </div>
@@ -343,7 +371,15 @@ export function SpendMessagingTrend({ data, heading, showReach }: { data: Monthl
           )}
         </div>
         <div className={`col-start-1 row-start-1 h-full ${view === 'indexed' ? '' : 'invisible pointer-events-none'}`} aria-hidden={view !== 'indexed'}>
-          <IndexedComparisonChart data={data} series={AD_TREND_INDEXED_SERIES} />
+          <IndexedComparisonChart
+            data={data}
+            series={AD_TREND_INDEXED_SERIES}
+            interpret={(rows, basePeriod) => {
+              const { finding, reachExcludedNote } = interpretSpendMessagingCompare(rows, basePeriod, showReach ?? false)
+              const opening = `Total Spend and Messaging Conversations indexed to ${basePeriod} = 100%.`
+              return [opening, finding, reachExcludedNote].filter(Boolean).join(' ')
+            }}
+          />
         </div>
       </div>
     </div>
@@ -359,7 +395,7 @@ export function PostEngagementTrend({ data, footer }: { data: MonthlyPostTrend[]
           <h2 className="font-semibold text-foreground">Organic Post Engagement</h2>
           <p className="text-xs text-muted-foreground">
             {view === 'bars'
-              ? 'Average engagement rate and post count per reporting period — different units, shown as two charts'
+              ? 'Average engagement rate and post count per reporting period, different units, shown as two charts'
               : 'Both series indexed to the first month, so their trend shapes are directly comparable'}
           </p>
         </div>
@@ -394,7 +430,7 @@ export default function TrendCharts({ adTrends, postTrends }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-2xl card-shadow p-6">
           <h2 className="font-semibold text-foreground mb-1">Ad Reach by Reporting Period</h2>
-          <p className="text-xs text-muted-foreground mb-4">Total reach summed across ads — people who saw more than one ad are counted more than once</p>
+          <p className="text-xs text-muted-foreground mb-4">Total reach summed across ads, people who saw more than one ad are counted more than once</p>
           <ReachTrendChart data={adTrends} />
         </div>
 
