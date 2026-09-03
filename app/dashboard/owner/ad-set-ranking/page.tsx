@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
@@ -9,8 +9,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
 
 export default async function AdSetRankingPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'BUSINESS_OWNER') {
+  const session = await requireSession()
+  if (session.user.role !== 'BUSINESS_OWNER') {
     redirect('/login')
   }
 

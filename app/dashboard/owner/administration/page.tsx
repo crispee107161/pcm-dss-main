@@ -1,12 +1,12 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import UserManagement from '@/components/admin/UserManagement'
 
 export default async function OwnerAdministrationPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'BUSINESS_OWNER') {
+  const session = await requireSession()
+  if (session.user.role !== 'BUSINESS_OWNER') {
     redirect('/login')
   }
 

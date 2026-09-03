@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
@@ -9,8 +9,8 @@ import UploadCoverageStatus from '@/components/upload/UploadCoverageStatus'
 // FR-04/FR-05: Owner has full Upload Data rights alongside the Marketing
 // Manager — see docs/raven/Response_Forecast_Upload_Sidebar.md §2.1.
 export default async function OwnerUploadPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'BUSINESS_OWNER') {
+  const session = await requireSession()
+  if (session.user.role !== 'BUSINESS_OWNER') {
     redirect('/login')
   }
 

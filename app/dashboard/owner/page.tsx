@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import DashboardOverview from '@/components/dashboard/DashboardOverview'
 
@@ -7,8 +7,8 @@ export default async function OwnerDashboard({
 }: {
   searchParams: Promise<{ from?: string; to?: string; all?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'BUSINESS_OWNER') redirect('/login')
+  const session = await requireSession()
+  if (session.user.role !== 'BUSINESS_OWNER') redirect('/login')
 
   const displayName = session.user.email?.split('@')[0] ?? 'there'
   const { from, to, all } = await searchParams

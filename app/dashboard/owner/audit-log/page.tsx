@@ -1,12 +1,12 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { loadAuditLog } from '@/lib/data/audit-log'
 import { PageHeader } from '@/components/nav/PageHeader'
 import AuditLogTable from '@/components/audit/AuditLogTable'
 
 export default async function OwnerAuditLogPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'BUSINESS_OWNER') {
+  const session = await requireSession()
+  if (session.user.role !== 'BUSINESS_OWNER') {
     redirect('/login')
   }
 

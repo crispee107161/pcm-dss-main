@@ -1,10 +1,10 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import TrendAnalysisView from '@/components/analytics/pages/TrendAnalysisView'
 
 export default async function OwnerTrendAnalysisPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'BUSINESS_OWNER') {
+  const session = await requireSession()
+  if (session.user.role !== 'BUSINESS_OWNER') {
     redirect('/login')
   }
 

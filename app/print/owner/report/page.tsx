@@ -8,7 +8,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } }
 
 export default async function OwnerPrintReportPage() {
   const session = await requireUsableSession()
-  if (!session?.user || session.user.role !== 'BUSINESS_OWNER') redirect('/login')
+  if (!session || session.user.role !== 'BUSINESS_OWNER') redirect('/login')
 
   const data = await buildReportData({ role: 'owner' })
   return <ReportView variant="print" role="owner" data={data} />

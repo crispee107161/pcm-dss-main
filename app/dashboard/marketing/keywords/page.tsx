@@ -1,12 +1,12 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
 import KeywordsClient from '@/components/marketing/KeywordsClient'
 
 export default async function KeywordsPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
+  const session = await requireSession()
+  if (session.user.role !== 'MARKETING_MANAGER') {
     redirect('/login')
   }
 

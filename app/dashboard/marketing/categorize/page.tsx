@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { withStudyPeriod } from '@/lib/data/study-period'
@@ -23,8 +23,8 @@ export default async function CategorizePage({
 }: {
   searchParams: Promise<{ filter?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user || (session.user.role !== 'MARKETING_MANAGER' && session.user.role !== 'MARKETING_TEAM')) {
+  const session = await requireSession()
+  if (session.user.role !== 'MARKETING_MANAGER' && session.user.role !== 'MARKETING_TEAM') {
     redirect('/login')
   }
 

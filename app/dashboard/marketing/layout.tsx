@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import Sidebar, { NavItem } from '@/components/nav/Sidebar'
 import { UploadProvider } from '@/contexts/UploadContext'
@@ -44,8 +44,8 @@ const navItems: NavItem[] = [
 ]
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth()
-  if (!session?.user || (session.user.role !== 'MARKETING_MANAGER' && session.user.role !== 'MARKETING_TEAM')) {
+  const session = await requireSession()
+  if (session.user.role !== 'MARKETING_MANAGER' && session.user.role !== 'MARKETING_TEAM') {
     redirect('/login')
   }
 

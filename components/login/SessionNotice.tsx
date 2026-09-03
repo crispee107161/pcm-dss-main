@@ -10,6 +10,7 @@ const REASON_INFO: Record<string, { message: string; tone: Tone }> = {
   logout: { message: "You've been signed out.", tone: 'success' },
   idle: { message: 'You were signed out after 15 minutes of inactivity.', tone: 'neutral' },
   expired: { message: 'Your session expired. Please sign in again.', tone: 'neutral' },
+  revoked: { message: 'Your access was revoked. Contact an administrator.', tone: 'neutral' },
 }
 
 const AUTO_DISMISS_MS = 3000

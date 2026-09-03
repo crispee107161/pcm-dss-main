@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { STUDY_PERIOD_POST_WHERE } from '@/lib/data/study-period'
@@ -10,8 +10,8 @@ import PostTypePerformanceTable from '@/components/analytics/PostTypePerformance
 import WatchThroughCard from '@/components/analytics/WatchThroughCard'
 
 export default async function MarketingPostTypePerformancePage() {
-  const session = await auth()
-  if (!session?.user || (session.user.role !== 'MARKETING_MANAGER' && session.user.role !== 'MARKETING_TEAM')) {
+  const session = await requireSession()
+  if (session.user.role !== 'MARKETING_MANAGER' && session.user.role !== 'MARKETING_TEAM') {
     redirect('/login')
   }
 

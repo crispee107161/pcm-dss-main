@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/nav/PageHeader'
@@ -28,8 +28,8 @@ export default async function CampaignRankingsPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>
 }) {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
+  const session = await requireSession()
+  if (session.user.role !== 'MARKETING_MANAGER') {
     redirect('/login')
   }
 

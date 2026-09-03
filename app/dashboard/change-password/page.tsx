@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { ForcePasswordChangeForm } from '@/components/auth/ForcePasswordChangeForm'
 import type { Role } from '@/types/index'
@@ -13,8 +13,7 @@ const roleRoutes: Record<Role, string> = {
 // user's temporary password hasn't been changed yet. Not gated by role: any
 // authenticated user with must_change_password can land here.
 export default async function ChangePasswordPage() {
-  const session = await auth()
-  if (!session?.user) redirect('/login')
+  const session = await requireSession()
 
   const dashboardPath = roleRoutes[session.user.role]
 

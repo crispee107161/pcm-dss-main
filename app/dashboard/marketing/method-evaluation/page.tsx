@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { loadMethodEvaluation, loadGroundTruthMethodEvaluation, getInterCoderReliability, getSuggestionAcceptanceRate } from '@/lib/data/method-evaluation'
 import { kappaMagnitude } from '@/lib/stats/agreement'
@@ -8,8 +8,8 @@ import MethodAgreementCard from '@/components/analytics/MethodAgreementCard'
 
 // mvp.md §3 S8: Owner View, Marketing Manager Full, Marketing Team hidden.
 export default async function MarketingMethodEvaluationPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
+  const session = await requireSession()
+  if (session.user.role !== 'MARKETING_MANAGER') {
     redirect('/login')
   }
 

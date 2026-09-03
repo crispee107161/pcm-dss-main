@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { loadCategoryPerformanceData } from '@/lib/data/category-performance'
 import CategoryPerformanceView from '@/components/analytics/pages/CategoryPerformanceView'
@@ -8,8 +8,8 @@ import CategoryPerformanceView from '@/components/analytics/pages/CategoryPerfor
 // content performed, which the Analysis screen's FR-20 distribution section
 // already covers.
 export default async function MarketingCategoryPerformancePage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') redirect('/login')
+  const session = await requireSession()
+  if (session.user.role !== 'MARKETING_MANAGER') redirect('/login')
 
   const data = await loadCategoryPerformanceData()
 

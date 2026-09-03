@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { loadAuditLog } from '@/lib/data/audit-log'
 import { PageHeader } from '@/components/nav/PageHeader'
@@ -6,8 +6,8 @@ import AuditLogTable from '@/components/audit/AuditLogTable'
 
 // mvp.md §3 S11: Owner Full, Marketing Manager View, Marketing Team hidden entirely.
 export default async function MarketingAuditLogPage() {
-  const session = await auth()
-  if (!session?.user || session.user.role !== 'MARKETING_MANAGER') {
+  const session = await requireSession()
+  if (session.user.role !== 'MARKETING_MANAGER') {
     redirect('/login')
   }
 
