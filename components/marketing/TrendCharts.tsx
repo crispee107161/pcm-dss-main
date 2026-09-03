@@ -161,13 +161,12 @@ const CHART_VIEW_OPTIONS: { value: 'bars' | 'indexed'; label: string }[] = [
 ]
 
 // Shared toggle for the "side by side" vs "compare trend" chart views. Uses
-// the same SlidingTabs mechanism (components/ui/sliding-tabs.tsx) as
-// ContentClient.tsx's FilterTabs — one implementation of the sliding
-// shared-element indicator, two different skins (this one keeps the
-// existing .segmented-control white-surface/shadow indicator; FilterTabs has
-// its own brand-filled indicator plus a .segmented-control--bordered track
-// for light-mode grouping, added 2026-08-24) — code review (2026-08-23) flagged the two
-// segmented controls as duplicated logic before this refactor. `id` keys the
+// the same SlidingTabs mechanism (components/ui/sliding-tabs.tsx) and the
+// same brand skin (.segmented-control--bordered track + --active-brand
+// indicator) as ContentClient.tsx's FilterTabs — switched from the neutral
+// white-surface/shadow skin 2026-09-04 because that skin's dark-mode active
+// pill (plain --secondary fill, no border) read too close to the track to
+// tell it was selected. `id` keys the
 // layoutId: two instances of this component render at once on the trend
 // pages (SpendMessagingTrend + PostEngagementTrend below), and a shared
 // layoutId across separate instances would animate one's indicator toward
@@ -180,13 +179,13 @@ function ChartViewToggle({ id, view, onChange }: { id: string; view: 'bars' | 'i
       options={CHART_VIEW_OPTIONS}
       layoutId={`chart-view-toggle-${id}`}
       ariaLabel="Chart view"
-      className="flex-shrink-0 segmented-control"
+      className="flex-shrink-0 segmented-control segmented-control--bordered"
       segmentClassName={(active) =>
-        `segmented-control__segment text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-          active ? 'segmented-control__segment--active' : ''
+        `segmented-control__segment text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+          active ? 'segmented-control__segment--active-brand' : ''
         }`
       }
-      indicatorClassName="segmented-control__indicator"
+      indicatorClassName="segmented-control__indicator segmented-control__indicator--brand"
     />
   )
 }

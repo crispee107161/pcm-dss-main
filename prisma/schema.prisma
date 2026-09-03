@@ -291,8 +291,9 @@ model FacebookPost {
   category_llm                  CategoryLabel?
   /// Raven's Four_Remaining_Gaps memo, FR-07: the version stamp the
   /// lexicon-drift episode showed was missing. category_llm_model records
-  /// resolveGroqModel()'s pick (actions/classify-posts.ts's pinned
-  /// CLASSIFICATION_MODEL) at suggestion time; category_keyword_lexicon_count
+  /// classify-posts.ts's pinned CLASSIFICATION_MODEL constant (not
+  /// resolveGroqModel()'s pick — that's chat.ts's path, see groq-model.ts's
+  /// own comment) at suggestion time; category_keyword_lexicon_count
   /// records how many lib/keywords rows existed when autoCategorizeAll ran.
   /// Both null for suggestions written before this column existed.
   category_llm_model            String?

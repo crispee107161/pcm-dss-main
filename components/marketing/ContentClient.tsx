@@ -1231,7 +1231,12 @@ function FilterTabs({ current }: { current: ContentFilter }) {
       // offset gap keeps the crimson focus ring visible against the
       // brand-filled active segment instead of blending into it.
       segmentClassName={(active) =>
-        `segmented-control__segment whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
+        // text-sm (not text-xs like TrendCharts.tsx's ChartViewToggle) —
+        // .segmented-control__segment no longer sets its own font-size
+        // (code review, 2026-09-04: it used to, and being unlayered CSS it
+        // silently beat any text-* utility a caller applied), so this keeps
+        // FilterTabs at its original 14px rather than inheriting a default.
+        `segmented-control__segment text-sm whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 ${
           active ? 'segmented-control__segment--active-brand' : ''
         }`
       }

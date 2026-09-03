@@ -4,6 +4,8 @@
 **Re:** `Provenance_Followup_and_Revised_Order.md` §2.1
 **Scripts:** `scripts/category-final-audit.ts` (LLM run history, read-only), `scripts/rerun-fr08-llm-model.ts` (live Groq re-run, read-only — does not write `category_llm`)
 
+**Superseded (2026-09-04):** two statements below are now stale. The prompt snapshot line — "no separate snapshot file was created" — no longer holds: `docs/raven/classification-prompt-snapshot.txt` was created and committed since this memo, see `docs/raven/Groq_Account_Ownership_and_Remaining_Items.md` §3. And "Fix applied" below listing `chat.ts`/`ai-insights.ts`/`keywords.ts` as sharing `resolveGroqModel()` is now wrong on two counts: `ai-insights.ts` was deleted 2026-09-02 as dead code, and `keywords.ts` never called Groq in the first place — the lexicon is frozen. `chat.ts` is the only other Groq caller besides the pinned classification path.
+
 ## §2.1 checklist, answered
 
 - **Where does the categorisation prompt live? File path, and is it in version control?**

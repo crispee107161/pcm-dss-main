@@ -21,9 +21,10 @@ const CLASSIFY_WINDOW_MS = 5 * 60 * 1000
 // docs/raven/Provenance_Followup_and_Revised_Order.md §2.1 — the FR-08/FR-15
 // kappa figures need a reproducible model, so this path is pinned to a fixed,
 // version-controlled id rather than calling lib/groq-model.ts's
-// resolveGroqModel() (used by chat.ts/keywords.ts, where
-// deprecation-resilience matters more than reproducibility and there's no
-// evaluation figure riding on a specific model). Confirmed via
+// resolveGroqModel() (used by chat.ts, the only other Groq caller in the
+// codebase — keywords.ts doesn't call Groq at all, the lexicon is frozen —
+// where deprecation-resilience matters more than reproducibility and
+// there's no evaluation figure riding on a specific model). Confirmed via
 // LlmClassificationRun that every run to date used 'llama-3.1-8b-instant',
 // which Groq has since deprecated (commit a308813) — that exact model can no
 // longer be pinned back to. 'openai/gpt-oss-20b' is the model

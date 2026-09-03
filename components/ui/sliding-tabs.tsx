@@ -8,9 +8,10 @@ import { motion, useReducedMotion } from 'motion/react'
 // components/marketing/ContentClient.tsx's FilterTabs and
 // components/marketing/TrendCharts.tsx's ChartViewToggle, for what "snap"
 // looked like before). Deliberately styling-agnostic: callers own every
-// class (track, segment, indicator) so two visually distinct segmented
-// controls (a bordered/filled box vs. a white-surface/shadow pill) can share
-// this one implementation instead of each hand-rolling the same
+// class (track, segment, indicator) so two segmented controls that may not
+// always share one skin (both currently use the brand/bordered skin as of
+// 2026-09-04, but each could opt into the neutral skin independently) can
+// share this one implementation instead of each hand-rolling the same
 // layoutId/useReducedMotion boilerplate and quietly drifting apart.
 const SLIDING_TABS_TRANSITION = { type: 'spring', stiffness: 500, damping: 40 } as const
 const REDUCED_SLIDING_TABS_TRANSITION = { duration: 0.01 }

@@ -1,6 +1,8 @@
 // Resolves which Groq chat model to use, adapting to Groq deprecating/renaming
-// models (see actions/{chat,classify-posts,keywords}.ts, all of
-// which call resolveGroqModel instead of hardcoding a model id).
+// models. actions/chat.ts is the only caller (code review, 2026-09-04):
+// classify-posts.ts deliberately pins a fixed model instead for reproducibility
+// (see its own comment), and keywords.ts doesn't call Groq at all — the
+// lexicon is frozen and every export there is a hard stop.
 //
 // This is a preference-ordered ALLOWLIST, not "whatever Groq has today": we ask
 // Groq's /models endpoint what is currently live, then take the first entry from

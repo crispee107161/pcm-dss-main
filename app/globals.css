@@ -693,9 +693,10 @@
   background: var(--color-alpha-white-200);
 }
 /* Opt-in for controls meant to read as a bounded group even in light mode
-   (e.g. ContentClient.tsx's FilterTabs) — not applied to the base class
-   because ChartViewToggle (TrendCharts.tsx) deliberately keeps the plain
-   white-surface/shadow look instead. Dark mode doesn't need this: the
+   (e.g. ContentClient.tsx's FilterTabs, and TrendCharts.tsx's
+   ChartViewToggle since it switched to the same brand skin 2026-09-04 —
+   not applied to the base class because a future neutral-skin consumer may
+   still want the unbordered look). Dark mode doesn't need this: the
    alpha-white-200 track background above already reads clearly against the
    dark card, whereas gray-50 sits only ~2% off the white card in light mode
    (#F9F8F7 vs #FFFFFF) — nowhere near enough contrast on its own to read as
@@ -706,6 +707,14 @@
 .dark .segmented-control--bordered {
   border-color: transparent;
 }
+/* font-size intentionally omitted — this rule is unlayered, so it would beat
+   any Tailwind text-* utility a caller applies regardless of specificity
+   (Tailwind v4 utilities live in @layer utilities; unlayered rules always
+   win). Code review, 2026-09-04: a caller's text-xs was silently inert
+   because of this. Callers set their own size utility on segmentClassName —
+   FilterTabs (ContentClient.tsx) uses text-sm to keep its existing 14px,
+   ChartViewToggle (TrendCharts.tsx) uses text-xs for 12px next to its 12px
+   caption. */
 .segmented-control__segment {
   position: relative;
   display: inline-flex;
@@ -714,27 +723,48 @@
   padding: 4px 8px;
   border-radius: 6px;
   white-space: nowrap;
-  font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-gray-500);
+  color: var(--color-gray-600);
   cursor: pointer;
   transition: background-color 200ms, color 200ms;
 }
+/* gray-600 (#5A5355), not gray-500 (#7A7473) — gray-500 measured 4.33:1 at
+   rest / 3.64:1 on hover against this track's light-mode background, both
+   below WCAG AA's 4.5:1 (code review, 2026-09-04, following the analogous
+   dark-mode fix below). */
 .dark .segmented-control__segment {
-  color: var(--color-gray-300);
+  /* gray-400 (#9E9E9E), not gray-300 (#737373) — gray-300 measured ~2.9:1
+     against this track's ~#2E2E2E effective background (impeccable audit,
+     2026-09-04), failing WCAG AA's 4.5:1 for normal text. gray-400 clears
+     it (~5:1). */
+  color: var(--color-gray-400);
 }
 .segmented-control__segment:hover {
   background: var(--color-gray-200);
 }
 .dark .segmented-control__segment:hover {
-  background: var(--color-gray-800);
+  /* gray-100 (#363636), not gray-800. This ramp inverts in dark mode (low
+     N = near-black, high N = near-white, see the .dark block above), so
+     gray-800 resolved to #F7F7F7 — a near-white flash on the #171717 card
+     instead of the subtle one-step lighten gray-200 gives in light mode
+     (impeccable audit, 2026-09-04: this was the actual cause of the
+     dark-mode "white glow" on hover, not the card's ambient shadow).
+     gray-100 also happens to be the AA floor here: the inactive label
+     (gray-400, #9E9E9E) on this background measures 4.51:1, 0.01 above the
+     4.5:1 minimum — a step lighter (gray-200, #5C5C5C) drops it to 2.50:1.
+     Don't bump this for a "more visible" hover without re-checking. */
+  background: var(--color-gray-100);
 }
 /* The active surface (background/shadow) is now painted by
    .segmented-control__indicator below — a motion-animated span that slides
    between segments (components/ui/sliding-tabs.tsx) instead of this
    modifier hard-cutting the background on click. This modifier is just the
    text color, plus disabling the plain hover background so it can't show
-   through/beside the indicator. */
+   through/beside the indicator.
+   No current consumer uses this neutral (non-brand) active variant as of
+   2026-09-04 — both FilterTabs and ChartViewToggle now use
+   --active-brand below. Kept as the documented neutral skin for a future
+   consumer rather than deleted; remove if none appears. */
 .segmented-control__segment--active,
 .segmented-control__segment--active:hover {
   background: transparent;
@@ -753,10 +783,13 @@
 
 /* Brand-outlined variant of the segmented control, for a filter/view switch
    where the selected option should read as a clear, colorful choice rather
-   than a neutral one (e.g. ContentClient.tsx's FilterTabs) — opt-in via an
-   extra class alongside .segmented-control__indicator /
-   .segmented-control__segment--active so ChartViewToggle's neutral
-   white/shadow skin is untouched. A solid --primary fill (the original
+   than a neutral one — used by ContentClient.tsx's FilterTabs and, since
+   2026-09-04, TrendCharts.tsx's ChartViewToggle (it previously used the
+   neutral white/shadow skin below; switched for dark-mode legibility, see
+   the segment/hover comments above). Opt-in via an extra class alongside
+   .segmented-control__indicator / .segmented-control__segment--active
+   rather than replacing the base rules, so a future neutral-skin consumer
+   can still opt out. A solid --primary fill (the original
    version of this variant) was replaced with an outline: same white-in-
    light/--secondary-in-dark pill background as the neutral variant above,
    plus a 1px --primary border for the "colorful choice" read. Label text is
@@ -788,7 +821,15 @@
   border: 1px solid var(--primary);
 }
 .dark .segmented-control__indicator.segmented-control__indicator--brand {
-  border: 1px solid var(--primary);
+  /* Same 65%-primary/35%-white tint as the active-brand label below, not
+     plain --primary — the pure crimson border measured 2.54:1 against this
+     track's ~#2E2E2E background, failing WCAG 1.4.11's 3:1 minimum for a
+     UI-state indicator (code review, 2026-09-04). The pill fill itself
+     (--secondary, #242424) is only 1.31:1 off the track, so this border is
+     effectively the only "selected" cue in dark mode — it has to clear the
+     bar on its own. Tinting also re-unifies it with the label color instead
+     of leaving two different crimsons in one pill. */
+  border: 1px solid color-mix(in srgb, var(--primary) 65%, white);
 }
 .segmented-control__segment.segmented-control__segment--active-brand,
 .segmented-control__segment.segmented-control__segment--active-brand:hover {
@@ -798,7 +839,13 @@
 .dark .segmented-control__segment.segmented-control__segment--active-brand,
 .dark .segmented-control__segment.segmented-control__segment--active-brand:hover {
   background: transparent;
-  color: var(--primary);
+  /* Pure --primary text measured ~2.9:1 against this pill's --secondary
+     (#242424) background in dark mode — fails WCAG AA (impeccable audit,
+     2026-09-04). Light mode is unaffected (--primary on white is ~6.65:1)
+     so this tint is dark-only. 65% primary / 35% white clears ~4.7:1
+     while staying visibly the same crimson family as the light-mode text
+     and the --primary border, not a different hue. */
+  color: color-mix(in srgb, var(--primary) 65%, white);
 }
 
 /* Tabular numerals for all KPI/stat values — stays on the sans face (Geist
