@@ -13,6 +13,10 @@ export interface ChatMessage {
 
 const CHAT_LIMIT = 20
 const CHAT_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
+// Not pinned to 0 like classify-posts.ts — this is a conversational assistant,
+// not a reproducibility-sensitive evaluation figure, so a little variation is
+// fine. Still a named constant per docs/raven/Groq_Configuration_Requirements.md §2.
+const CHAT_TEMPERATURE = 0.4
 
 export async function sendChatMessage(history: ChatMessage[], userMessage: string): Promise<string> {
   const session = await auth()
@@ -107,7 +111,7 @@ Current followers: ${followerHistory[0]?.followers?.toLocaleString() ?? 'N/A'}
         messages,
         max_tokens: 600,
         reasoning_effort: 'low',
-        temperature: 0.4,
+        temperature: CHAT_TEMPERATURE,
       }),
     })
 
