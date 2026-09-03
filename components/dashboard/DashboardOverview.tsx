@@ -1,5 +1,6 @@
 import { getGreeting } from '@/lib/greeting'
 import { getDashboardOverview } from '@/lib/data/dashboard'
+import { STUDY_PERIOD_LABEL } from '@/lib/data/study-period'
 import { KpiCard, formatPhp, formatPhpPrecise, formatNumber } from '@/components/kpi/KpiCard'
 import { SpendMessagingTrend } from '@/components/marketing/TrendCharts'
 import { CpiDistributionChart, CategoryPerformanceChart, PostReachViewsTrendChart, PageFunnelChart } from '@/components/dashboard/DashboardCharts'
@@ -121,7 +122,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
         <KpiCard
           label="Median Cost / Inquiry"
           value={kpis.medianCpi.value !== null ? formatPhpPrecise(kpis.medianCpi.value) : '—'}
-          sub={kpis.medianCpi.iqr ? `IQR ${formatPhpPrecise(kpis.medianCpi.iqr.q1)} – ${formatPhpPrecise(kpis.medianCpi.iqr.q3)} (n=${kpis.medianCpi.n})` : `n=${kpis.medianCpi.n}`}
+          sub={kpis.medianCpi.iqr ? `IQR ${formatPhpPrecise(kpis.medianCpi.iqr.q1)} – ${formatPhpPrecise(kpis.medianCpi.iqr.q3)} (n=${kpis.medianCpi.n}) — no minimum spend filter` : `n=${kpis.medianCpi.n} — no minimum spend filter`}
           note={kpis.medianCpi.value !== null ? 'Half of ads this period cost less than this per inquiry, half cost more.' : undefined}
           delta={kpis.medianCpi.delta} deltaLabel={data.deltaWindowLabel ?? undefined} invertSentiment
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0a3 3 0 106 0m-6 0a3 3 0 016 0M9 13h6" /></svg>}
@@ -171,7 +172,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px] items-stretch">
         <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Cost-per-Inquiry Distribution</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-3 mb-3">Per-ad CPI, {data.periodLabel} — histogram and box plot of the same population as the KPI above.</p>
+          <p className="text-xs text-muted-foreground -mt-3 mb-3">Per-ad CPI, {data.periodLabel} — histogram and box plot of the same population as the KPI above. Computed per advertisement per month with no minimum expenditure filter, unlike the study-wide analysis.</p>
           <CpiDistributionChart data={data.cpiDistribution} />
         </div>
         <div className="bg-card rounded-2xl p-5 flex flex-col" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
@@ -196,7 +197,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
         </div>
         <div className="bg-card rounded-2xl p-5" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
           <SectionLabel>Follows per 100 Page Visits</SectionLabel>
-          <p className="text-xs text-muted-foreground -mt-3 mb-3">Full uploaded history — visits, follows, and the ratio, monthly.</p>
+          <p className="text-xs text-muted-foreground -mt-3 mb-3">Full study period ({STUDY_PERIOD_LABEL}) — visits, follows, and the ratio, monthly, independent of the period selector above.</p>
           <PageFunnelChart data={data.pageFunnelTrend} />
         </div>
       </div>
@@ -211,7 +212,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
         />
         <AdTable
           title="Least Efficient Ads"
-          subtitle={`Highest cost per inquiry, ${data.periodLabel} — spend without a matching result.`}
+          subtitle={`Highest cost per inquiry, ${data.periodLabel} — these advertisements cost the most per conversation started.`}
           ads={data.bottomAds}
           emptyMessage="Not enough ranked ads yet to show a bottom list."
         />

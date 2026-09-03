@@ -1,6 +1,7 @@
 import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import DashboardOverview from '@/components/dashboard/DashboardOverview'
+import { greetingName } from '@/lib/greeting'
 
 export default async function MarketingDashboard({
   searchParams,
@@ -12,7 +13,7 @@ export default async function MarketingDashboard({
     redirect('/login')
   }
 
-  const displayName = session.user.email?.split('@')[0] ?? 'there'
+  const displayName = greetingName(session.user.name, session.user.email)
   const { from, to, all } = await searchParams
 
   return (

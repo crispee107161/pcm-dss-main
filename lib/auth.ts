@@ -134,6 +134,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return {
           id: String(user.id),
           email: user.email,
+          name: user.name,
           role: user.role as Role,
           mustChangePassword: user.must_change_password,
         }
@@ -157,21 +158,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     // waiting for the JWT to naturally expire.
     async jwt({ token, user }) {
       if (user) {
-        const u = user as { role: Role; mustChangePassword?: boolean }
+        const u = user as { role: Role; name?: string | null; mustChangePassword?: boolean }
         token.role = u.role
         token.sub = user.id
+        token.name = u.name ?? null
         token.mustChangePassword = u.mustChangePassword ?? false
         return token
       }
       if (token.sub) {
         const dbUser = await prisma.user.findUnique({
           where: { id: Number(token.sub) },
-          select: { is_active: true, is_locked: true, role: true, must_change_password: true },
+          select: { is_active: true, is_locked: true, role: true, name: true, must_change_password: true },
         })
         if (!dbUser || !dbUser.is_active || dbUser.is_locked) {
           return null
         }
         token.role = dbUser.role
+        token.name = dbUser.name
         token.mustChangePassword = dbUser.must_change_password
       }
       return token
@@ -180,6 +183,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token) {
         session.user.id = token.sub as string
         session.user.role = token.role as Role
+        session.user.name = (token.name as string | null) ?? null
         session.user.mustChangePassword = (token.mustChangePassword as boolean) ?? false
       }
       return session

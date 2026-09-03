@@ -46,10 +46,10 @@ export default function AlertsStrip({ uncategorizedCount, missingMonths, spendNo
       {spendNoResultAds.length > 0 && (
         <span
           className="sensitive inline-flex items-center gap-2 text-xs font-semibold rounded-full pl-2.5 pr-3 py-1.5 bg-status-negative/10 border border-status-negative/30 text-status-negative"
-          title={spendNoResultAds.map(a => `${a.name}: ${formatPhp(a.spend)}`).join('\n')}
+          title={`Expected for ads run for reach or video views rather than messaging — not necessarily an error (FR-06).\n\n${spendNoResultAds.map(a => `${a.name}: ${formatPhp(a.spend)}`).join('\n')}`}
         >
           <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 10v2m9-8a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          {spendNoResultAds.length} ad{spendNoResultAds.length === 1 ? '' : 's'} with spend but no messaging conversations
+          {spendNoResultAds.length} ad{spendNoResultAds.length === 1 ? '' : 's'} with spend but no messaging conversations — may be expected for reach/video ads
         </span>
       )}
     </div>

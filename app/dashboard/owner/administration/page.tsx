@@ -15,13 +15,13 @@ export default async function OwnerAdministrationPage() {
   const [users, totalUploads, recentUploads] = await Promise.all([
     prisma.user.findMany({
       orderBy: { created_at: 'asc' },
-      select: { id: true, email: true, role: true, created_at: true, is_active: true, is_locked: true },
+      select: { id: true, email: true, name: true, role: true, created_at: true, is_active: true, is_locked: true },
     }),
     prisma.uploadLog.count(),
     prisma.uploadLog.findMany({
       orderBy: { uploaded_at: 'desc' },
       take: 10,
-      include: { user: { select: { email: true, role: true } } },
+      include: { user: { select: { email: true, name: true, role: true } } },
     }),
   ])
 
@@ -89,7 +89,7 @@ export default async function OwnerAdministrationPage() {
                 {recentUploads.map((log) => (
                   <tr key={log.id} className="hover:bg-secondary/50 border-t border-border">
                     <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{formatDate(log.uploaded_at)}</td>
-                    <td className="px-4 py-3 text-foreground text-xs">{log.user.email}</td>
+                    <td className="px-4 py-3 text-foreground text-xs">{log.user.name ?? log.user.email}</td>
                     <td className="px-4 py-3 text-foreground max-w-xs truncate text-xs" title={log.filename}>{log.filename}</td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">{log.upload_type.replace(/_/g, ' ')}</td>
                     <td className="px-4 py-3">

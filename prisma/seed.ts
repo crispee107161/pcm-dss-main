@@ -94,19 +94,35 @@ async function main() {
     console.log('Migrated legacy sales@pcmerchandise.com -> team@pcmerchandise.com (id preserved)')
   }
 
+  // docs/raven/Account_Display_Names.md §4 — the two individual accounts
+  // carry the name of the person who holds them; team@ is genuinely shared
+  // by more than one person, so it carries its role instead of naming one of
+  // them. owner2@ is the second BUSINESS_OWNER seat added for the FR-06
+  // last-active-owner lockout guard.
+  // team@'s name is the single word "Team", not "Marketing Team" — the
+  // greeting shortens any stored name to its first token
+  // (lib/greeting.ts's greetingName), and a two-word role label would
+  // otherwise greet a shared account as "Good afternoon, Marketing".
   const users = [
-    { email: 'marketing@pcmerchandise.com', password: marketingPw, role: 'MARKETING_MANAGER' as const },
-    { email: 'team@pcmerchandise.com',      password: teamPw,      role: 'MARKETING_TEAM' as const },
-    { email: 'owner@pcmerchandise.com',     password: ownerPw,     role: 'BUSINESS_OWNER' as const },
-    { email: 'owner2@pcmerchandise.com',    password: owner2Pw,    role: 'BUSINESS_OWNER' as const },
+    { email: 'marketing@pcmerchandise.com', password: marketingPw, role: 'MARKETING_MANAGER' as const, name: 'Dan Mintong Carullo' },
+    { email: 'team@pcmerchandise.com',      password: teamPw,      role: 'MARKETING_TEAM' as const,     name: 'Team' },
+    { email: 'owner@pcmerchandise.com',     password: ownerPw,     role: 'BUSINESS_OWNER' as const,     name: 'John Bernard Olermo' },
+    { email: 'owner2@pcmerchandise.com',    password: owner2Pw,    role: 'BUSINESS_OWNER' as const,     name: 'John Bernard Olermo 2' },
   ]
 
   for (const user of users) {
     const password_hash = await bcryptjs.hash(user.password, 12)
     const existing = await prisma.user.findUnique({ where: { email: user.email } })
-    const created = existing ?? await prisma.user.create({
-      data: { email: user.email, password_hash, role: user.role },
-    })
+    // Idempotent on `name` specifically — a fresh clone's first seed run
+    // creates the row, but a pre-existing row (this shared dev/prod DB
+    // included) never picked up the field when it was added, and re-running
+    // seed is also how a future name correction should land, so `existing`
+    // is updated in place rather than left untouched.
+    const created = existing
+      ? await prisma.user.update({ where: { email: user.email }, data: { name: user.name } })
+      : await prisma.user.create({
+          data: { email: user.email, password_hash, role: user.role, name: user.name },
+        })
     console.log(`User: ${created.email} (${created.role})`)
   }
 

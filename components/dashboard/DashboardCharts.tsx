@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import {
   BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, LabelList,
+  XAxis, YAxis, CartesianGrid, LabelList, Cell,
 } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { ChartTooltipRow } from '@/lib/chart-tooltip'
@@ -116,8 +116,13 @@ export function CpiDistributionChart({ data }: { data: number[] }) {
 
 export interface CategoryBarDatum { label: string; medianEngagement: number; n: number }
 
+// Same threshold PostTypePerformanceTable/ad-set-ranking use for "low
+// confidence" — a bar built on this few observations shouldn't look as
+// authoritative as one built on dozens (docs/raven/Executive_Dashboard_Review.md B6).
+const LOW_CONFIDENCE_N = 3
+
 export function CategoryPerformanceChart({ data }: { data: CategoryBarDatum[] }) {
-  if (data.length === 0) {
+  if (data.length === 0 || data.every(d => d.n === 0)) {
     return <p className="text-sm text-muted-foreground py-10 text-center">No categorised posts in this period.</p>
   }
 
@@ -129,10 +134,24 @@ export function CategoryPerformanceChart({ data }: { data: CategoryBarDatum[] })
         <YAxis tickFormatter={v => `${v}%`} tickLine={false} axisLine={false} tickMargin={8} />
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent hideLabel formatter={value => <ChartTooltipRow color={CHART_COLORS.orange} label="Median Engagement Rate" value={`${Number(value).toFixed(2)}%`} />} />}
+          content={<ChartTooltipContent hideLabel formatter={(value, _name, item) => {
+            const n = (item.payload as CategoryBarDatum).n
+            const suffix = n === 0 ? ' — no posts this period' : n < LOW_CONFIDENCE_N ? ` — low confidence (n=${n})` : ` (n=${n})`
+            return <ChartTooltipRow color={CHART_COLORS.orange} label="Median Engagement Rate" value={`${Number(value).toFixed(2)}%${suffix}`} />
+          }} />}
         />
         <Bar dataKey="medianEngagement" name="Median Engagement Rate" fill="var(--color-medianEngagement)" radius={6} maxBarSize={56}>
-          <LabelList dataKey="n" position="top" offset={8} className="fill-foreground" fontSize={10} formatter={(v: unknown) => `n=${v}`} />
+          {data.map(d => (
+            <Cell key={d.label} fillOpacity={d.n < LOW_CONFIDENCE_N ? 0.35 : 1} />
+          ))}
+          <LabelList
+            dataKey="n"
+            position="top"
+            offset={8}
+            className="fill-muted-foreground"
+            fontSize={10}
+            formatter={(v: unknown) => (Number(v) === 0 ? 'no posts' : `n=${v}`)}
+          />
         </Bar>
       </BarChart>
     </ChartContainer>
@@ -169,7 +188,11 @@ export function PostReachViewsTrendChart({ data }: { data: ReachViewsPoint[] }) 
                 cursor={false}
                 content={<ChartTooltipContent hideLabel formatter={v => <ChartTooltipRow color={CHART_COLORS.blue} label="Total Reach" value={Number(v).toLocaleString()} />} />}
               />
-              <Line dataKey="total_reach" name="Total Reach" type="monotone" stroke="var(--color-total_reach)" dot={false} strokeWidth={2} />
+              {/* linear + visible dots, not a smoothed curve — this only
+                  ever plots the last 3 monthly points, and a curve through
+                  3 points draws a saturation shape that isn't in the data
+                  (docs/raven/Executive_Dashboard_Review.md B5) */}
+              <Line dataKey="total_reach" name="Total Reach" type="linear" stroke="var(--color-total_reach)" dot={{ r: 4 }} strokeWidth={2} />
             </LineChart>
           </ChartContainer>
         </div>
@@ -189,7 +212,7 @@ export function PostReachViewsTrendChart({ data }: { data: ReachViewsPoint[] }) 
                 cursor={false}
                 content={<ChartTooltipContent hideLabel formatter={v => <ChartTooltipRow color={CHART_COLORS.violet} label="Total Views" value={Number(v).toLocaleString()} />} />}
               />
-              <Line dataKey="total_views" name="Total Views" type="monotone" stroke="var(--color-total_views)" dot={false} strokeWidth={2} />
+              <Line dataKey="total_views" name="Total Views" type="linear" stroke="var(--color-total_views)" dot={{ r: 4 }} strokeWidth={2} />
             </LineChart>
           </ChartContainer>
         </div>

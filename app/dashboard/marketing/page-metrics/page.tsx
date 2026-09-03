@@ -1,7 +1,7 @@
 import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { withStudyPeriod } from '@/lib/data/study-period'
+import { withStudyPeriod, withStudyPeriodPageMetric } from '@/lib/data/study-period'
 import { demographicSnapshotSuffix } from '@/lib/data/demographic-snapshot'
 import { PageHeader } from '@/components/nav/PageHeader'
 import Link from 'next/link'
@@ -71,6 +71,8 @@ export default async function PageMetricsPage({
   const { from, to } = await searchParams
   const range = manilaDayRange(from, to)
   const dateWhere = { where: range ? { date: range } : undefined }
+  // FR-04a — see the same note on app/dashboard/owner/page-metrics/page.tsx.
+  const pageMetricWhere = { where: withStudyPeriodPageMetric(range ? { date: range } : undefined) }
   const postWhere = { where: withStudyPeriod(range ? { publish_time: range } : undefined) }
   const noDataMessage = range
     ? 'No data in the selected period.'
@@ -88,7 +90,7 @@ export default async function PageMetricsPage({
     postAgg,
     typeBreakdown,
   ] = await Promise.all([
-    prisma.pageMetricDaily.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
+    prisma.pageMetricDaily.findMany({ ...pageMetricWhere, orderBy: { date: 'asc' } }),
     prisma.followerHistory.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
     prisma.pageViewers.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
     // No date column on these snapshot tables — always all-time.

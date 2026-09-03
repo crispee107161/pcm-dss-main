@@ -144,6 +144,7 @@ export async function createUser(
   if ('error' in auth_) return { error: auth_.error }
   const { session } = auth_
 
+  const name = (formData.get('name') as string | null)?.trim() || null
   const email = (formData.get('email') as string | null)?.trim().toLowerCase()
   const password = formData.get('password') as string | null
   const role = formData.get('role') as Role
@@ -167,7 +168,7 @@ export async function createUser(
   }
 
   const password_hash = await bcryptjs.hash(password, 12)
-  const created = await prisma.user.create({ data: { email, password_hash, role } })
+  const created = await prisma.user.create({ data: { email, name, password_hash, role } })
   await logSecurityEvent({
     eventType: 'ACCOUNT_CREATED',
     userId: parseInt(session.user.id, 10),

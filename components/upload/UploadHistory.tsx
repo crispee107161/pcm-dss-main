@@ -54,9 +54,11 @@ export default function UploadHistory({ logs }: UploadHistoryProps) {
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">Date</TableHead>
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">Filename</TableHead>
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">Type</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden md:table-cell">Read</TableHead>
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Added</TableHead>
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Changed</TableHead>
-          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Unchanged</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden sm:table-cell">Duplicate</TableHead>
+          <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50 hidden md:table-cell">Rejected</TableHead>
           <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-3 bg-gray-50">Status</TableHead>
         </TableRow>
       </TableHeader>
@@ -77,6 +79,14 @@ export default function UploadHistory({ logs }: UploadHistoryProps) {
             <TableCell className="px-4 py-3">
               <TypeBadge type={log.upload_type} />
             </TableCell>
+            {/* FR-05 requires 5 figures: read, stored, updated, rejected, and
+                identified as duplicates (docs/raven/Executive_Dashboard_Review.md
+                A3) — records_read is persisted (UploadLog.records_read),
+                not derived, so a future reshaping upsert can't silently
+                desync it from the sum of the other four. */}
+            <TableCell className="px-4 py-3 text-gray-700 text-center hidden md:table-cell">
+              {log.records_read}
+            </TableCell>
             <TableCell className="px-4 py-3 text-gray-700 text-center hidden sm:table-cell">
               {log.records_inserted}
             </TableCell>
@@ -85,6 +95,11 @@ export default function UploadHistory({ logs }: UploadHistoryProps) {
             </TableCell>
             <TableCell className="px-4 py-3 text-gray-400 text-center hidden sm:table-cell">
               {log.records_unchanged}
+            </TableCell>
+            <TableCell className="px-4 py-3 text-center hidden md:table-cell">
+              <span className={log.records_rejected > 0 ? 'text-red-600 font-medium' : 'text-gray-400'} title={log.rejected_reasons ?? undefined}>
+                {log.records_rejected}
+              </span>
             </TableCell>
             <TableCell className="px-4 py-3">
               <StatusBadge status={log.status} />

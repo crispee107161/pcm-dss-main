@@ -152,12 +152,14 @@ export async function uploadCSV(
   const userId = parseInt(session.user.id, 10)
   const confirmed = formData.get('confirmed') === 'true'
   let detectedType: UploadType = 'ADS_CSV'
+  // Hoisted above the try block so the catch block below can also persist
+  // it — 0 there means the error hit before any branch counted rows.
+  let records_read: number | undefined
 
   try {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    let records_read: number | undefined
     let records_inserted = 0
     let records_updated = 0
     let records_unchanged = 0
@@ -291,6 +293,7 @@ export async function uploadCSV(
         upload_type: detectedType,
         filename,
         status: 'SUCCESS',
+        records_read: records_read ?? 0,
         records_inserted,
         records_updated,
         records_unchanged,
@@ -322,6 +325,7 @@ export async function uploadCSV(
           upload_type: detectedType,
           filename,
           status: 'FAILED',
+          records_read: records_read ?? 0,
           records_inserted: 0,
           records_updated: 0,
           records_unchanged: 0,

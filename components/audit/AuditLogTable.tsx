@@ -39,7 +39,16 @@ export default function AuditLogTable({ events }: { events: AuditEvent[] }) {
           {events.map((event) => (
             <tr key={`${event.kind}-${event.id}`} className="hover:bg-secondary/50 border-t border-border">
               <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{formatDate(event.at)}</td>
-              <td className="px-4 py-3 text-foreground text-xs">{event.userEmail}</td>
+              {/* Name for reading, email to identify the account unambiguously
+                  — same reasoning as docs/raven/Account_Display_Names.md §5. */}
+              <td className="px-4 py-3 text-foreground text-xs">
+                {event.userName ? (
+                  <>
+                    {event.userName}
+                    <span className="block text-muted-foreground">{event.userEmail}</span>
+                  </>
+                ) : event.userEmail}
+              </td>
               <td className="px-4 py-3">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${KIND_BADGE[event.kind]}`}>
                   {KIND_LABEL[event.kind]}

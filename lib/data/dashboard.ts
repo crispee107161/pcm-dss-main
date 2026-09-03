@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { withStudyPeriod, STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, withStudyPeriodAd } from '@/lib/data/study-period'
+import { withStudyPeriod, STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, STUDY_PERIOD_PAGE_METRIC_WHERE, withStudyPeriodAd } from '@/lib/data/study-period'
 import { manilaDayRange, priorEqualWindow, diffDaysInclusive, lastCompleteMonth, toISODate, type DateRangeWhere } from '@/lib/date-range'
 import { median, iqr, type Iqr } from '@/lib/stats/descriptive'
 import { MIN_INQUIRIES_FOR_CPI } from '@/lib/stats/campaign-rankings'
@@ -214,7 +214,7 @@ export async function getDashboardOverview(from: string | undefined, to: string 
       select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true, reach: true, reporting_starts: true },
     }),
     prisma.facebookPost.findMany({ where: STUDY_PERIOD_POST_WHERE, select: { publish_time: true, reach: true, views: true } }),
-    prisma.pageMetricDaily.findMany({ select: { date: true, visits: true, follows: true } }),
+    prisma.pageMetricDaily.findMany({ where: STUDY_PERIOD_PAGE_METRIC_WHERE, select: { date: true, visits: true, follows: true } }),
   ])
 
   // A "vs prior period" delta is only meaningful when the prior window falls
@@ -282,10 +282,14 @@ export async function getDashboardOverview(from: string | undefined, to: string 
     }
   })
 
+  // Every assignable category is kept, n=0 included — dropping empty
+  // categories made "Promotional Offer" (for example) disappear from the
+  // chart entirely instead of showing it had no posts this period
+  // (docs/raven/Executive_Dashboard_Review.md B6).
   const categoryPerformance = ASSIGNABLE_CATEGORY_LABELS.map(category => {
     const rates = curPosts.filter(p => p.category_final === category).map(p => p.engagement_rate)
     return { category, label: CATEGORY_LABEL_DISPLAY[category], medianEngagement: rates.length > 0 ? median(rates) : 0, n: rates.length }
-  }).filter(c => c.n > 0)
+  })
 
   // Organic reach/views, same "last 3 months" convention as monthlyTrend
   // above but bucketed off post publish dates rather than ad reporting dates

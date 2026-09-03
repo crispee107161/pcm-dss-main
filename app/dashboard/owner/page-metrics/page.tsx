@@ -1,7 +1,7 @@
 import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { withStudyPeriod } from '@/lib/data/study-period'
+import { withStudyPeriod, withStudyPeriodPageMetric } from '@/lib/data/study-period'
 import { demographicSnapshotSuffix } from '@/lib/data/demographic-snapshot'
 import { PageHeader } from '@/components/nav/PageHeader'
 import DateRangeFilter from '@/components/ui/DateRangeFilter'
@@ -69,6 +69,13 @@ export default async function OwnerPageMetricsPage({
   const { from, to } = await searchParams
   const range = manilaDayRange(from, to)
   const dateWhere = { where: range ? { date: range } : undefined }
+  // FR-04a — PageMetricDaily was never scoped to the study period anywhere
+  // in the codebase (docs/raven/Executive_Dashboard_Review.md A2); this
+  // screen's own daily-activity chart is exactly the kind of "analytical
+  // output" the requirement means, so the study-period floor is ANDed onto
+  // whatever date range the user picked. followerHistory/pageViewers below
+  // keep the plain dateWhere — a broader scope than what A2 flagged.
+  const pageMetricWhere = { where: withStudyPeriodPageMetric(range ? { date: range } : undefined) }
   const postWhere = { where: withStudyPeriod(range ? { publish_time: range } : undefined) }
   const noDataMessage = range ? 'No data in the selected period.' : undefined
 
@@ -84,7 +91,7 @@ export default async function OwnerPageMetricsPage({
     postAgg,
     typeBreakdown,
   ] = await Promise.all([
-    prisma.pageMetricDaily.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
+    prisma.pageMetricDaily.findMany({ ...pageMetricWhere, orderBy: { date: 'asc' } }),
     prisma.followerHistory.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
     prisma.pageViewers.findMany({ ...dateWhere, orderBy: { date: 'asc' } }),
     // No per-row date filter — these are point-in-time snapshots, not a

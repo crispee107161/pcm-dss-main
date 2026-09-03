@@ -114,6 +114,17 @@ enum CategoryAuditAction {
 model User {
   id                         Int                @id @default(autoincrement())
   email                      String             @unique
+  // Full name in a single field, nullable so pre-existing rows keep working
+  // unpopulated. Not split into given/surname — nothing here sorts by
+  // surname or addresses users formally, and Filipino naming conventions
+  // (middle names, compound surnames) don't map cleanly onto a two-field
+  // structure anyway. Shorten at the point of display (first token, for the
+  // dashboard greeting) rather than at the point of storage — recoverable in
+  // either direction, unlike storing only a first name — and FR-20's audit
+  // trail wants the unambiguous full name, not a first name that collides
+  // the moment a second person shares it
+  // (docs/raven/Account_Display_Names.md §3).
+  name                       String?
   password_hash              String
   role                       Role
   created_at                 DateTime           @default(now())
@@ -197,6 +208,14 @@ model UploadLog {
   upload_type        UploadType
   filename           String
   status             UploadStatus
+  // FR-05's "records read" figure — was computed in actions/upload.ts and
+  // returned to the client on the immediate post-upload toast, but never
+  // persisted, so the Recent Uploads history table (both the dashboard
+  // widget and the Upload Data screen) had no way to show it and had to
+  // reconstruct it from the other four counts instead
+  // (docs/raven/Executive_Dashboard_Review.md A3). 0 on a FAILED upload
+  // that errored before parsing got far enough to count rows.
+  records_read       Int          @default(0)
   records_inserted   Int          @default(0)
   records_updated    Int          @default(0)
   records_unchanged  Int          @default(0)

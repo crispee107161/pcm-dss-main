@@ -13,6 +13,13 @@ const END_RAW = process.env.STUDY_PERIOD_END ?? '2026-07-31T23:59:59'
 export const STUDY_PERIOD_START: Date = parseIsoLocalAsManila(START_RAW)
 export const STUDY_PERIOD_END: Date = parseIsoLocalAsManila(END_RAW)
 
+// Derived from the same two constants above (not a second literal) so a
+// STUDY_PERIOD_START/END env override for staging/tests can't leave a caption
+// quoting the hardcoded declared range — see the Follows-per-100-Visits
+// caption on the Executive Dashboard (docs/raven/Executive_Dashboard_Review.md A2).
+const STUDY_PERIOD_LABEL_FMT = new Intl.DateTimeFormat('en-PH', { month: 'short', year: 'numeric', timeZone: 'Asia/Manila' })
+export const STUDY_PERIOD_LABEL = `${STUDY_PERIOD_LABEL_FMT.format(STUDY_PERIOD_START)} – ${STUDY_PERIOD_LABEL_FMT.format(STUDY_PERIOD_END)}`
+
 export function isInStudyPeriod(publishTime: Date): boolean {
   return publishTime >= STUDY_PERIOD_START && publishTime <= STUDY_PERIOD_END
 }
@@ -50,4 +57,25 @@ export const STUDY_PERIOD_AD_WHERE: Prisma.AdWhereInput = {
 // Mirrors withStudyPeriod for Ad queries — see that function's comment.
 export function withStudyPeriodAd(where?: Prisma.AdWhereInput): Prisma.AdWhereInput {
   return where ? { AND: [where, STUDY_PERIOD_AD_WHERE] } : STUDY_PERIOD_AD_WHERE
+}
+
+// PageMetricDaily was never given a study-period constant when FR-04a was
+// implemented (docs/raven/FR04a_Implementation_and_731st_Post_Response_2026-08-25.md
+// §2 lists FacebookPost and Ad call sites only) — every reader of this table
+// queried it unfiltered, so the Follows-per-100-Visits chart's x-axis ran
+// back to whatever the earliest uploaded row was (April 2025), months before
+// the declared study period, breaking FR-04a's "excluded from all
+// analytical outputs" requirement
+// (docs/raven/Executive_Dashboard_Review.md A2). `date` is Manila-anchored
+// the same way as FacebookPost.publish_time (lib/db/upsert-page-metric.ts).
+export const STUDY_PERIOD_PAGE_METRIC_WHERE: Prisma.PageMetricDailyWhereInput = {
+  date: { gte: STUDY_PERIOD_START, lte: STUDY_PERIOD_END },
+}
+
+// Mirrors withStudyPeriod/withStudyPeriodAd — for the page-metrics screens,
+// which already build their own `{ date: range }` filter from a user-picked
+// date range and need to AND the study-period floor onto it rather than
+// have one silently overwrite the other.
+export function withStudyPeriodPageMetric(where?: Prisma.PageMetricDailyWhereInput): Prisma.PageMetricDailyWhereInput {
+  return where ? { AND: [where, STUDY_PERIOD_PAGE_METRIC_WHERE] } : STUDY_PERIOD_PAGE_METRIC_WHERE
 }

@@ -15,6 +15,7 @@ type Role = 'BUSINESS_OWNER' | 'MARKETING_TEAM' | 'MARKETING_MANAGER'
 interface User {
   id: number
   email: string
+  name: string | null
   role: Role
   created_at: Date
   is_active: boolean
@@ -112,7 +113,17 @@ function CreateUserForm() {
       {open && (
         <form action={async (fd) => { await action(fd); if (!state?.error) setOpen(false) }} className="bg-secondary border border-border rounded-2xl p-6 mb-4">
           <h3 className="font-semibold text-foreground mb-4">Create New User</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label htmlFor="create-user-name" className="block text-xs font-medium text-muted-foreground mb-1">Name</label>
+              <Input
+                id="create-user-name"
+                name="name"
+                type="text"
+                placeholder="Full name"
+                className="w-full border-border focus-visible:ring-ring"
+              />
+            </div>
             <div>
               <label htmlFor="create-user-email" className="block text-xs font-medium text-muted-foreground mb-1">Email</label>
               <Input
@@ -233,6 +244,7 @@ function UserRow({
     <>
       <TableRow className="border-t border-border align-top">
         <TableCell className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell">#{user.id}</TableCell>
+        <TableCell className="px-4 py-3 text-foreground text-sm hidden md:table-cell">{user.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
         <TableCell className="px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="font-medium text-foreground text-sm">{user.email}</span>
@@ -603,6 +615,7 @@ export default function UserManagement({ users, currentUserId }: Props) {
           <TableHeader>
             <TableRow className="bg-secondary">
               <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 hidden sm:table-cell">ID</TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 hidden md:table-cell">Name</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Email</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3">Role</TableHead>
               <TableHead className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-3 hidden md:table-cell">Created</TableHead>

@@ -29,6 +29,13 @@ async function latestUpload(types: UploadType[]) {
 // been uploaded?" before anyone starts, and surfaces gaps between the three
 // export families — nothing here needs new persistence, it's all derived
 // from the existing hierarchy tables + UploadLog's audit trail.
+// Deliberately unfiltered by the study-period bound (lib/data/study-period.ts)
+// unlike every analytical query — this widget's whole purpose is showing the
+// *actual* uploaded date range, gaps and all, so an upload before/after the
+// declared window still needs to surface here rather than be hidden by the
+// same filter analytical outputs use (per
+// docs/raven/FR04a_Implementation_and_731st_Post_Response_2026-08-25.md §2's
+// "left deliberately unfiltered" list).
 export async function getUploadCoverage(): Promise<CoverageRow[]> {
   const [adRange, postRange, pageMetricRange, adLog, postLog, pageLog] = await Promise.all([
     prisma.ad.aggregate({ _min: { reporting_starts: true }, _max: { reporting_starts: true } }),

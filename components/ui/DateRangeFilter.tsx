@@ -39,6 +39,21 @@ function addMonths(d: Date, months: number): Date {
   return copy
 }
 
+// Presets and stepped windows are resolved against `anchor` (the latest
+// uploaded date), not "today" — so a label like "Last 7 days" can silently
+// mean the last 7 days of *uploaded data*, not the calendar week a reader
+// assumes (docs/raven/Executive_Dashboard_Review.md B2). Printing the actual
+// resolved dates next to the selector removes that ambiguity at the point
+// the choice is made, rather than only on the KPI cards below.
+function formatResolvedRange(fromISO: string, toISO: string): string {
+  const from = new Date(`${fromISO}T00:00:00`)
+  const to = new Date(`${toISO}T00:00:00`)
+  const sameYear = from.getFullYear() === to.getFullYear()
+  const fromFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: sameYear ? undefined : 'numeric' }).format(from)
+  const toFmt = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(to)
+  return `${fromFmt} – ${toFmt}`
+}
+
 interface Preset {
   key: string
   label: string
@@ -66,6 +81,13 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [customOpen, setCustomOpen] = useState(false)
+  // The prev/next arrows step the active window by its own width, which
+  // rarely lands back on a named preset — that would otherwise make
+  // `activeLabel` resolve to 'Custom range' and pop the date-input pair
+  // open below, duplicating the dropdown's own "Custom range…" entry
+  // (docs/raven/Executive_Dashboard_Review.md B1). Stepping should only
+  // ever shift the window, never reveal the manual pickers.
+  const [arrowStepped, setArrowStepped] = useState(false)
 
   const refDate = anchor && ISO_DAY.test(anchor) ? new Date(`${anchor}T00:00:00`) : new Date()
   const presets = buildPresets(refDate)
@@ -115,20 +137,22 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
   const windowDays = from && to ? diffDaysInclusive(from, to) : null
 
   const goPrev = useCallback(() => {
-    if (!from || !to || windowDays === null) return
+    if (!from || !to || windowDays === null || isPending) return
     const newTo = addDays(new Date(from), -1)
     const newFrom = addDays(newTo, -(windowDays - 1))
+    setArrowStepped(true)
     setRange({ from: toISODate(newFrom), to: toISODate(newTo) })
-  }, [from, to, windowDays, setRange])
+  }, [from, to, windowDays, isPending, setRange])
 
   const goNext = useCallback(() => {
-    if (!from || !to || windowDays === null) return
+    if (!from || !to || windowDays === null || isPending) return
     const todayISO = toISODate(new Date())
     const newFrom = addDays(new Date(to), 1)
     const newTo = addDays(newFrom, windowDays - 1)
     const cappedTo = toISODate(newTo) > todayISO ? new Date() : newTo
+    setArrowStepped(true)
     setRange({ from: toISODate(newFrom), to: toISODate(cappedTo) })
-  }, [from, to, windowDays, setRange])
+  }, [from, to, windowDays, isPending, setRange])
 
   const nextDisabled = windowDays === null || (to !== undefined && to >= toISODate(new Date()))
 
@@ -157,25 +181,30 @@ export default function DateRangeFilter({ from, to, className = '', anchor }: Da
 
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 text-sm border border-border rounded-lg px-3 py-1.5 text-foreground bg-card hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          {activeLabel}
+          <span className="flex flex-col items-start leading-tight">
+            <span>{activeLabel}</span>
+            {from && to && ISO_DAY.test(from) && ISO_DAY.test(to) && (
+              <span className="text-[10px] font-normal text-muted-foreground tabular">{formatResolvedRange(from, to)}</span>
+            )}
+          </span>
           <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           {presets.map(p => (
-            <DropdownMenuItem key={p.key} onClick={() => { setCustomOpen(false); setRange(p.range()) }}>
+            <DropdownMenuItem key={p.key} onClick={() => { setCustomOpen(false); setArrowStepped(false); setRange(p.range()) }}>
               {p.label}
             </DropdownMenuItem>
           ))}
-          <DropdownMenuItem onClick={() => { setCustomOpen(false); anchor ? setAllTime() : setRange({}) }}>
+          <DropdownMenuItem onClick={() => { setCustomOpen(false); setArrowStepped(false); anchor ? setAllTime() : setRange({}) }}>
             All time
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setCustomOpen(true)}>
+          <DropdownMenuItem onClick={() => { setArrowStepped(false); setCustomOpen(true) }}>
             Custom range&hellip;
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {(customOpen || (activeLabel === 'Custom range')) && (
+      {(customOpen || (activeLabel === 'Custom range' && !arrowStepped)) && (
         <div className="flex items-center gap-1.5">
           <input
             type="date"

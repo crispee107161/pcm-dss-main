@@ -13,6 +13,7 @@ export type AuditEvent =
       id: number
       at: Date
       userEmail: string
+      userName: string | null
       userRole: string
       summary: string
       detail: string
@@ -23,6 +24,7 @@ export type AuditEvent =
       id: number
       at: Date
       userEmail: string
+      userName: string | null
       userRole: string
       summary: string
       detail: string
@@ -32,6 +34,7 @@ export type AuditEvent =
       id: number
       at: Date
       userEmail: string
+      userName: string | null
       userRole: string
       summary: string
       detail: string
@@ -81,12 +84,12 @@ export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
     prisma.uploadLog.findMany({
       orderBy: { uploaded_at: 'desc' },
       take: limit,
-      include: { user: { select: { email: true, role: true } } },
+      include: { user: { select: { email: true, name: true, role: true } } },
     }),
     prisma.categoryAuditLog.findMany({
       orderBy: { created_at: 'desc' },
       take: limit,
-      include: { user: { select: { email: true, role: true } } },
+      include: { user: { select: { email: true, name: true, role: true } } },
     }),
     // SR-L1/L2/L3 — auth and account-admin events (sign-in, lockout, role
     // change, etc.), merged into the same timeline as uploads/category
@@ -95,7 +98,7 @@ export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
     prisma.securityEventLog.findMany({
       orderBy: { at: 'desc' },
       take: limit,
-      include: { user: { select: { email: true, role: true } } },
+      include: { user: { select: { email: true, name: true, role: true } } },
     }),
     prisma.uploadLog.count(),
     prisma.categoryAuditLog.count(),
@@ -107,6 +110,7 @@ export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
     id: log.id,
     at: log.uploaded_at,
     userEmail: log.user.email,
+    userName: log.user.name,
     userRole: log.user.role,
     summary: `${log.status === 'SUCCESS' ? 'Uploaded' : 'Failed to upload'} ${log.filename}`,
     detail: log.status === 'SUCCESS'
@@ -121,6 +125,7 @@ export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
     id: log.id,
     at: log.created_at,
     userEmail: log.user.email,
+    userName: log.user.name,
     userRole: log.user.role,
     summary: `${CATEGORY_ACTION_LABEL[log.action] ?? log.action} — post #${log.facebook_post_id}`,
     detail: `${categoryLabel(log.previous_category)} → ${categoryLabel(log.new_category)}`,
@@ -131,6 +136,7 @@ export async function loadAuditLog(limit = 100): Promise<AuditLogPage> {
     id: log.id,
     at: log.at,
     userEmail: log.user?.email ?? log.actor_email ?? 'unknown',
+    userName: log.user?.name ?? null,
     userRole: log.user?.role ?? '—',
     summary: SECURITY_EVENT_LABEL[log.event_type] ?? log.event_type,
     detail: log.detail ?? '',

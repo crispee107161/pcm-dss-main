@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { rateLimit } from '@/lib/rate-limit'
 import { resolveGroqModel } from '@/lib/groq-model'
-import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
+import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, STUDY_PERIOD_PAGE_METRIC_WHERE } from '@/lib/data/study-period'
 
 export interface ChatMessage {
   role: 'user' | 'model'
@@ -44,7 +44,7 @@ export async function sendChatMessage(history: ChatMessage[], userMessage: strin
       _sum: { reach: true },
     }),
     prisma.followerHistory.findMany({ orderBy: { date: 'desc' }, take: 1 }),
-    prisma.pageMetricDaily.findMany({ orderBy: { date: 'desc' }, take: 7 }),
+    prisma.pageMetricDaily.findMany({ where: STUDY_PERIOD_PAGE_METRIC_WHERE, orderBy: { date: 'desc' }, take: 7 }),
   ])
 
   const totalSpend     = allAds.reduce((s, a) => s + a.amount_spent, 0)

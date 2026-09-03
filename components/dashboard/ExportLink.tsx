@@ -28,7 +28,7 @@ export function ExportLink({ href }: { href: string }) {
       className="flex items-center gap-2 text-sm font-semibold rounded-lg px-3.5 py-2 bg-primary text-primary-foreground hover:bg-[var(--primary-hover)] active:bg-primary/80 transition-colors"
     >
       <DownloadIcon ref={iconRef} size={14} />
-      Export
+      Reports
     </Link>
   )
 }

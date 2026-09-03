@@ -106,7 +106,11 @@ export function ReachTrendChart({ data, compact }: { data: MonthlyAdTrend[]; com
           content={<ChartTooltipContent hideLabel formatter={v => <ChartTooltipRow color={CHART_COLORS.violet} label="Reach" value={Number(v).toLocaleString()} />} />}
         />
         {!compact && <ChartLegend content={<ChartLegendContent />} />}
-        <Line dataKey="total_reach" name="Ad Reach" type="natural" stroke="var(--color-total_reach)" strokeWidth={2} dot={false} />
+        {/* linear + visible dots, not a smoothed curve — this only ever
+            plots 3 monthly points (the "last 3 months" trend convention),
+            and a curve through 3 points draws a saturation shape that isn't
+            in the data (docs/raven/Executive_Dashboard_Review.md B5) */}
+        <Line dataKey="total_reach" name="Ad Reach" type="linear" stroke="var(--color-total_reach)" strokeWidth={2} dot={{ r: 4 }} />
       </LineChart>
     </ChartContainer>
   )
