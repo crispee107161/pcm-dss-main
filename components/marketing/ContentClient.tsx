@@ -360,7 +360,7 @@ function ManagerActionCell({ post }: { post: ContentPostRow }) {
             <DialogHeader>
               <DialogTitle>Finalize as &ldquo;{selected ? selectableLabelText(selected) : ''}&rdquo;?</DialogTitle>
               <DialogDescription>
-                This finalizes the category directly. It can&apos;t be undone from here — a finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
+                This finalizes the category directly. It can&apos;t be undone from here. A finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -386,8 +386,21 @@ function ManagerActionCell({ post }: { post: ContentPostRow }) {
 // four possible reasons and each is a short phrase, so all fired reasons
 // are now shown inline; no expand/collapse state needed.
 function FlagReasonCell({ post }: { post: ContentPostRow }) {
+  // docs/design changes/Upload_and_Content_Review_Revised_v2.md §4.2 — a
+  // bare dash on an unflagged row reads as "no information". But empty
+  // flagReasons alone doesn't mean the two methods agreed — DISAGREEMENT
+  // only fires when both produced a value and they differ (lib/categorize/
+  // flag-reasons.ts), so a post where one method (or neither) hasn't run
+  // yet also has no flags. Gate the "agree" wording on the same
+  // isBatchConfirmEligible predicate the Batch confirm button uses (code
+  // review, 2026-09-03), so this cell can't say "agree" on a post
+  // SuggestionCell is simultaneously showing as "Uncategorised".
   if (post.flagReasons.length === 0) {
-    return <span className="text-muted-foreground text-xs">—</span>
+    return (
+      <span className="text-muted-foreground text-xs">
+        {isBatchConfirmEligible(post) ? 'Both methods agree' : 'Waiting for suggestions'}
+      </span>
+    )
   }
 
   const [primary, ...rest] = rankFlagReasons(post.flagReasons)
@@ -499,8 +512,8 @@ const FLAG_FILTER_OPTIONS: { value: FlagFilter; label: string }[] = [
   { value: 'ALL', label: 'All posts' },
   { value: 'FLAGGED', label: 'Flagged only' },
   { value: 'UNFLAGGED', label: 'Unflagged only' },
-  { value: 'DISAGREEMENT', label: 'Needs judgment — disagreement' },
-  { value: 'UNCLASSIFIED', label: "Needs judgment — couldn't classify" },
+  { value: 'DISAGREEMENT', label: 'Needs judgment (disagreement)' },
+  { value: 'UNCLASSIFIED', label: "Needs judgment (couldn't classify)" },
   { value: 'ENTERTAINMENT_SUGGESTED', label: 'Entertainment suggested' },
   { value: 'SHORT_CAPTION', label: 'Short caption' },
 ]
@@ -643,10 +656,13 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
   }
 
   const allCaughtUp = posts.length === 0
+  const generateHint = llmCooldown > 0
+    ? `Keyword matching runs now. AI is cooling down after the last run, wait ${llmCooldown}s to finish that half.`
+    : 'Runs keyword matching and AI on every post missing a suggestion'
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 flex-wrap">
         <div>
           <h2 className="font-semibold text-foreground">Uncategorised Posts</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -658,8 +674,10 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
             each toast/button fill the row's width instead of shrinking to
             content and sitting stuck on the left with empty space beside it.
             sm:flex-row switches back to natural inline sizing once there's
-            room for them side by side. */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-wrap">
+            room for them side by side. w-full (with the parent now flex-col
+            on mobile too) lets the button row reach the card's edge instead
+            of shrink-wrapping to content width. */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto sm:flex-wrap">
           {generateResult && (
             <p role={generateResult.tone !== 'positive' ? 'alert' : undefined} className={`animate-fade-slide-up text-xs font-medium rounded-lg px-3 py-1.5 border ${
               generateResult.tone === 'negative'
@@ -683,62 +701,56 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
           )}
 
           <TooltipProvider>
-            {role === 'MARKETING_MANAGER' && batchConfirmCountInView > 0 && (
-              // On mobile this is deliberately smaller/lower-weight than
-              // "Generate suggestions" below — two equal-size full-width
-              // pills stacked read as competing primaries and ate a lot of
-              // vertical space above the queue. self-start (overriding the
-              // flex-col parent's default stretch) plus the compact
-              // chip-style sizing signal "secondary, less frequent action";
-              // sm: reverts to matching "Generate suggestions"'s size once
-              // they sit side by side and the hierarchy issue disappears.
-              <Tooltip>
-                <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
-                  <TooltipTrigger
-                    render={
-                      <DialogTrigger
-                        disabled={isPending || generatePending}
-                        render={
-                          <button
-                            type="button"
-                            className="inline-flex self-start items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:self-auto sm:gap-2 sm:px-4 sm:py-2 sm:rounded-xl sm:text-sm sm:font-semibold sm:w-auto"
-                          />
-                        }
-                      />
-                    }
-                  >
-                    {isFiltered ? `Batch confirm in view (${batchConfirmCountInView})` : `Batch confirm agreed (${batchConfirmCountInView})`}
-                  </TooltipTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Confirm {batchConfirmCountInView} unflagged, agreed post{batchConfirmCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
-                      <DialogDescription>
-                        Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here — a finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
-                        {isFiltered && batchConfirmCountOutsideView > 0 && (
-                          <> {batchConfirmCountOutsideView} more eligible post{batchConfirmCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included — clear filters first to confirm everything.</>
-                        )}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setConfirmBatchOpen(false)} className="text-xs">
-                        Cancel
-                      </Button>
-                      <Button type="button" onClick={() => handleBatchConfirm(isFiltered)} className="text-xs">
-                        Confirm {batchConfirmCountInView}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-                <TooltipContent>Finalizes unflagged, agreed posts</TooltipContent>
-              </Tooltip>
-            )}
+            {/* Paired row on mobile: "Generate suggestions" (primary) takes the
+                remaining width, "Batch confirm" (secondary) stays a fixed-width
+                chip beside it — one compact row instead of two stacked
+                full-width pills. sm:contents drops this wrapper from the layout
+                on desktop so both buttons sit exactly as they did before. */}
+            <div className="flex flex-row items-start gap-2 w-full sm:contents">
+              {role === 'MARKETING_MANAGER' && batchConfirmCountInView > 0 && (
+                <Tooltip>
+                  <Dialog open={confirmBatchOpen} onOpenChange={setConfirmBatchOpen}>
+                    <TooltipTrigger
+                      render={
+                        <DialogTrigger
+                          disabled={isPending || generatePending}
+                          render={
+                            <button
+                              type="button"
+                              className="inline-flex shrink-0 items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-foreground bg-card border border-border hover:bg-accent active:bg-accent/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 sm:gap-2 sm:px-4 sm:text-sm sm:font-semibold sm:w-auto"
+                            />
+                          }
+                        />
+                      }
+                    >
+                      {isFiltered ? `Batch confirm in view (${batchConfirmCountInView})` : `Batch confirm agreed (${batchConfirmCountInView})`}
+                    </TooltipTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Confirm {batchConfirmCountInView} unflagged, agreed post{batchConfirmCountInView !== 1 ? 's' : ''}{isFiltered ? ' in this filtered view' : ''}?</DialogTitle>
+                        <DialogDescription>
+                          Finalizes every post where both methods agree and nothing was flagged for review{isFiltered ? ', restricted to your current filter' : ''}. It can&apos;t be undone from here. A finalized post can only be changed afterward from the &ldquo;All&rdquo; filter, one at a time.
+                          {isFiltered && batchConfirmCountOutsideView > 0 && (
+                            <> {batchConfirmCountOutsideView} more eligible post{batchConfirmCountOutsideView !== 1 ? 's are' : ' is'} outside this filter and won&apos;t be included. Clear filters first to confirm everything.</>
+                          )}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setConfirmBatchOpen(false)} className="text-xs">
+                          Cancel
+                        </Button>
+                        <Button type="button" onClick={() => handleBatchConfirm(isFiltered)} className="text-xs">
+                          Confirm {batchConfirmCountInView}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  <TooltipContent>Finalizes unflagged, agreed posts</TooltipContent>
+                </Tooltip>
+              )}
 
-            {role === 'MARKETING_MANAGER' && (() => {
-              const generateHint = llmCooldown > 0
-                ? `Keyword matching runs now — AI is cooling down after the last run, wait ${llmCooldown}s to finish that half`
-                : 'Runs keyword matching and AI on every post missing a suggestion'
-              return (
-                <div className="flex flex-col gap-1 w-full sm:w-auto">
+              {role === 'MARKETING_MANAGER' && (
+                <div className="flex flex-col gap-1 flex-1 min-w-0 sm:flex-none sm:w-auto">
                   <Tooltip>
                     <TooltipTrigger
                       render={
@@ -748,7 +760,7 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
                           disabled={generatePending || posts.length === 0}
                           // hover:bg-[var(--primary-hover)] — see app/globals.css
                           // for why (a real darker shade, not an opacity fade).
-                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-[var(--primary-hover)] active:bg-primary/80 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-not-allowed transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 w-full sm:w-auto"
                         />
                       }
                     >
@@ -756,16 +768,19 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
                     </TooltipTrigger>
                     <TooltipContent>{generateHint}</TooltipContent>
                   </Tooltip>
-                  {/* A fine pointer (mouse/trackpad) gets the hover tooltip above;
-                      a coarse pointer (touch) never triggers hover at all, so the
-                      same text is shown as a caption instead — pointer-fine:hidden
-                      keeps it from also appearing on desktop. */}
-                  <p className="text-xs text-muted-foreground max-w-56 pointer-fine:hidden">
+                  {/* A fine pointer (mouse/trackpad) gets the hover tooltip
+                      above; a coarse pointer (touch) never triggers hover at
+                      all, so the same text is shown as a caption instead —
+                      pointer-fine:hidden keeps it from also appearing on
+                      desktop. Lives in this button's own column (not the row's
+                      left edge) so it reads as scoped to Generate suggestions,
+                      not to Batch confirm beside it. */}
+                  <p className="text-xs text-muted-foreground leading-relaxed pointer-fine:hidden">
                     {generateHint}
                   </p>
                 </div>
-              )
-            })()}
+              )}
+            </div>
           </TooltipProvider>
         </div>
       </div>
@@ -781,8 +796,8 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
             className="h-8 max-w-xs text-xs"
           />
           <Select value={flagFilter} onValueChange={(v) => updateFlagFilter(v as FlagFilter)}>
-            {/* w-64 (not w-56): at text-xs the longest label ("Needs judgment —
-                couldn't classify") needs ~189px against ~182px of content box
+            {/* w-64 (not w-56): at text-xs the longest label ("Needs judgment
+                (couldn't classify)") needs ~189px against ~182px of content box
                 at w-56, so a selected long value was ellipsizing by a
                 character or two in the closed trigger. */}
             <SelectTrigger className="text-xs border-border focus-visible:ring-ring w-64 h-8" size="sm">
@@ -940,7 +955,7 @@ function CategoryEditCell({ post, canEdit, baseRoute }: { post: ContentPostRow; 
     return (
       <div className="flex items-center gap-1.5">
         <CategoryBadge label={post.category_final} />
-        {isGroundTruth && <span className="text-[10px] text-muted-foreground">locked — ground truth</span>}
+        {isGroundTruth && <span className="text-[10px] text-muted-foreground">locked, ground truth</span>}
       </div>
     )
   }
@@ -981,7 +996,7 @@ function CategoryEditCell({ post, canEdit, baseRoute }: { post: ContentPostRow; 
             <SelectValue>{categoryEditLabel}</SelectValue>
           </SelectTrigger>
           <SelectContent align="start" alignItemWithTrigger={false}>
-            <SelectItem value="" label="— None —">— None —</SelectItem>
+            <SelectItem value="" label="(None)">(None)</SelectItem>
             {SELECTABLE_LABELS.map((label) => (
               <SelectItem key={label} value={label} label={selectableLabelText(label)}>{selectableLabelText(label)}</SelectItem>
             ))}

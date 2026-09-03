@@ -27,7 +27,7 @@ export function selectableLabelText(label: CategoryLabel): string {
 }
 
 export function categoryEditLabel(value: string | null): string {
-  if (value === null || value === '') return '— None —'
+  if (value === null || value === '') return '(None)'
   return selectableLabelText(value as CategoryLabel)
 }
 

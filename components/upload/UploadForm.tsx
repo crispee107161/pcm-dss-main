@@ -94,10 +94,15 @@ export default function UploadForm() {
           <span className="text-primary">click to browse</span>
         </p>
         <p className="text-muted-foreground text-xs mt-1">
-          Select multiple files at once — Ads, Posts, Page Metrics, Follower History, Page Viewers, and Demographics
+          Select multiple files at once: Ads, Posts, Page Metrics, Follower History, Page Viewers, and Demographics
         </p>
         <p className="text-muted-foreground text-xs mt-1">
-          Records are matched by date, so re-uploading the same file is safe and never creates duplicates.
+          {/* docs/design changes/Upload_and_Content_Review_Revised_v2.md §4.1 —
+              the old copy said "matched by date", which is only true for
+              page-level metrics. Posts match on Post ID, ads on advertisement
+              identifier and reporting period. Worded generically rather than
+              naming all three, since the matching field differs by file type. */}
+          Records are matched on the identifier each file type carries, so re-uploading the same file is safe and never creates duplicates.
         </p>
         <input
           ref={fileInputRef}
@@ -149,7 +154,7 @@ export default function UploadForm() {
                   )}
                   {entry.result?.status === 'NEEDS_CONFIRMATION' && entry.result.existing && entry.result.incoming && (
                     <div className="mt-1.5 rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-xs text-foreground">
-                      <p className="font-medium">This period is already loaded — {entry.result.periodLabel}</p>
+                      <p className="font-medium">This period is already loaded ({entry.result.periodLabel})</p>
                       <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground">
                         <span>Currently held:</span>
                         <span className="tabular">
@@ -216,7 +221,7 @@ export default function UploadForm() {
                   {entry.result?.status === 'SUCCESS' && entry.result.rejected_rows && entry.result.rejected_rows.length > 0 && (
                     <div className="mt-1.5 rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-xs text-foreground">
                       <p className="font-medium text-status-warning">
-                        {entry.result.records_rejected} row{entry.result.records_rejected === 1 ? '' : 's'} rejected — the rest of the file was still processed.
+                        {entry.result.records_rejected} row{entry.result.records_rejected === 1 ? '' : 's'} rejected. The rest of the file was still processed.
                       </p>
                       <ul className="mt-1 space-y-0.5 text-muted-foreground">
                         {entry.result.rejected_rows.map((r, i) => (
@@ -336,7 +341,7 @@ export default function UploadForm() {
               {successCount > 0 && (
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {totalInserted === 0 && totalUpdated === 0 && totalRejected === 0
-                    ? 'No changes — your data was already current.'
+                    ? 'No changes. Your data was already current.'
                     : [
                         totalInserted > 0 && `${totalInserted} records added`,
                         totalUpdated > 0 && `${totalUpdated} updated`,

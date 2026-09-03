@@ -54,10 +54,10 @@ export function computeFlagReasons({ categoryKeyword, categoryLlm, caption }: Fl
 // ENTERTAINMENT_SUGGESTED's text names the category, not which method
 // suggested it.
 export const FLAG_REASON_SHORT: Record<CategoryFlagReason, string> = {
-  DISAGREEMENT: 'Needs your judgment — this post sits between two categories',
-  UNCLASSIFIED: "Needs your judgment — the system couldn't determine a category",
-  ENTERTAINMENT_SUGGESTED: 'Check this one — entertainment is often over-suggested',
-  SHORT_CAPTION: 'Open the post — the caption is too short to classify from text',
+  DISAGREEMENT: 'Needs your judgment. This post sits between two categories',
+  UNCLASSIFIED: "Needs your judgment. The system couldn't determine a category",
+  ENTERTAINMENT_SUGGESTED: 'Check this one. Entertainment is often over-suggested',
+  SHORT_CAPTION: 'Open the post. The caption is too short to classify from text',
 }
 
 // docs/raven/S4_Presentation_Fix.md §2.2 — most-informative-first. Two
