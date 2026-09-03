@@ -107,10 +107,9 @@ export function ReachTrendChart({ data, compact }: { data: MonthlyAdTrend[]; com
           content={<ChartTooltipContent hideLabel formatter={v => <ChartTooltipRow color={CHART_COLORS.violet} label="Reach" value={Number(v).toLocaleString()} />} />}
         />
         {!compact && <ChartLegend content={<ChartLegendContent />} />}
-        {/* linear + visible dots, not a smoothed curve — this only ever
-            plots 3 monthly points (the "last 3 months" trend convention),
-            and a curve through 3 points draws a saturation shape that isn't
-            in the data (docs/raven/Executive_Dashboard_Review.md B5) */}
+        {/* linear + visible dots, not a smoothed curve — with few monthly
+            points, a curve draws a saturation shape that isn't in the data
+            (docs/raven/Executive_Dashboard_Review.md B5) */}
         <Line dataKey="total_reach" name="Ad Reach" type="linear" stroke="var(--color-total_reach)" strokeWidth={2} dot={{ r: 4 }} />
       </LineChart>
     </ChartContainer>
@@ -253,11 +252,10 @@ function IndexedComparisonChart<T extends { period: string }>({
           <LineChart accessibilityLayer data={indexedData} margin={{ left: 12, right: 12 }}>
             <CartesianGrid vertical={false} />
             <XAxis dataKey="period" tickLine={false} axisLine={false} tickMargin={8} />
-            {/* Scaled to the data range, not a fixed 0-based domain - this
-                only ever plots two or three monthly points whose values can
-                sit entirely within a narrow band (e.g. 77-102%), and a
-                0-based axis compresses that band into the top of the plot,
-                hiding the decline it exists to show
+            {/* Scaled to the data range, not a fixed 0-based domain - with
+                few monthly points, values can sit entirely within a narrow
+                band (e.g. 77-102%), and a 0-based axis compresses that band
+                into the top of the plot, hiding the decline it exists to show
                 (docs/dashboard/Dashboard_Plain_Language_and_Notation.md §2).
                 Each accessor pads 10 beyond its own rounded bound (not just
                 floor/ceil to the nearest 10) so the domain can never

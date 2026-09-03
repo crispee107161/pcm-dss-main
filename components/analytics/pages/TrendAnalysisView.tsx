@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
+import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, STUDY_PERIOD_START, STUDY_PERIOD_END } from '@/lib/data/study-period'
+import { manilaYearMonth, monthIndex, rowsInMonth, MANILA_MONTH_LABEL_FMT, type TargetMonth } from '@/lib/data/month-buckets'
 import { PageHeader } from '@/components/nav/PageHeader'
 import TrendCharts from '@/components/marketing/TrendCharts'
 import { computeTrendInsight } from '@/lib/insights/trend-insight'
@@ -9,30 +10,43 @@ function formatPHP(value: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(value)
 }
 
-const TARGET_PERIODS = [
-  { label: 'Sep 2025', year: 2025, month: 9 },
-  { label: 'Dec 2025', year: 2025, month: 12 },
-  { label: 'Jan 2026', year: 2026, month: 1 },
-]
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-function monthIndex(year: number, month: number): number {
-  return year * 12 + (month - 1)
+// Derived from whatever months actually have ad or post data (Manila
+// wall-clock, via manilaYearMonth — see lib/data/month-buckets.ts), rather
+// than a fixed literal list — a hardcoded set silently excludes any month
+// uploaded after the list was last updated (see lib/data/study-period.ts's
+// STUDY_PERIOD_LABEL comment for the same "derive, don't hardcode"
+// rationale), and using ad dates alone would drop post-only months.
+function deriveTargetPeriods(dates: Date[]): TargetMonth[] {
+  const seen = new Map<number, TargetMonth>()
+  for (const d of dates) {
+    const { year, month } = manilaYearMonth(d)
+    const idx = monthIndex(year, month)
+    if (!seen.has(idx)) {
+      seen.set(idx, { label: MANILA_MONTH_LABEL_FMT.format(d), year, month })
+    }
+  }
+  return Array.from(seen.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([, period]) => period)
 }
 
-function missingMonthLabels(): string[] {
+// Anchored to the declared study period (not just the span of uploaded
+// data) so a dataset that only covers e.g. Jun-Jul 2026 still reports the
+// other ten study-period months as missing, instead of going quiet because
+// there's no gap *between* the two months that exist.
+function missingMonthLabels(coveredIndices: Set<number>): string[] {
   const missing: string[] = []
-  for (let i = 0; i < TARGET_PERIODS.length - 1; i++) {
-    const a = TARGET_PERIODS[i]
-    const b = TARGET_PERIODS[i + 1]
-    const gap = monthIndex(b.year, b.month) - monthIndex(a.year, a.month)
-    for (let step = 1; step < gap; step++) {
-      const idx = monthIndex(a.year, a.month) + step
-      const year = Math.floor(idx / 12)
-      const month = (idx % 12) + 1
-      missing.push(`${MONTH_NAMES[month - 1]} ${year}`)
-    }
+  const start = manilaYearMonth(STUDY_PERIOD_START)
+  const end = manilaYearMonth(STUDY_PERIOD_END)
+  const startIdx = monthIndex(start.year, start.month)
+  const endIdx = monthIndex(end.year, end.month)
+  for (let idx = startIdx; idx <= endIdx; idx++) {
+    if (coveredIndices.has(idx)) continue
+    const year = Math.floor(idx / 12)
+    const month = (idx % 12) + 1
+    // Mid-month UTC instant so formatting with the Manila-zone label
+    // formatter can never roll over into an adjacent month.
+    missing.push(MANILA_MONTH_LABEL_FMT.format(new Date(Date.UTC(year, month - 1, 15))))
   }
   return missing
 }
@@ -63,13 +77,13 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
     }),
   ])
 
-  const adTrends = TARGET_PERIODS.map(({ label, year, month }) => {
-    const start = new Date(year, month - 1, 1)
-    const end = new Date(year, month, 0, 23, 59, 59)
-    const ads = allAds.filter(a => {
-      const d = new Date(a.reporting_starts)
-      return d >= start && d <= end
-    })
+  const targetPeriods = deriveTargetPeriods([
+    ...allAds.map(a => new Date(a.reporting_starts)),
+    ...allPosts.map(p => new Date(p.publish_time)),
+  ])
+
+  const adTrends = targetPeriods.map(({ label, year, month }) => {
+    const ads = rowsInMonth(allAds, a => new Date(a.reporting_starts), { label, year, month })
     const total_spend = ads.reduce((s, a) => s + a.amount_spent, 0)
     const total_inquiries = ads.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
     const total_reach = ads.reduce((s, a) => s + (a.reach ?? 0), 0)
@@ -77,20 +91,15 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
     return { period: label, total_spend, total_inquiries, total_reach, ad_count }
   })
 
-  const postTrends = TARGET_PERIODS.map(({ label, year, month }) => {
-    const start = new Date(year, month - 1, 1)
-    const end = new Date(year, month, 0, 23, 59, 59)
-    const posts = allPosts.filter(p => {
-      const d = new Date(p.publish_time)
-      return d >= start && d <= end
-    })
+  const postTrends = targetPeriods.map(({ label, year, month }) => {
+    const posts = rowsInMonth(allPosts, p => new Date(p.publish_time), { label, year, month })
     const post_count = posts.length
     const avg_engagement_rate = post_count > 0 ? posts.reduce((s, p) => s + p.engagement_rate, 0) / post_count : 0
     const total_reach = posts.reduce((s, p) => s + p.reach, 0)
     return { period: label, post_count, avg_engagement_rate, total_reach }
   })
 
-  const lastTwoPeriods = TARGET_PERIODS.slice(-2)
+  const lastTwoPeriods = targetPeriods.slice(-2)
   const isConsecutive = lastTwoPeriods.length === 2
     && monthIndex(lastTwoPeriods[1].year, lastTwoPeriods[1].month) - monthIndex(lastTwoPeriods[0].year, lastTwoPeriods[0].month) === 1
 
@@ -104,7 +113,8 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
     ? ((lastTwo[1].total_inquiries - lastTwo[0].total_inquiries) / lastTwo[0].total_inquiries) * 100
     : null
 
-  const missingMonths = missingMonthLabels()
+  const coveredMonthIndices = new Set(targetPeriods.map(p => monthIndex(p.year, p.month)))
+  const missingMonths = missingMonthLabels(coveredMonthIndices)
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -112,7 +122,7 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
 
       {missingMonths.length > 0 && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5 mb-6 text-xs text-amber-700 dark:text-amber-300">
-          Data is available for {TARGET_PERIODS.map(p => p.label).join(', ')} only — {missingMonths.join(', ')} {missingMonths.length === 1 ? 'is' : 'are'} not in the uploaded dataset.
+          Data is available for {targetPeriods.map(p => p.label).join(', ')} only — {missingMonths.join(', ')} {missingMonths.length === 1 ? 'is' : 'are'} not in the uploaded dataset.
         </div>
       )}
 
