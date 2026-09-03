@@ -199,9 +199,11 @@ Jarque-Bera:      JB = 193.144      p ≈ 1.15e-42
 | | In-sample | 10-fold CV | Baseline (predict median) |
 |---|---|---|---|
 | R² | 0.548 | 0.397 | — |
-| MAE | ₱3.93 | ₱4.15 | ₱5.83 |
-| RMSE | ₱6.20 | ₱6.55 | ₱8.77 |
-| MAPE | 18.2% | 19.1% | 26.9% |
+| MAE | ₱3.93 | ₱4.15 | ₱5.86 |
+| RMSE | ₱6.20 | ₱6.55 | ₱8.79 |
+| MAPE | 18.2% | 19.1% | 27.1% |
+
+*(Baseline column updated 2026-09-03: the baseline is now scored on the same per-fold CV partition as the model, not an in-sample baseline compared against an out-of-fold model — see `docs/raven/Four_Open_Decisions_2026-09-03.md` §2. Previous figures: MAE ₱5.83, RMSE ₱8.77, MAPE 26.9%.)*
 
 > CV numbers depend on the shuffle. If your fold assignment differs from a Python `KFold(shuffle=True, random_state=42)`, expect CV R² around 0.39–0.41 and MAPE around 19–20% rather than an exact match. The **direction and magnitude** must hold: modest shrinkage from in-sample, and a clear margin over the median baseline.
 

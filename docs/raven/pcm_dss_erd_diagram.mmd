@@ -1,0 +1,192 @@
+erDiagram
+    User {
+        int id PK
+        text email
+        text password_hash
+        Role role
+        bool is_active
+        int failed_login_attempts
+        timestamp last_failed_login_at
+        bool is_locked
+        timestamp locked_at
+        bool must_change_password
+        timestamp temp_password_expires_at
+    }
+
+    UploadLog {
+        int id PK
+        int user_id FK
+        UploadType upload_type
+        text filename
+        UploadStatus status
+        int records_inserted
+        int records_updated
+        int records_unchanged
+        int records_superseded
+        int records_rejected
+    }
+
+    CategoryAuditLog {
+        int id PK
+        int user_id FK
+        CategoryAuditAction action
+        int facebook_post_id "not FK"
+        CategoryLabel previous_category
+        CategoryLabel new_category
+    }
+
+    SecurityEventLog {
+        int id PK
+        SecurityEventType event_type
+        int user_id FK "nullable, ON DELETE SET NULL"
+        text actor_email
+        int target_user_id "not FK"
+        text outcome
+    }
+
+    InterCoderReliability {
+        int id PK
+        int n
+        double percent_agreement
+        double kappa
+    }
+
+    FacebookPost {
+        int id PK
+        text post_id
+        timestamp publish_time
+        text post_type
+        int reach
+        double engagement_rate
+        CategoryLabel category_keyword
+        CategoryLabel category_llm
+        CategoryLabel category_final
+        CategoryFinalSource category_final_source
+        int category_final_assigned_by_id FK
+        CategoryLabel category_pending
+        int category_pending_by FK
+    }
+
+    Ad {
+        int id PK
+        timestamp reporting_starts
+        timestamp reporting_ends
+        text ad_id
+        text ad_name
+        text campaign_id
+        double amount_spent
+        int impressions
+    }
+
+    Category {
+        int id PK
+        text name
+    }
+
+    Keyword {
+        int id PK
+        text word
+        int category_id FK
+    }
+
+    LlmClassificationRun {
+        int id PK
+        text model_name
+        int[] post_ids "not FK, batch reference"
+        text raw_response
+        bool succeeded
+    }
+
+    CorrelationAssumptionRun {
+        int id PK
+        int n
+        CorrelationMethod method
+        double coefficient
+        double p_value
+    }
+
+    RegressionRun {
+        int id PK
+        RegressionSpecification specification
+        int n
+        double r_squared
+        double adj_r_squared
+        double f_statistic
+    }
+
+    RegressionModel {
+        int id PK
+        double intercept
+        double coefficient
+        double r_squared
+        int n
+    }
+
+    SimulationResult {
+        int id PK
+        int user_id FK
+        double amount_spent_input
+        double projected_inquiries
+        int model_id "not FK"
+    }
+
+    PageMetricDaily {
+        int id PK
+        timestamp date
+        int follows
+        int interactions
+        int link_clicks
+        int views
+        int viewers
+        int visits
+    }
+
+    FollowerHistory {
+        int id PK
+        timestamp date
+        int followers
+        int daily_change
+    }
+
+    PageViewers {
+        int id PK
+        timestamp date
+        int total_viewers
+        int new_viewers
+        int returning_viewers
+    }
+
+    FollowerGender {
+        int id PK
+        text gender
+        double distribution
+    }
+
+    FollowerTerritory {
+        int id PK
+        text territory
+        double distribution
+    }
+
+    FollowerAgeGender {
+        int id PK
+        text age_bracket
+        double men_distribution
+        double women_distribution
+    }
+
+    FollowerAudienceRank {
+        int id PK
+        text category
+        text label
+        double distribution
+    }
+
+    %% ---- 7 FK relationships ----
+    User ||--o{ UploadLog : "uploaded"
+    User ||--o{ CategoryAuditLog : "acted"
+    User ||--o{ SecurityEventLog : "triggered (nullable)"
+    User ||--o{ FacebookPost : "finalized (category_final_assigned_by_id)"
+    User ||--o{ FacebookPost : "proposed (category_pending_by)"
+    User ||--o{ SimulationResult : "ran (legacy)"
+    Category ||--o{ Keyword : "contains"

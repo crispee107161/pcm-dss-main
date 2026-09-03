@@ -172,14 +172,16 @@ Compute the same three metrics for a naive model that predicts **the median CPI*
 | | In-sample | 10-fold CV | Baseline (predict median) |
 |---|---|---|---|
 | R² | 0.548 | 0.397 | — |
-| MAE | ₱3.93 | ₱4.15 | ₱5.83 |
-| RMSE | ₱6.20 | ₱6.55 | ₱8.77 |
-| MAPE | 18.2% | 19.1% | 26.9% |
+| MAE | ₱3.93 | ₱4.15 | ₱5.86 |
+| RMSE | ₱6.20 | ₱6.55 | ₱8.79 |
+| MAPE | 18.2% | 19.1% | 27.1% |
 
 Two things this shows, and the UI should make both visible:
 
 - **Shrinkage is modest** (0.548 → 0.397). A large gap would signal overfitting; this doesn't.
-- **The model beats the naive baseline by ~29%** on held-out data (MAE ₱4.15 vs ₱5.83; MAPE 19.1% vs 26.9%). That comparison is the actual evidence the model is worth anything.
+- **The model beats the naive baseline by ~29%** on held-out data (MAE ₱4.15 vs ₱5.86; MAPE 19.1% vs 27.1%). That comparison is the actual evidence the model is worth anything.
+
+*(Baseline column updated 2026-09-03: the baseline is now scored on the same per-fold CV partition as the model, rather than an in-sample baseline compared against an out-of-fold model — see `docs/raven/Owner_Deadlock_Baseline_and_Deletions_2026-09-02.md` and `docs/raven/Four_Open_Decisions_2026-09-03.md` §2. Previous figures: MAE ₱5.83, RMSE ₱8.77, MAPE 26.9%, ~29% improvement — the improvement percentage is essentially unchanged since both MAE figures moved together. Note the app's own live TS implementation reports CV MAE ₱4.19, not the ₱4.15 in this table — `mulberry32` cannot byte-match Python's `KFold(shuffle=True, random_state=42)`, only the fold-size rule was matched — so the live-computed improvement is ~28.5%, not exactly this table's ~29%.)*
 
 ---
 
@@ -221,7 +223,7 @@ Order matters — assumptions first, then coefficients, then accuracy. That orde
 |---|---|
 | "predicts", "will cost", "forecast" | "is associated with", "at the level associated with its characteristics" |
 | "X causes lower CPI" | "X is associated with lower CPI" |
-| "accuracy: 81%" | "MAPE 19.1% on held-out data, vs 26.9% for a median baseline" |
+| "accuracy: 81%" | "MAPE 19.1% on held-out data, vs 27.1% for a median baseline" |
 | "the model shows engagement doesn't matter" | "the engagement rate coefficient is not stable across specifications" |
 
 ---
