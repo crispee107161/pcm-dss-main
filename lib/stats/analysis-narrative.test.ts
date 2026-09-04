@@ -10,12 +10,14 @@ import {
   accuracySentence,
   residualSentence,
   predictorStabilitySentence,
+  budgetReallocationFindingSentence,
 } from './analysis-narrative'
 import type { RankingComparisonResult } from './ranking-comparison'
 import type { CategoryDistributionRow } from './category-distribution'
 import type { CorrelationSelectionResult } from './correlation-selection'
 import type { CohortCurve } from './ad-lifecycle'
 import type { AccuracyPanel, ResidualDiagnostic, SpecificationComparison } from './fr31-regression'
+import type { BudgetReallocationResult } from './budget-reallocation'
 
 function ranking(overrides: Partial<RankingComparisonResult> = {}): RankingComparisonResult {
   return {
@@ -344,5 +346,114 @@ describe('predictorStabilitySentence', () => {
 
   it('returns null when there is nothing to compare', () => {
     expect(predictorStabilitySentence(null)).toBeNull()
+  })
+})
+
+function budgetReallocation(overrides: Partial<BudgetReallocationResult> = {}): BudgetReallocationResult {
+  return {
+    minSpendThreshold: 1000,
+    n: 108,
+    quartiles: [
+      { quartile: 1, n: 27, spend: 318933, inquiries: 27045, cpi: 11.79 },
+      { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0 },
+      { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0 },
+      { quartile: 4, n: 27, spend: 59745, inquiries: 1988, cpi: 30.05 },
+    ],
+    q1Cpi: 11.79,
+    q4Spend: 59745,
+    q4Inquiries: 1988,
+    q4Ads: [],
+    counterfactualInquiries: 5067,
+    additionalInquiries: 3079,
+    ...overrides,
+  }
+}
+
+describe('budgetReallocationFindingSentence', () => {
+  it('states the Q1/Q4 CPI comparison and the multiplier in plain language', () => {
+    const s = budgetReallocationFindingSentence(budgetReallocation())
+    expect(s).toContain('27 most efficient advertisements')
+    expect(s).toContain('27 least efficient advertisements')
+    expect(s).not.toMatch(/\bn\s*=/)
+  })
+
+  it('states the study period rather than a hardcoded month count', () => {
+    const s = budgetReallocationFindingSentence(budgetReallocation())
+    expect(s).toContain('spent real money over the same period (')
+    expect(s).not.toContain('twelve months')
+  })
+
+  it('uses singular phrasing for a one-ad quartile instead of "The 1 most efficient advertisement"', () => {
+    const s = budgetReallocationFindingSentence(
+      budgetReallocation({
+        quartiles: [
+          { quartile: 1, n: 1, spend: 1000, inquiries: 100, cpi: 10 },
+          { quartile: 2, n: 1, spend: 0, inquiries: 0, cpi: 0 },
+          { quartile: 3, n: 1, spend: 0, inquiries: 0, cpi: 0 },
+          { quartile: 4, n: 1, spend: 2000, inquiries: 50, cpi: 40 },
+        ],
+      })
+    )
+    expect(s).toContain('The single most efficient advertisement')
+    expect(s).toContain('The single least efficient advertisement')
+    expect(s).not.toMatch(/The 1 /)
+  })
+
+  it('drops the multiplier clause when Q1 and Q4 are near parity instead of saying "1 times as much"', () => {
+    const s = budgetReallocationFindingSentence(
+      budgetReallocation({
+        quartiles: [
+          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10 },
+          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0 },
+          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0 },
+          { quartile: 4, n: 27, spend: 27000, inquiries: 2500, cpi: 10.8 },
+        ],
+      })
+    )
+    expect(s).toContain('for about the same result')
+    expect(s).not.toMatch(/1 times as much/)
+  })
+
+  it('rounds the multiplier to the nearest half rather than showing raw precision', () => {
+    const s = budgetReallocationFindingSentence(
+      budgetReallocation({
+        quartiles: [
+          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10 },
+          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0 },
+          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0 },
+          { quartile: 4, n: 27, spend: 27000, inquiries: 1080, cpi: 25 },
+        ],
+      })
+    )
+    expect(s).toContain('2.5 times as much')
+  })
+
+  it('says "twice" for a ratio close to two rather than a decimal', () => {
+    const s = budgetReallocationFindingSentence(
+      budgetReallocation({
+        quartiles: [
+          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10 },
+          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0 },
+          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0 },
+          { quartile: 4, n: 27, spend: 27000, inquiries: 1350, cpi: 20 },
+        ],
+      })
+    )
+    expect(s).toContain('twice as much')
+  })
+
+  it('returns null when a quartile has no eligible ads', () => {
+    expect(
+      budgetReallocationFindingSentence(
+        budgetReallocation({
+          quartiles: [
+            { quartile: 1, n: 0, spend: 0, inquiries: 0, cpi: 0 },
+            { quartile: 2, n: 0, spend: 0, inquiries: 0, cpi: 0 },
+            { quartile: 3, n: 0, spend: 0, inquiries: 0, cpi: 0 },
+            { quartile: 4, n: 0, spend: 0, inquiries: 0, cpi: 0 },
+          ],
+        })
+      )
+    ).toBeNull()
   })
 })

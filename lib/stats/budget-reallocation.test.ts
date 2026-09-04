@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeBudgetReallocation, type AdForReallocation } from './budget-reallocation'
+import { computeBudgetReallocation, sortQ4WorstFirst, type AdForReallocation, type ReallocationAd } from './budget-reallocation'
 
 function ad(overrides: Partial<AdForReallocation> & { ad_id: string }): AdForReallocation {
   return {
@@ -81,5 +81,33 @@ describe('computeBudgetReallocation', () => {
     expect(result.quartiles).toHaveLength(4)
     expect(result.quartiles.every(q => q.n === 0)).toBe(true)
     expect(result.additionalInquiries).toBe(0)
+  })
+})
+
+function reallocationAd(overrides: Partial<ReallocationAd> & { ad_id: string; cpi: number }): ReallocationAd {
+  return {
+    ad_name: overrides.ad_id,
+    ad_set_name: 'set-1',
+    spend: 0,
+    inquiries: 0,
+    ...overrides,
+  }
+}
+
+describe('sortQ4WorstFirst', () => {
+  it('puts the highest-CPI ad first, regardless of input order', () => {
+    const q4Ads = [
+      reallocationAd({ ad_id: 'least-bad', cpi: 25 }),
+      reallocationAd({ ad_id: 'worst', cpi: 60 }),
+      reallocationAd({ ad_id: 'middle', cpi: 40 }),
+    ]
+    const sorted = sortQ4WorstFirst(q4Ads)
+    expect(sorted.map(a => a.ad_id)).toEqual(['worst', 'middle', 'least-bad'])
+  })
+
+  it('does not mutate the input array', () => {
+    const q4Ads = [reallocationAd({ ad_id: 'a', cpi: 10 }), reallocationAd({ ad_id: 'b', cpi: 20 })]
+    sortQ4WorstFirst(q4Ads)
+    expect(q4Ads.map(a => a.ad_id)).toEqual(['a', 'b'])
   })
 })

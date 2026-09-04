@@ -190,7 +190,7 @@ export default function ReportView({ variant, role, data, canExport = true, hide
 
       {!hideMonetary && <Section variant={variant} title="Budget Reallocation">
         <MetricGrid variant={variant} items={budgetReallocation.quartiles.map((q) => ({
-          label: `Q${q.quartile} (n=${q.n})`,
+          label: `Q${q.quartile} (${q.n} advertisements)`,
           value: q.cpi > 0 ? formatPHP(q.cpi) : '—',
           sub: `${formatPHP(q.spend)} spend, ${q.inquiries} conversations`,
         }))} />
@@ -198,13 +198,13 @@ export default function ReportView({ variant, role, data, canExport = true, hide
           <p className={`text-sm mt-4 ${isPrint ? 'text-neutral-700' : 'text-gray-700'}`}>
             Q4&apos;s {formatPHP(budgetReallocation.q4Spend)} spend produced {budgetReallocation.q4Inquiries}{'\u00A0'}conversations;
             the same spend at Q1&apos;s rate would have generated {Math.round(budgetReallocation.counterfactualInquiries)}{'\u00A0'}conversations
-            based on recorded results — a retrospective comparison, not a forecast.
+            based on recorded results: a retrospective comparison, not a forecast.
           </p>
         )}
         <Caveat variant={variant} label="Method">
-          Messaging ads with spend ≥ {formatPHP(budgetReallocation.minSpendThreshold)} (n={budgetReallocation.n}), ranked by cost per
+          Messaging ads with spend ≥ {formatPHP(budgetReallocation.minSpendThreshold)} ({budgetReallocation.n} advertisements), ranked by cost per
           messaging conversation and split into four equal-size groups. The minimum-spend filter guards against regression to the
-          mean — an unfiltered split would put low-volume, noisy-CPI ads in the worst quartile regardless of quality.
+          mean (an unfiltered split would put low-volume, noisy-CPI ads in the worst quartile regardless of quality).
         </Caveat>
       </Section>}
 

@@ -46,6 +46,14 @@ export interface BudgetReallocationResult {
 
 const EMPTY_QUARTILES: QuartileSummary[] = [1, 2, 3, 4].map(q => ({ quartile: q as 1 | 2 | 3 | 4, n: 0, spend: 0, inquiries: 0, cpi: 0 }))
 
+// q4Ads arrives in ascending-CPI order (least-bad-of-the-worst first, see
+// computeBudgetReallocation below), so the true worst ads sit at the end.
+// The UI's "worst 10" toggle needs them worst-first — extracted as a pure
+// function so the sort direction is unit-testable without React.
+export function sortQ4WorstFirst(q4Ads: ReallocationAd[]): ReallocationAd[] {
+  return [...q4Ads].sort((a, b) => b.cpi - a.cpi)
+}
+
 // A monthly-export ad can have up to 12 rows (one per uploaded month) — sum
 // spend/inquiries per Ad ID first, then compute one CPI per ad, matching the
 // aggregation rule in data_catalog.md §4.3 (sum-then-divide, never mean-of-ratios).

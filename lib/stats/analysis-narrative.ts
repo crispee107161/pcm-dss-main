@@ -14,6 +14,8 @@ import type { CorrelationSelectionResult } from './correlation-selection'
 import type { CohortCurve } from './ad-lifecycle'
 import type { AccuracyPanel, ResidualDiagnostic, SpecificationComparison, Fr31Term } from './fr31-regression'
 import { FR31_TERM_LABEL } from './fr31-regression'
+import type { BudgetReallocationResult } from './budget-reallocation'
+import { STUDY_PERIOD_LABEL } from '@/lib/data/study-period'
 import { CATEGORY_LABEL_DISPLAY } from '@/lib/category-label'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
 
@@ -21,6 +23,20 @@ type Fr31Predictor = SpecificationComparison['predictor']
 
 function formatPHP(v: number): string {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 2 }).format(v)
+}
+
+// Matches the Budget Reallocation cards' own formatter (BudgetReallocation.tsx),
+// which rounds to whole pesos — a sentence beside those cards must not show
+// more precision than the cards it is describing.
+function formatPHPWhole(v: number): string {
+  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(v)
+}
+
+// Rounds to the nearest half so "2.5 times" reads naturally instead of
+// "2.47 times" — plain language, not a computed statistic.
+function formatRatio(ratio: number): string {
+  const rounded = Math.round(ratio * 2) / 2
+  return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1)
 }
 
 function pluralize(n: number, noun: string, pluralNoun = `${noun}s`): string {
@@ -86,6 +102,34 @@ export function categoryDistributionSentence(rows: CategoryDistributionRow[]): s
     return `Every category has a similar median engagement rate, around ${best.engagementRate.median.toFixed(2)}%.`
   }
   return `${CATEGORY_LABEL_DISPLAY[best.category]} has the highest median engagement rate (${best.engagementRate.median.toFixed(2)}%); ${CATEGORY_LABEL_DISPLAY[worst.category]} has the lowest (${worst.engagementRate.median.toFixed(2)}%).`
+}
+
+// FR-18 (docs/raven/Budget_Reallocation_Review.md §4) — plain-language
+// finding for the Budget Reallocation screen's quartile cards, generated
+// from the same figures the cards display so it can never disagree with
+// them, and recomputed automatically when the minimum-spend threshold
+// selector changes the population.
+// "The 27 most efficient advertisements" / "The single most efficient
+// advertisement" — a bare "The 1 most efficient advertisement" reads as
+// broken grammar, and the ₱300 threshold can produce quartiles this small.
+function groupLabel(n: number, superlative: string): string {
+  return n === 1 ? `The single ${superlative} advertisement` : `The ${n} ${superlative} advertisements`
+}
+
+export function budgetReallocationFindingSentence(result: BudgetReallocationResult): string | null {
+  const q1 = result.quartiles[0]
+  const q4 = result.quartiles[3]
+  if (!q1 || !q4 || q1.n === 0 || q4.n === 0 || q1.cpi <= 0) return null
+
+  const ratio = q4.cpi / q1.cpi
+  const rounded = Math.round(ratio * 2) / 2
+  // Below ~1.15x the multiplier reads as noise ("1 times as much" is both
+  // ungrammatical and not a meaningful finding) — drop the clause instead.
+  const comparisonClause = rounded <= 1
+    ? 'for about the same result'
+    : `for the same result, ${rounded >= 1.9 && rounded <= 2.1 ? 'twice' : `${formatRatio(rounded)} times`} as much`
+
+  return `${groupLabel(q1.n, 'most efficient')} generated inquiries at ${formatPHPWhole(q1.cpi)} each. ${groupLabel(q4.n, 'least efficient')} paid ${formatPHPWhole(q4.cpi)} ${comparisonClause}. Both groups spent real money over the same period (${STUDY_PERIOD_LABEL}).`
 }
 
 // §3.1's accepted correction — the old "most posts are unlabelled" caveat

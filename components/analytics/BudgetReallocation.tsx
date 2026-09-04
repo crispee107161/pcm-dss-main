@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { useProgressRouter } from '@/lib/navigation-progress'
-import type { BudgetReallocationResult } from '@/lib/stats/budget-reallocation'
+import { sortQ4WorstFirst, type BudgetReallocationResult } from '@/lib/stats/budget-reallocation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -64,7 +64,7 @@ function QuartileCard({ q }: { q: BudgetReallocationResult['quartiles'][number] 
       <p className="sensitive text-2xl font-bold text-foreground mt-1">{q.n > 0 ? formatPHP(q.cpi) : '—'}</p>
       <p className="text-xs text-muted-foreground mt-1">cost per messaging conversation</p>
       <div className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground space-y-1">
-        <p>{q.n} ads</p>
+        <p>{q.n} advertisements</p>
         <p className="sensitive">{formatPHP(q.spend)} spend</p>
         <p className="sensitive">{q.inquiries.toLocaleString()} inquiries</p>
       </div>
@@ -72,8 +72,13 @@ function QuartileCard({ q }: { q: BudgetReallocationResult['quartiles'][number] 
   )
 }
 
+// Defaults below 100% (docs/raven/Budget_Reallocation_Review.md §2): landing
+// on the maximum possible claim on first paint overstates before the user
+// has done anything.
+const DEFAULT_REALLOCATION_PCT = 50
+
 export function ReallocationSlider({ result }: { result: BudgetReallocationResult }) {
-  const [pct, setPct] = useState(100)
+  const [pct, setPct] = useState(DEFAULT_REALLOCATION_PCT)
 
   const reallocatedSpend = (result.q4Spend * pct) / 100
   const additionalAtPct = (result.additionalInquiries * pct) / 100
@@ -113,7 +118,10 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
         </div>
         <div>
           <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Additional, based on recorded results</p>
-          <p className="sensitive text-lg font-bold text-status-positive">+{Math.round(additionalAtPct).toLocaleString()}</p>
+          {/* Neutral, not text-status-positive (docs/raven/Budget_Reallocation_Review.md
+              §2): green reads as a promise, but this is a retrospective
+              comparison, not a recommendation. */}
+          <p className="sensitive text-lg font-bold text-foreground">+{Math.round(additionalAtPct).toLocaleString()}</p>
         </div>
       </div>
 
@@ -124,24 +132,29 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
   )
 }
 
-export function BudgetReallocationView({ result }: { result: BudgetReallocationResult }) {
+// Shows the worst 10 by default, the rest behind a toggle (docs/raven/
+// Budget_Reallocation_Review.md §5) — the operational value is in the worst
+// few, and the full list stays available rather than foregrounded. Mirrors
+// the show-all pattern in ResidualDiagnosticTable.tsx.
+const Q4_TABLE_COLLAPSED_COUNT = 10
+
+function Q4Table({ q4Ads }: { q4Ads: BudgetReallocationResult['q4Ads'] }) {
+  const [showAll, setShowAll] = useState(false)
+  const worstFirst = sortQ4WorstFirst(q4Ads)
+  const visible = showAll ? worstFirst : worstFirst.slice(0, Q4_TABLE_COLLAPSED_COUNT)
+  const hasMore = q4Ads.length > Q4_TABLE_COLLAPSED_COUNT
+
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {result.quartiles.map(q => <QuartileCard key={q.quartile} q={q} />)}
+    <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+      <div className="px-5 py-4 border-b border-border">
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
+          Worst-performing advertisements ({q4Ads.length} total)
+        </p>
       </div>
-
-      <ReallocationSlider result={result} />
-
-      <div className="bg-card rounded-2xl card-shadow overflow-hidden">
-        <div className="px-5 py-4 border-b border-border">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
-            Q4 ads (n={result.q4Ads.length}) — worst cost per messaging conversation
-          </p>
-        </div>
-        {result.q4Ads.length === 0 ? (
-          <p className="text-muted-foreground text-sm p-6">No ads meet the minimum-spend threshold.</p>
-        ) : (
+      {q4Ads.length === 0 ? (
+        <p className="text-muted-foreground text-sm p-6">No advertisements meet the minimum-spend threshold.</p>
+      ) : (
+        <>
           <div className="table-scroll">
             <Table>
               <TableHeader>
@@ -154,7 +167,7 @@ export function BudgetReallocationView({ result }: { result: BudgetReallocationR
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {result.q4Ads.map(a => (
+                {visible.map(a => (
                   <TableRow key={a.ad_id} className="border-t border-border hover:bg-secondary/50/50 transition-colors">
                     <TableCell className="px-4 py-3">
                       <span className="font-medium text-foreground text-sm max-w-xs truncate block" title={a.ad_name}>{a.ad_name}</span>
@@ -170,8 +183,40 @@ export function BudgetReallocationView({ result }: { result: BudgetReallocationR
               </TableBody>
             </Table>
           </div>
-        )}
+
+          {hasMore && (
+            <div className="border-t border-border px-5 py-3 flex items-center justify-between">
+              <p className="text-[11px] text-muted-foreground">
+                {showAll ? `All ${q4Ads.length} advertisements` : `Showing the worst ${Q4_TABLE_COLLAPSED_COUNT} of ${q4Ads.length}`}
+              </p>
+              <button
+                onClick={() => setShowAll(v => !v)}
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                {showAll ? (
+                  <> Show less <span>▲</span> </>
+                ) : (
+                  <> Show all {q4Ads.length} advertisements <span>▼</span> </>
+                )}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+export function BudgetReallocationView({ result }: { result: BudgetReallocationResult }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {result.quartiles.map(q => <QuartileCard key={q.quartile} q={q} />)}
       </div>
+
+      <ReallocationSlider result={result} />
+
+      <Q4Table q4Ads={result.q4Ads} />
     </div>
   )
 }
