@@ -15,7 +15,9 @@ function formatPHP(value: number) {
 // than a fixed literal list — a hardcoded set silently excludes any month
 // uploaded after the list was last updated (see lib/data/study-period.ts's
 // STUDY_PERIOD_LABEL comment for the same "derive, don't hardcode"
-// rationale), and using ad dates alone would drop post-only months.
+// rationale), and using ad dates alone would drop post-only months. Both
+// reporting_starts and reporting_ends are included so an ad row spanning a
+// month boundary still marks every month it touches as covered.
 function deriveTargetPeriods(dates: Date[]): TargetMonth[] {
   const seen = new Map<number, TargetMonth>()
   for (const d of dates) {
@@ -69,7 +71,7 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
   const [allAds, allPosts] = await Promise.all([
     prisma.ad.findMany({
       where: STUDY_PERIOD_AD_WHERE,
-      select: { reporting_starts: true, amount_spent: true, total_messaging_contacts: true, reach: true },
+      select: { reporting_starts: true, reporting_ends: true, amount_spent: true, total_messaging_contacts: true, reach: true },
     }),
     prisma.facebookPost.findMany({
       where: STUDY_PERIOD_POST_WHERE,
@@ -79,6 +81,7 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
 
   const targetPeriods = deriveTargetPeriods([
     ...allAds.map(a => new Date(a.reporting_starts)),
+    ...allAds.map(a => new Date(a.reporting_ends)),
     ...allPosts.map(p => new Date(p.publish_time)),
   ])
 
@@ -122,7 +125,7 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
 
       {missingMonths.length > 0 && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5 mb-6 text-xs text-amber-700 dark:text-amber-300">
-          Data is available for {targetPeriods.map(p => p.label).join(', ')} only — {missingMonths.join(', ')} {missingMonths.length === 1 ? 'is' : 'are'} not in the uploaded dataset.
+          Data is available for {targetPeriods.map(p => p.label).join(', ')} only. {missingMonths.join(', ')} {missingMonths.length === 1 ? 'is' : 'are'} not in the uploaded dataset.
         </div>
       )}
 
