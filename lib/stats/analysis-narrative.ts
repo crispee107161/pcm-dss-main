@@ -15,6 +15,7 @@ import type { CohortCurve } from './ad-lifecycle'
 import type { AccuracyPanel, ResidualDiagnostic, SpecificationComparison, Fr31Term } from './fr31-regression'
 import { FR31_TERM_LABEL } from './fr31-regression'
 import type { BudgetReallocationResult } from './budget-reallocation'
+import type { GroupRankingRow, CampaignAdSetMapping } from './ad-set-ranking'
 import { STUDY_PERIOD_LABEL } from '@/lib/data/study-period'
 import { CATEGORY_LABEL_DISPLAY } from '@/lib/category-label'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
@@ -130,6 +131,33 @@ export function budgetReallocationFindingSentence(result: BudgetReallocationResu
     : `for the same result, ${rounded >= 1.9 && rounded <= 2.1 ? 'twice' : `${formatRatio(rounded)} times`} as much`
 
   return `${groupLabel(q1.n, 'most efficient')} generated inquiries at ${formatPHPWhole(q1.cpi)} each. ${groupLabel(q4.n, 'least efficient')} paid ${formatPHPWhole(q4.cpi)} ${comparisonClause}. Both groups spent real money over the same period (${STUDY_PERIOD_LABEL}).`
+}
+
+// docs/raven/Rankings_Review.md §2/§2.1 — states the reason "By Ad Set" and
+// "By Campaign" show identical figures, computed fresh on every load rather
+// than asserted as a permanent fact about the account.
+export function sameGroupingsSentence(mapping: CampaignAdSetMapping): string {
+  if (mapping.allOneToOne) {
+    return 'Each campaign in this account contains exactly one ad set, so these two groupings show the same advertisements under different names.'
+  }
+  const n = mapping.multiAdSetCampaignCount
+  const verb = n === 1 ? 'contains' : 'contain'
+  return `${n} ${pluralize(n, 'campaign')} ${verb} more than one ad set, so the two groupings differ.`
+}
+
+// docs/raven/Rankings_Review.md §5 — plain-language finding above the Ad Set
+// / Campaign tables, generated from the same rows the table renders so it
+// can never disagree with them. "noun" is 'ad set' or 'campaign' (singular);
+// only groups that recorded at least one messaging conversation (a ratio to
+// report) count toward the "N ad sets that recorded messaging conversations"
+// clause — a zero-conversation group has no CPI to be most or least efficient.
+export function rankingsFindingSentence(rows: GroupRankingRow[], noun: string): string | null {
+  const withCpi = rows.filter((r): r is GroupRankingRow & { cpi: number } => r.cpi !== null)
+  if (withCpi.length < 2) return null
+  const sorted = [...withCpi].sort((a, b) => a.cpi - b.cpi)
+  const best = sorted[0]
+  const worst = sorted[sorted.length - 1]
+  return `The most efficient ${noun} generated inquiries at ${formatPHPWhole(best.cpi)} each and the least efficient at ${formatPHPWhole(worst.cpi)}, across ${withCpi.length} ${pluralize(withCpi.length, noun)} that recorded messaging conversations.`
 }
 
 // §3.1's accepted correction — the old "most posts are unlabelled" caveat

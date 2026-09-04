@@ -3,7 +3,7 @@ import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, STUDY_PERIOD_START, STU
 import { manilaYearMonth, monthIndex, rowsInMonth, MANILA_MONTH_LABEL_FMT, type TargetMonth } from '@/lib/data/month-buckets'
 import { PageHeader } from '@/components/nav/PageHeader'
 import TrendCharts from '@/components/marketing/TrendCharts'
-import { computeTrendInsight } from '@/lib/insights/trend-insight'
+import { computeTrendInsight, type PeriodDataCompleteness } from '@/lib/insights/trend-insight'
 import InsightHeader from '@/components/analytics/InsightHeader'
 
 function formatPHP(value: number) {
@@ -51,6 +51,20 @@ function missingMonthLabels(coveredIndices: Set<number>): string[] {
     missing.push(MANILA_MONTH_LABEL_FMT.format(new Date(Date.UTC(year, month - 1, 15))))
   }
   return missing
+}
+
+// docs/raven/Trend_Analysis_Corrections_and_Confidence_Decision.md §3.1 — a
+// period only certifies as "fully present" when every ad row bucketed into
+// it (by reporting_starts, matching adTrends' own bucketing above) also has
+// its reporting_ends within that same calendar month. A row spanning a
+// month boundary means this period's total is partly attributable to the
+// row's other month too, not a clean single-month figure.
+function isPeriodFullyPresent(monthAds: { reporting_ends: Date }[], year: number, month: number): boolean {
+  if (monthAds.length === 0) return false
+  return monthAds.every(a => {
+    const end = manilaYearMonth(new Date(a.reporting_ends))
+    return end.year === year && end.month === month
+  })
 }
 
 function DeltaBadge({ value }: { value: number | null }) {
@@ -106,7 +120,17 @@ export default async function TrendAnalysisView({ emptyStateMessage }: TrendAnal
   const isConsecutive = lastTwoPeriods.length === 2
     && monthIndex(lastTwoPeriods[1].year, lastTwoPeriods[1].month) - monthIndex(lastTwoPeriods[0].year, lastTwoPeriods[0].month) === 1
 
-  const insight = computeTrendInsight(adTrends, isConsecutive)
+  const periodCompleteness: PeriodDataCompleteness[] = targetPeriods.map(({ label, year, month }, i) => ({
+    isFullyPresent: isPeriodFullyPresent(
+      rowsInMonth(allAds, a => new Date(a.reporting_starts), { label, year, month }),
+      year,
+      month,
+    ),
+    hasAdRecords: adTrends[i].ad_count > 0,
+    hasOrganicRecords: postTrends[i].post_count > 0,
+  }))
+
+  const insight = computeTrendInsight(adTrends, isConsecutive, periodCompleteness)
 
   const lastTwo = adTrends.slice(-2)
   const spendDelta = lastTwo.length === 2 && lastTwo[0].total_spend > 0

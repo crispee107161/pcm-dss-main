@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rankByAdSet, rankByCampaign, MIN_ADS_FOR_CONFIDENCE, type AdForGroupRanking } from './ad-set-ranking'
+import { rankByAdSet, rankByCampaign, checkCampaignAdSetMapping, MIN_ADS_FOR_CONFIDENCE, type AdForGroupRanking } from './ad-set-ranking'
 import { FR31_RESULT_TYPE } from './fr31-regression'
 
 function ad(overrides: Partial<AdForGroupRanking> & { ad_id: string }): AdForGroupRanking {
@@ -108,5 +108,38 @@ describe('rankByCampaign', () => {
     ]
     const rows = rankByCampaign(ads)
     expect(new Set(rows.map(r => r.id))).toEqual(new Set(['camp-A', 'camp-B']))
+  })
+})
+
+describe('checkCampaignAdSetMapping', () => {
+  it('reports one-to-one when every campaign has exactly one ad set', () => {
+    const ads = [
+      ad({ ad_id: 'a1', campaign_id: 'camp-A', ad_set_id: 'set-A' }),
+      ad({ ad_id: 'a2', campaign_id: 'camp-B', ad_set_id: 'set-B' }),
+    ]
+    const mapping = checkCampaignAdSetMapping(ads)
+    expect(mapping.allOneToOne).toBe(true)
+    expect(mapping.multiAdSetCampaignCount).toBe(0)
+  })
+
+  it('counts campaigns containing more than one ad set, not the extra ad sets themselves', () => {
+    const ads = [
+      ad({ ad_id: 'a1', campaign_id: 'camp-A', ad_set_id: 'set-A' }),
+      ad({ ad_id: 'a2', campaign_id: 'camp-A', ad_set_id: 'set-B' }), // same campaign, 2nd ad set
+      ad({ ad_id: 'a3', campaign_id: 'camp-A', ad_set_id: 'set-C' }), // same campaign, 3rd ad set
+      ad({ ad_id: 'a4', campaign_id: 'camp-B', ad_set_id: 'set-D' }),
+    ]
+    const mapping = checkCampaignAdSetMapping(ads)
+    expect(mapping.allOneToOne).toBe(false)
+    expect(mapping.multiAdSetCampaignCount).toBe(1) // camp-A only, not 3
+  })
+
+  it('considers every row, not just messaging ones — this is a structural account fact', () => {
+    const ads = [
+      ad({ ad_id: 'a1', campaign_id: 'camp-A', ad_set_id: 'set-A', result_type: 'Link clicks' }),
+      ad({ ad_id: 'a2', campaign_id: 'camp-A', ad_set_id: 'set-B', result_type: 'Link clicks' }),
+    ]
+    const mapping = checkCampaignAdSetMapping(ads)
+    expect(mapping.allOneToOne).toBe(false)
   })
 })

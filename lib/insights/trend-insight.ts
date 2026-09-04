@@ -7,7 +7,7 @@ export interface TrendPeriodPoint {
   total_inquiries: number
 }
 
-export type Confidence = 'medium' | 'low'
+export type Confidence = 'high' | 'medium' | 'low'
 
 export interface TrendInsight {
   confidence: Confidence
@@ -15,13 +15,46 @@ export interface TrendInsight {
   detail: string
 }
 
+// docs/raven/Trend_Analysis_Corrections_and_Confidence_Decision.md §3.1 — one
+// entry per period in the `periods` array passed to computeTrendInsight,
+// aligned by index. All three flags are about the DATA, not the comparison
+// itself, so they're computed by the caller (which owns the raw ad/post
+// rows) and passed in rather than re-derived here.
+export interface PeriodDataCompleteness {
+  // True when every ad row bucketed into this period's totals also has its
+  // reporting_ends within the same calendar month — i.e. none of them spill
+  // into the next month, so this period's spend/inquiries aren't secretly a
+  // partial-month figure. False (not merely "unknown") when the period has
+  // no ad rows at all, since there is nothing to certify as complete.
+  isFullyPresent: boolean
+  hasAdRecords: boolean
+  hasOrganicRecords: boolean
+}
+
+// Reliable requires all three of §3.1's conditions; Rough guide is anything
+// sound but limited (any one of them missing); Weak signal is decided
+// earlier, before this runs, whenever there isn't even a valid delta to
+// report (see the null-delta branch below) — unchanged by this widening.
+function classifyConfidence(
+  isConsecutive: boolean,
+  prev: PeriodDataCompleteness | undefined,
+  curr: PeriodDataCompleteness | undefined,
+): Confidence {
+  if (!isConsecutive || !prev || !curr) return 'medium'
+  const bothFullyPresent = prev.isFullyPresent && curr.isFullyPresent
+  const bothHaveBothSources = prev.hasAdRecords && prev.hasOrganicRecords && curr.hasAdRecords && curr.hasOrganicRecords
+  return bothFullyPresent && bothHaveBothSources ? 'high' : 'medium'
+}
+
 export function computeTrendInsight(
   periods: TrendPeriodPoint[],
   isConsecutive: boolean,
+  completeness: PeriodDataCompleteness[] = [],
 ): TrendInsight | null {
   const lastTwo = periods.slice(-2)
   if (lastTwo.length < 2) return null
   const [prev, curr] = lastTwo
+  const [prevCompleteness, currCompleteness] = completeness.slice(-2)
 
   const spendDelta = prev.total_spend > 0
     ? ((curr.total_spend - prev.total_spend) / prev.total_spend) * 100
@@ -57,7 +90,7 @@ export function computeTrendInsight(
   }
 
   return {
-    confidence: isConsecutive ? 'medium' : 'low',
+    confidence: classifyConfidence(isConsecutive, prevCompleteness, currCompleteness),
     headline,
     detail: detailParts.join(' '),
   }

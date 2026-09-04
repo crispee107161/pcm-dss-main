@@ -105,3 +105,27 @@ export function rankByAdSet(ads: AdForGroupRanking[]): GroupRankingRow[] {
 export function rankByCampaign(ads: AdForGroupRanking[]): GroupRankingRow[] {
   return rankByGroup(ads, a => a.campaign_id, a => a.campaign_name)
 }
+
+export interface CampaignAdSetMapping {
+  // True when every campaign contains exactly one ad set — the structural
+  // fact that makes "By Ad Set" and "By Campaign" identical
+  // (docs/raven/Rankings_Review.md §2). Callers should pass the same
+  // messaging-filtered rows that feed rankByAdSet/rankByCampaign, so this
+  // can never disagree with the tables it's captioning. Must be recomputed
+  // on every load, not assumed static — the client's data is one-to-one
+  // today but a new campaign with two ad sets would make this false without
+  // anything else on screen changing.
+  allOneToOne: boolean
+  multiAdSetCampaignCount: number
+}
+
+export function checkCampaignAdSetMapping(ads: AdForGroupRanking[]): CampaignAdSetMapping {
+  const campaignToAdSets = new Map<string, Set<string>>()
+  for (const ad of ads) {
+    const adSetIds = campaignToAdSets.get(ad.campaign_id) ?? new Set<string>()
+    adSetIds.add(ad.ad_set_id)
+    campaignToAdSets.set(ad.campaign_id, adSetIds)
+  }
+  const multiAdSetCampaignCount = [...campaignToAdSets.values()].filter(adSetIds => adSetIds.size > 1).length
+  return { allOneToOne: multiAdSetCampaignCount === 0, multiAdSetCampaignCount }
+}

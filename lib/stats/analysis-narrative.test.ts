@@ -11,6 +11,8 @@ import {
   residualSentence,
   predictorStabilitySentence,
   budgetReallocationFindingSentence,
+  sameGroupingsSentence,
+  rankingsFindingSentence,
 } from './analysis-narrative'
 import type { RankingComparisonResult } from './ranking-comparison'
 import type { CategoryDistributionRow } from './category-distribution'
@@ -18,6 +20,7 @@ import type { CorrelationSelectionResult } from './correlation-selection'
 import type { CohortCurve } from './ad-lifecycle'
 import type { AccuracyPanel, ResidualDiagnostic, SpecificationComparison } from './fr31-regression'
 import type { BudgetReallocationResult } from './budget-reallocation'
+import type { GroupRankingRow } from './ad-set-ranking'
 
 function ranking(overrides: Partial<RankingComparisonResult> = {}): RankingComparisonResult {
   return {
@@ -455,5 +458,66 @@ describe('budgetReallocationFindingSentence', () => {
         })
       )
     ).toBeNull()
+  })
+})
+
+describe('sameGroupingsSentence', () => {
+  it('states the one-to-one fact plainly when every campaign has exactly one ad set', () => {
+    const s = sameGroupingsSentence({ allOneToOne: true, multiAdSetCampaignCount: 0 })
+    expect(s).toContain('exactly one ad set')
+    expect(s).toContain('same advertisements under different names')
+  })
+
+  it('names the count and switches to the "differ" wording when some campaigns have more than one ad set', () => {
+    const s = sameGroupingsSentence({ allOneToOne: false, multiAdSetCampaignCount: 3 })
+    expect(s).toContain('3 campaigns contain more than one ad set')
+    expect(s).toContain('the two groupings differ')
+  })
+
+  it('uses singular grammar for exactly one affected campaign', () => {
+    const s = sameGroupingsSentence({ allOneToOne: false, multiAdSetCampaignCount: 1 })
+    expect(s).toContain('1 campaign contains more than one ad set')
+    expect(s).not.toContain('1 campaigns')
+  })
+})
+
+function groupRow(overrides: Partial<GroupRankingRow> & { id: string }): GroupRankingRow {
+  return {
+    name: overrides.id,
+    adCount: 5,
+    spend: 1000,
+    inquiries: 100,
+    cpi: 10,
+    lowConfidence: false,
+    ...overrides,
+  }
+}
+
+describe('rankingsFindingSentence', () => {
+  it('names the most and least efficient group by CPI, and the group count that recorded conversations', () => {
+    const rows = [
+      groupRow({ id: 'a', cpi: 12 }),
+      groupRow({ id: 'b', cpi: 26 }),
+      groupRow({ id: 'c', cpi: 18 }),
+    ]
+    const s = rankingsFindingSentence(rows, 'ad set')
+    expect(s).toContain('₱12')
+    expect(s).toContain('₱26')
+    expect(s).toContain('3 ad sets')
+  })
+
+  it('excludes zero-conversion groups (null CPI) from the count', () => {
+    const rows = [
+      groupRow({ id: 'a', cpi: 12 }),
+      groupRow({ id: 'b', cpi: 26 }),
+      groupRow({ id: 'c', cpi: null }),
+    ]
+    const s = rankingsFindingSentence(rows, 'campaign')
+    expect(s).toContain('2 campaigns')
+  })
+
+  it('returns null when fewer than two groups have a CPI to compare', () => {
+    expect(rankingsFindingSentence([groupRow({ id: 'a', cpi: 12 })], 'ad set')).toBeNull()
+    expect(rankingsFindingSentence([], 'ad set')).toBeNull()
   })
 })

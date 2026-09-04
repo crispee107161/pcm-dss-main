@@ -33,7 +33,7 @@ export default function AdSetRankingTable({ rows, idLabel }: { rows: GroupRankin
                 {row.lowConfidence && (
                   <span
                     className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-status-warning/10 text-status-warning flex-shrink-0"
-                    title={`Fewer than ${MIN_ADS_FOR_CONFIDENCE} ads — CPI here is noisier than the groups above`}
+                    title={`Fewer than ${MIN_ADS_FOR_CONFIDENCE} ads: CPI here is noisier than the groups above`}
                   >
                     Low confidence
                   </span>
