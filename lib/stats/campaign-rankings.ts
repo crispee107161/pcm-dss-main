@@ -1,4 +1,5 @@
 import { monthKey } from '@/lib/data/month-buckets'
+import { FR31_RESULT_TYPE } from './fr31-regression'
 
 // One row per advertisement per calendar month (mvp.md §6's 93-column
 // monthly export). An advertisement that ran four months contributes four
@@ -13,6 +14,7 @@ export interface AdForRanking {
   impressions: number
   link_clicks: number | null
   total_messaging_contacts: number | null
+  result_type: string | null
   reach: number | null
   reporting_starts: Date
   reporting_ends: Date
@@ -25,6 +27,20 @@ export interface AggregatedAd {
   name: string
   adSetName: string
   amountSpent: number
+  // Spend summed only from rows where result_type is FR31_RESULT_TYPE
+  // ("Messaging conversations started"). Filtering on result_type directly,
+  // not on `total_messaging_contacts !== null`, matters: total_messaging_contacts
+  // is null both for a non-messaging row AND for a messaging row whose
+  // "Results" cell was blank in the CSV (lib/csv/validate-ads.ts's
+  // parseIntOrNull returns null, not 0, for a blank cell) — the null-proxy
+  // would silently drop that second case's real messaging spend too, under-
+  // counting the numerator this time instead of over-counting it. Matches
+  // fr31-regression.ts's own choice to filter on result_type rather than a
+  // derived column. Cost per inquiry must divide by this, not amountSpent —
+  // a mixed ad that also ran non-messaging months would otherwise have
+  // non-messaging spend inflate its CPI numerator while the denominator
+  // stays messaging-only (docs/raven/Top_Ads_Accepted_and_Filter_Question.md §2).
+  messagingSpend: number
   impressions: number
   linkClicks: number
   messagingContacts: number
@@ -90,6 +106,7 @@ export function aggregateAdsById(ads: AdForRanking[]): AggregatedAd[] {
       name: ad.ad_name,
       adSetName: ad.ad_set_name,
       amountSpent: 0,
+      messagingSpend: 0,
       impressions: 0,
       linkClicks: 0,
       messagingContacts: 0,
@@ -101,6 +118,7 @@ export function aggregateAdsById(ads: AdForRanking[]): AggregatedAd[] {
       name: ad.ad_name,
       adSetName: ad.ad_set_name,
       amountSpent: existing.amountSpent + ad.amount_spent,
+      messagingSpend: existing.messagingSpend + (ad.result_type === FR31_RESULT_TYPE ? ad.amount_spent : 0),
       impressions: existing.impressions + ad.impressions,
       linkClicks: existing.linkClicks + (ad.link_clicks ?? 0),
       messagingContacts: existing.messagingContacts + (ad.total_messaging_contacts ?? 0),
@@ -145,11 +163,12 @@ export function rankByReach(ads: AggregatedAd[], limit = DEFAULT_LIMIT): RankedA
     .slice(0, limit)
 }
 
-// Lower cost per messaging conversation is better — rank ascending.
+// Lower cost per messaging conversation is better — rank ascending. Divides
+// by messagingSpend, not amountSpent — see AggregatedAd.messagingSpend.
 export function rankByCostPerInquiry(ads: AggregatedAd[], limit = DEFAULT_LIMIT): RankedAd[] {
   return ads
-    .filter(a => a.amountSpent > 0 && a.messagingContacts >= MIN_INQUIRIES_FOR_CPI)
-    .map(a => toRankedAd(a, a.amountSpent / a.messagingContacts))
+    .filter(a => a.messagingSpend > 0 && a.messagingContacts >= MIN_INQUIRIES_FOR_CPI)
+    .map(a => toRankedAd(a, a.messagingSpend / a.messagingContacts))
     .sort((a, b) => a.value - b.value)
     .slice(0, limit)
 }
@@ -179,7 +198,7 @@ export function rankByCostPerClick(ads: AggregatedAd[], limit = DEFAULT_LIMIT): 
 // rank* return a count too, so the existing RankedAd[] return shape (used
 // directly as RankRow elsewhere) doesn't need to change.
 export function countEligibleForCostPerInquiry(ads: AggregatedAd[]): number {
-  return ads.filter(a => a.amountSpent > 0 && a.messagingContacts >= MIN_INQUIRIES_FOR_CPI).length
+  return ads.filter(a => a.messagingSpend > 0 && a.messagingContacts >= MIN_INQUIRIES_FOR_CPI).length
 }
 
 export function countEligibleForCtr(ads: AggregatedAd[]): number {

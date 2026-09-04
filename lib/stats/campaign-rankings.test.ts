@@ -13,14 +13,24 @@ import {
   type AdForRanking,
   type AggregatedAd,
 } from './campaign-rankings'
+import { FR31_RESULT_TYPE } from './fr31-regression'
 
 function adRow(overrides: Partial<AdForRanking> & { ad_id: string; ad_name: string }): AdForRanking {
+  const total_messaging_contacts = overrides.total_messaging_contacts ?? null
   return {
     ad_set_name: 'set-1',
     amount_spent: 0,
     impressions: 0,
     link_clicks: null,
-    total_messaging_contacts: null,
+    total_messaging_contacts,
+    // Mirrors lib/csv/validate-ads.ts's derivation (messaging row -> both
+    // set, non-messaging row -> both null), so tests that only set
+    // total_messaging_contacts keep behaving correctly under the fix that
+    // filters messagingSpend on result_type. Override result_type directly
+    // to test the case where the two diverge (a messaging row with a blank
+    // "Results" CSV cell, where total_messaging_contacts is null but
+    // result_type is still FR31_RESULT_TYPE).
+    result_type: total_messaging_contacts !== null ? FR31_RESULT_TYPE : null,
     reach: null,
     reporting_starts: new Date('2026-01-01'),
     reporting_ends: new Date('2026-01-31'),
@@ -29,10 +39,15 @@ function adRow(overrides: Partial<AdForRanking> & { ad_id: string; ad_name: stri
 }
 
 function ad(overrides: Partial<AggregatedAd> & { name: string }): AggregatedAd {
+  const amountSpent = overrides.amountSpent ?? 0
   return {
     ad_id: overrides.name,
     adSetName: 'set-1',
-    amountSpent: 0,
+    amountSpent,
+    // Defaults to amountSpent (all-messaging ad) so existing CPI tests that
+    // only set amountSpent keep behaving as a pure-messaging ad; tests for
+    // the mixed-spend case override messagingSpend explicitly.
+    messagingSpend: amountSpent,
     impressions: 0,
     linkClicks: 0,
     messagingContacts: 0,
@@ -92,6 +107,35 @@ describe('aggregateAdsById', () => {
     expect(aggregated.linkClicks).toBe(0)
     expect(aggregated.messagingContacts).toBe(0)
     expect(aggregated.reach).toBe(0)
+  })
+
+  it('sums messagingSpend only from rows with result_type = "Messaging conversations started", unlike amountSpent which sums every row', () => {
+    // docs/raven/Top_Ads_Accepted_and_Filter_Question.md §2: a mixed ad that
+    // ran both a messaging month and a non-messaging month must not have the
+    // non-messaging month's spend counted toward its cost-per-inquiry numerator.
+    const rows = [
+      adRow({ ad_id: 'a1', ad_name: 'mixed', amount_spent: 100, total_messaging_contacts: 5 }), // messaging month
+      adRow({ ad_id: 'a1', ad_name: 'mixed', amount_spent: 400, total_messaging_contacts: null }), // non-messaging month
+    ]
+    const [aggregated] = aggregateAdsById(rows)
+    expect(aggregated.amountSpent).toBe(500)
+    expect(aggregated.messagingSpend).toBe(100)
+    expect(aggregated.messagingContacts).toBe(5)
+  })
+
+  it('counts a messaging row\'s spend even when total_messaging_contacts is null because the CSV\'s Results cell was blank', () => {
+    // The filter is on result_type, not on total_messaging_contacts !== null.
+    // A messaging-type row with an unparsable/blank "Results" cell still has
+    // total_messaging_contacts = null (lib/csv/validate-ads.ts), but its
+    // spend is still real messaging spend and must not be dropped from the
+    // numerator — that would be the mirror-image bug (CPI deflated instead
+    // of inflated).
+    const rows = [
+      adRow({ ad_id: 'a1', ad_name: 'blank-results', amount_spent: 100, result_type: FR31_RESULT_TYPE, total_messaging_contacts: null }),
+    ]
+    const [aggregated] = aggregateAdsById(rows)
+    expect(aggregated.messagingSpend).toBe(100)
+    expect(aggregated.messagingContacts).toBe(0)
   })
 })
 
@@ -165,6 +209,17 @@ describe('rankByCostPerInquiry', () => {
     expect(rankByCostPerInquiry(ads)).toHaveLength(10)
     expect(rankByCostPerInquiry(ads, 3)).toHaveLength(3)
     expect(rankByCostPerInquiry([])).toEqual([])
+  })
+
+  it('divides by messaging-only spend, not total spend, for an ad with a mixed messaging/non-messaging month', () => {
+    const rows = [
+      adRow({ ad_id: 'a1', ad_name: 'mixed', amount_spent: 100, total_messaging_contacts: 5 }), // messaging month
+      adRow({ ad_id: 'a1', ad_name: 'mixed', amount_spent: 400, total_messaging_contacts: null }), // non-messaging month
+    ]
+    const [aggregated] = aggregateAdsById(rows)
+    const ranked = rankByCostPerInquiry([aggregated])
+    // Correct: 100 (messaging spend) / 5 = 20. Bug would give 500 / 5 = 100.
+    expect(ranked[0].value).toBe(20)
   })
 
   it('sums spend and messaging across an ad\'s months before dividing, not the mean of per-month ratios', () => {
@@ -260,6 +315,21 @@ describe('countEligibleFor*', () => {
       ad({ name: 'not-eligible-cpi', amountSpent: 100, messagingContacts: 1 }),
     ]
     expect(countEligibleForCostPerInquiry(ads)).toBe(1)
+
+    // countEligibleForCostPerInquiry filters on messagingSpend, not
+    // amountSpent — this case only exercises that if messagingSpend
+    // genuinely diverges from amountSpent (the ad() fixture defaults
+    // messagingSpend to amountSpent, which would mask this).
+    const rows = [
+      adRow({ ad_id: 'a1', ad_name: 'messaging-eligible', amount_spent: 100, total_messaging_contacts: 5 }),
+      adRow({ ad_id: 'a2', ad_name: 'all-non-messaging', amount_spent: 100, total_messaging_contacts: null }),
+    ]
+    const aggregated = aggregateAdsById(rows)
+    // 'messaging-eligible' clears the floor (messagingSpend 100 > 0,
+    // messagingContacts 5 >= MIN_INQUIRIES_FOR_CPI); 'all-non-messaging' has
+    // messagingSpend = 0 despite amountSpent = 100, so it must not count as
+    // eligible for cost-per-inquiry even though it has real ad spend.
+    expect(countEligibleForCostPerInquiry(aggregated)).toBe(1)
 
     const ctrAds = [
       ad({ name: 'eligible-ctr', impressions: 2000, linkClicks: 10 }),

@@ -59,7 +59,8 @@ export default async function CampaignRankingsPage({
     where: adWhere,
     select: {
       ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, impressions: true,
-      link_clicks: true, total_messaging_contacts: true, reach: true, reporting_starts: true, reporting_ends: true,
+      link_clicks: true, total_messaging_contacts: true, result_type: true, reach: true,
+      reporting_starts: true, reporting_ends: true,
     },
   })
 
@@ -184,13 +185,16 @@ export default async function CampaignRankingsPage({
           <RankingTable rows={bestCostPerInquiry} valueLabel="Cost / Msg. Conv." formatValue={v => formatPHP(v)} />
           <div className="px-5 pt-3 pb-4">
             <MethodologyNote>
-              Spend and messaging conversations are summed per advertisement across every month it ran,
-              then divided (amount spent ÷ messaging conversations). Lower is better, so ranked
-              ascending, top 10. Only ads with at least {MIN_INQUIRIES_FOR_CPI} total messaging
-              conversations are included — below that, a single lucky conversation on tiny spend would
-              otherwise top the list. {eligibleForCostPerInquiry} ad{eligibleForCostPerInquiry === 1 ? '' : 's'} cleared
-              that floor in the selected range. Filtered by the date range above, applied to each
-              row&apos;s Reporting starts date before summing.
+              Messaging conversations are summed per advertisement across every month it ran; spend is
+              summed only from the months where &quot;Result type&quot; is &quot;Messaging conversations
+              started&quot;. The two are then divided (messaging-month spend ÷ messaging conversations).
+              For an advertisement that also ran non-messaging months, that month&apos;s spend does not
+              count toward this ratio. Lower is better, so ranked ascending, top 10. Only ads with at
+              least {MIN_INQUIRIES_FOR_CPI} total messaging conversations are included — below that, a
+              single lucky conversation on tiny spend would otherwise top the list.
+              {' '}{eligibleForCostPerInquiry} ad{eligibleForCostPerInquiry === 1 ? '' : 's'} cleared that
+              floor in the selected range. Filtered by the date range above, applied to each row&apos;s
+              Reporting starts date before summing.
             </MethodologyNote>
           </div>
         </div>
