@@ -52,6 +52,21 @@ describe('computeCategoryDistribution', () => {
     expect(rows[0].views.median).toBeNull()
   })
 
+  it('groups UNCLEAR as its own row, distinct from UNCLASSIFIED', () => {
+    const posts: PostForCategoryDistribution[] = [
+      post({ category_final: 'UNCLEAR' }),
+      post({ category_final: 'UNCLEAR' }),
+      post({ category_final: null }),
+    ]
+
+    const rows = computeCategoryDistribution(posts)
+
+    const unclear = rows.find(r => r.category === 'UNCLEAR')!
+    const unclassified = rows.find(r => r.category === 'UNCLASSIFIED')!
+    expect(unclear.n).toBe(2)
+    expect(unclassified.n).toBe(1)
+  })
+
   it('sorts categories by n descending', () => {
     const posts: PostForCategoryDistribution[] = [
       post({ category_final: 'ENTERTAINMENT' }),

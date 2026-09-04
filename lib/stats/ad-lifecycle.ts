@@ -117,7 +117,23 @@ function buildCurve(adRows: Map<string, { monthIndex: number; spend: number; res
     }
   }
 
+  // Truncate at minSurvivalMonths: cohort membership above guarantees every
+  // member REACHES that index (max(monthIndex) >= minSurvivalMonths), so
+  // this is the last index NOT subject to the survivorship artefact (a
+  // later index is only reached by whichever members happened to run
+  // longest, so a CPI change there reflects who is left, not a real trend).
+  // "Reaches" is not "has a row at" — a paused-then-resumed ad can have a
+  // gap row missing from an early index while still reaching a later one,
+  // so per-point n can still vary within the truncated range (see the
+  // "paused-then-resumed" test below). That composition drift is real and
+  // visible on screen (the Ad-Months column), but it is a gap-month
+  // artefact, not the survivorship artefact this truncation removes — the
+  // two must not be confused when someone next looks at a wobbling n.
+  // Filtering by month index rather than by "n equals cohort size" is what
+  // keeps a gap-month ad from being wrongly dropped as if it had left the
+  // cohort.
   const curve: MonthOfLifePoint[] = [...byMonthIndex.entries()]
+    .filter(([monthIndex]) => monthIndex <= minSurvivalMonths)
     .sort(([a], [b]) => a - b)
     .map(([monthIndex, { spend, results }]) => ({
       monthIndex,

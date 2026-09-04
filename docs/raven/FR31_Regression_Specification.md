@@ -55,7 +55,9 @@ Drop any ad where a ratio is null, infinite, or its denominator is zero.
 
 ### Why reach and spend are excluded
 
-They're near-perfectly collinear: **r = 0.984** on the log scale (bigger budgets buy more reach). Including both makes coefficients unstable. Excluding them in favour of the ratios is a documented modelling decision — put a note in the UI or the docs saying so.
+They're near-perfectly collinear: **r = 0.958** on the log scale, on this section's own n = 108 population (bigger budgets buy more reach). Including both makes coefficients unstable. Excluding them in favour of the ratios is a documented modelling decision — put a note in the UI or the docs saying so.
+
+*(Corrected 2026-09-05, `docs/raven/Analysis_Corrections_Accepted.md` §8: this section previously cited r = 0.984, which is the correlation on the unfiltered n = 187 population — a different population from the n = 108 model this exclusion actually justifies. On n = 108 the figure is 0.958. Both are real, correctly computed correlations; the error was citing the wrong one here. The secondary specification, §4, is unfiltered n = 187; 0.984 would be the correct figure to cite there, though §4 does not currently state a reach/spend correlation for that population.)*
 
 ---
 
@@ -200,7 +202,9 @@ These are ads costing **more than their own characteristics would suggest** — 
 
 **Apply the same ≥₱1,000 spend filter here.** Without it the largest residuals are ads with 1–2 recorded inquiries, which is the same small-sample noise that forced the filter on FR-25.
 
-**Display:** ad name, spend, actual CPI, predicted CPI, ratio — sorted by ratio descending.
+**Display:** by default, the table shows only advertisements exceeding the 1.5 ratio threshold. Each row carries ad name, spend, actual CPI, predicted CPI, and ratio, sorted by ratio descending. The full sorted list, all advertisements in the population, is available behind a "Show all advertisements" toggle, collapsed by default.
+
+*(Amended 2026-09-05, `docs/raven/Analysis_Corrections_Accepted.md` §2.2: previously "ad name, spend, actual CPI, predicted CPI, ratio — sorted by ratio descending" with no filtering instruction, which the build implemented literally by rendering every row in the population — compliant with this section as it stood, but contradicting §6's own framing of the table as "the operational payoff", a sharper list than FR-25's worst quartile. This amendment and the corresponding code fix landed together.)*
 
 **Mandatory caption:**
 > "Compares each advertisement's recorded cost per inquiry against the level associated with its characteristics. Not a prediction of future performance."
@@ -211,7 +215,7 @@ These are ads costing **more than their own characteristics would suggest** — 
 
 Order matters — assumptions first, then coefficients, then accuracy. That ordering is what makes the section defensible.
 
-1. **Model specification** — outcome, predictors, n, the ≥₱1,000 filter, and a note that reach/spend were excluded for collinearity (r = 0.984)
+1. **Model specification** — outcome, predictors, n, the ≥₱1,000 filter, and a note that reach/spend were excluded for collinearity (r = 0.958 on n = 108)
 2. **Diagnostics panel** — VIF per predictor, Breusch-Pagan p, Shapiro-Wilk p, and a plain-language line: *"Residuals are non-normal, so robust (HC3) standard errors are reported."*
 3. **Coefficient table** — both specifications side by side, both p-values, engagement_rate flagged as not robust
 4. **Accuracy panel** — the §5.4 table, all three columns including the baseline
@@ -243,7 +247,7 @@ Order matters — assumptions first, then coefficients, then accuracy. That orde
 
 - [ ] Population: messaging ads, spend ≥ ₱1,000, aggregated to Ad ID → **n = 108**
 - [ ] Outcome is `ln(cpi)`; predictors are the four ratios, sum-then-divide
-- [ ] Reach and spend excluded (r = 0.984) with a note in the UI
+- [ ] Reach and spend excluded (r = 0.958 on n = 108) with a note in the UI
 - [ ] **VIF computed with the intercept in the design matrix** → expect 1.10–1.35
 - [ ] Breusch-Pagan (expect p ≈ 0.054) and Shapiro-Wilk on residuals (expect p < 0.001) both run and displayed
 - [ ] HC3 robust standard errors reported **alongside** ordinary ones

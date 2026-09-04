@@ -171,7 +171,7 @@ Reels get ~2× the engagement rate of photos but the lowest reach; videos get th
 
 Owner + Marketing-Manager-facing (Marketing Team: View), lives on S7 Analysis as a new section alongside FR-19–FR-22 and FR-27.
 
-> ⚠️ **Not the multiple-linear-regression this document originally cut.** The version cut on 12 Aug (log(CPI) on reach + spend, VIF≈500) is the exact methodological exposure this reinstated version avoids. FR-31 drops reach and spend entirely — they're excluded as predictors (r=0.984 on the log scale) in favour of four ratios (engagement rate, frequency, CTR, CPM), all VIF 1.10–1.35. It is explanatory, not predictive: **no what-if slider, no forecast, no simulation** — that prohibition is unchanged from §5.
+> ⚠️ **Not the multiple-linear-regression this document originally cut.** The version cut on 12 Aug (log(CPI) on reach + spend, VIF≈500) is the exact methodological exposure this reinstated version avoids. FR-31 drops reach and spend entirely — they're excluded as predictors (r=0.958 on the log scale, on the primary n=108 population) in favour of four ratios (engagement rate, frequency, CTR, CPM), all VIF 1.10–1.35. It is explanatory, not predictive: **no what-if slider, no forecast, no simulation** — that prohibition is unchanged from §5.
 
 **Population:** messaging ads (`Result type = "Messaging conversations started"`), aggregated to Ad ID (sum-then-divide, ALG-09). Primary specification: spend ≥ the same configurable threshold FR-25 uses (default ₱1,000, n=108). Secondary specification: unfiltered (n=187) — both shown side by side, not just the primary.
 

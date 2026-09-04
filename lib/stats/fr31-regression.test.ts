@@ -192,13 +192,15 @@ describe('fitFr31Regression — primary spec (n=108) against published reference
     }
   })
 
-  it('computes a high logReachSpendCorrelation, consistent with the spec-cited r = 0.984 on the full population', () => {
+  it('computes a high logReachSpendCorrelation on the primary (n=108) population, distinct from the unfiltered n=187 figure', () => {
     // The primary spec is itself a filtered n=108 subsample (spend >=
     // ₱1,000), so its own reach~spend correlation is not expected to match
-    // the spec's r=0.984 exactly (that figure was computed on the full
-    // n=187 population — confirmed live against the DB at 0.9836 during
-    // planning). What matters here is that it's still strongly collinear,
-    // corroborating spec §2's reason for excluding reach/spend as predictors.
+    // the unfiltered population's r=0.984 exactly — the primary population's
+    // own figure is r=0.958 (spec §2, corrected 2026-09-05; the unfiltered
+    // n=187 figure was confirmed live against the DB at 0.9836 during
+    // planning, see the test below). What matters here is that it's still
+    // strongly collinear, corroborating spec §2's reason for excluding
+    // reach/spend as predictors.
     if (fit.status !== 'ok') throw new Error('unreachable')
     expect(fit.logReachSpendCorrelation).not.toBeNull()
     expect(fit.logReachSpendCorrelation!).toBeGreaterThan(0.9)
@@ -234,7 +236,7 @@ describe('fitFr31Regression — secondary spec (n=187) against published referen
     expect(byTerm.frequency.pHc3).toBeCloseTo(0.0084, 2)
   })
 
-  it('reproduces the spec-cited r = 0.984 exactly on the full (unfiltered) population', () => {
+  it('reproduces r = 0.984 exactly on the full (unfiltered, n=187) population', () => {
     if (fit.status !== 'ok') throw new Error('unreachable')
     expect(fit.logReachSpendCorrelation).not.toBeNull()
     expect(fit.logReachSpendCorrelation!).toBeCloseTo(0.984, 2)

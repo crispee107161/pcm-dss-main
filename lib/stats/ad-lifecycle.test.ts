@@ -80,6 +80,50 @@ describe('computeAdLifecycle', () => {
     expect(cohort.n).toBe(1) // only 'long' survived to month_of_life 2
   })
 
+  it('truncates each cohort curve at its own survival threshold, dropping the ragged tail from longer-lived members', () => {
+    const ads: AdRowForLifecycle[] = [
+      // Both survive to month_of_life 2, satisfying the >=2 cohort.
+      row({ ad_id: 'a', reporting_starts: d(2025, 0) }),
+      row({ ad_id: 'a', reporting_starts: d(2025, 1) }),
+      row({ ad_id: 'a', reporting_starts: d(2025, 2) }),
+      row({ ad_id: 'b', reporting_starts: d(2025, 0) }),
+      row({ ad_id: 'b', reporting_starts: d(2025, 1) }),
+      row({ ad_id: 'b', reporting_starts: d(2025, 2) }),
+      // 'b' alone runs a 4th month — a partial, survivorship-biased row
+      // that must not appear in the >=2 cohort's curve.
+      row({ ad_id: 'b', reporting_starts: d(2025, 3) }),
+    ]
+
+    const result = computeAdLifecycle(ads, [], [2])
+
+    const cohort = result.cohorts.find(c => c.minSurvivalMonths === 2)!
+    expect(cohort.curve.map(p => p.monthIndex)).toEqual([0, 1, 2])
+    expect(cohort.curve.every(p => p.n === 2)).toBe(true)
+  })
+
+  it('truncates by month index reaching the threshold, not by n equalling cohort size, so a paused-then-resumed ad is not mistruncated', () => {
+    const ads: AdRowForLifecycle[] = [
+      row({ ad_id: 'steady', reporting_starts: d(2025, 0) }),
+      row({ ad_id: 'steady', reporting_starts: d(2025, 1) }),
+      row({ ad_id: 'steady', reporting_starts: d(2025, 2) }),
+      // 'paused' has a gap at month_of_life 1 (no row that month), then
+      // resumes and still reaches month_of_life 2 — n at index 1 is 1, not
+      // 2, even though index 1 is within the guaranteed range.
+      row({ ad_id: 'paused', reporting_starts: d(2025, 0) }),
+      row({ ad_id: 'paused', reporting_starts: d(2025, 2) }),
+    ]
+
+    const result = computeAdLifecycle(ads, [], [2])
+
+    const cohort = result.cohorts.find(c => c.minSurvivalMonths === 2)!
+    // Both ads reached month_of_life 2, so both are cohort members and the
+    // curve must still run through index 2 despite the gap at index 1.
+    expect(cohort.n).toBe(2)
+    expect(cohort.curve.map(p => p.monthIndex)).toEqual([0, 1, 2])
+    const month1 = cohort.curve.find(p => p.monthIndex === 1)!
+    expect(month1.n).toBe(1) // only 'steady' has a row at index 1
+  })
+
   it('computes the single-month vs long-run (4+ months) overall CPI comparison', () => {
     const ads: AdRowForLifecycle[] = [
       row({ ad_id: 'single', reporting_starts: d(2025, 0), amount_spent: 100, total_messaging_contacts: 10 }),
