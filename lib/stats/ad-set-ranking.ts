@@ -3,6 +3,8 @@
 // distinct `Ad set name` values are spread across 26 distinct `Ad set ID`s,
 // so grouping by name silently merges two different ad sets into one row.
 
+import { FR31_RESULT_TYPE } from './fr31-regression'
+
 export interface AdForGroupRanking {
   ad_id: string
   ad_set_id: string
@@ -11,6 +13,7 @@ export interface AdForGroupRanking {
   campaign_name: string
   amount_spent: number
   total_messaging_contacts: number | null
+  result_type: string | null
 }
 
 export interface GroupRankingRow {
@@ -35,6 +38,15 @@ export const MIN_ADS_FOR_CONFIDENCE = 3
 // A monthly-export ad can have up to 12 rows (one per uploaded month) — sum
 // spend/inquiries per Ad ID first, then group, matching the sum-then-divide
 // aggregation rule in data_catalog.md §4.
+//
+// Spend is summed only from rows where result_type is FR31_RESULT_TYPE
+// ("Messaging conversations started"), not gated on
+// `total_messaging_contacts !== null` — total_messaging_contacts is null both
+// for a non-messaging row AND for a messaging row whose "Results" cell was
+// blank in the CSV (lib/csv/validate-ads.ts's parseIntOrNull returns null,
+// not 0, for a blank cell), so the null-proxy would silently drop that
+// second case's real messaging spend too. Matches the same fix applied to
+// lib/stats/campaign-rankings.ts's aggregateAdsById.
 function aggregateByAdId(ads: AdForGroupRanking[], groupId: (a: AdForGroupRanking) => string, groupName: (a: AdForGroupRanking) => string) {
   const perAd = new Map<string, { groupId: string; groupName: string; spend: number; inquiries: number }>()
   for (const ad of ads) {
@@ -42,7 +54,7 @@ function aggregateByAdId(ads: AdForGroupRanking[], groupId: (a: AdForGroupRankin
     perAd.set(ad.ad_id, {
       groupId: groupId(ad),
       groupName: groupName(ad),
-      spend: existing.spend + ad.amount_spent,
+      spend: existing.spend + (ad.result_type === FR31_RESULT_TYPE ? ad.amount_spent : 0),
       inquiries: existing.inquiries + (ad.total_messaging_contacts ?? 0),
     })
   }
@@ -50,9 +62,10 @@ function aggregateByAdId(ads: AdForGroupRanking[], groupId: (a: AdForGroupRankin
 }
 
 function rankByGroup(ads: AdForGroupRanking[], groupId: (a: AdForGroupRanking) => string, groupName: (a: AdForGroupRanking) => string): GroupRankingRow[] {
-  // Messaging-optimised ads only, matching the FR-25/data_catalog §4.3 filter
-  // — total_messaging_contacts is null for every non-messaging ad.
-  const messagingAds = ads.filter(a => a.total_messaging_contacts !== null)
+  // Messaging-optimised ads only, matching the FR-25/data_catalog §4.3 filter.
+  // Filtered on result_type directly, not total_messaging_contacts !== null
+  // — see aggregateByAdId above for why the null-proxy under-counts.
+  const messagingAds = ads.filter(a => a.result_type === FR31_RESULT_TYPE)
   const perAd = aggregateByAdId(messagingAds, groupId, groupName)
 
   const perGroup = new Map<string, { name: string; spend: number; inquiries: number; adCount: number }>()

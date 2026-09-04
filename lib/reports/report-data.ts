@@ -26,7 +26,7 @@ export async function buildReportData({ role }: ReportOptions) {
       where: STUDY_PERIOD_AD_WHERE,
       select: {
         ad_id: true, ad_set_id: true, ad_set_name: true, campaign_id: true, campaign_name: true,
-        amount_spent: true, total_messaging_contacts: true,
+        amount_spent: true, total_messaging_contacts: true, result_type: true,
       },
     }),
     prisma.facebookPost.findMany({
