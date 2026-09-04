@@ -109,6 +109,13 @@ enum CategoryAuditAction {
   /// batch-confirming every unflagged, both-methods-agreed post at once.
   /// Distinct from BULK_ACCEPT, which finalises MARKETING_TEAM proposals.
   BATCH_CONFIRM
+  /// docs/raven/Export_Verified_Repair_Approved.md §2 — an out-of-app script
+  /// nulling category_final/source/assigned_at/assigned_by to correct
+  /// provenance (e.g. an S4 assignment made after the corpus was supposed
+  /// to be frozen for blind coding), distinct from every other action here
+  /// in that it is not a person's categorisation decision but a repair of
+  /// one. See scripts/raven-backlog-repair-run.ts.
+  SCRIPTED_REVERSAL
 }
 
 model User {
