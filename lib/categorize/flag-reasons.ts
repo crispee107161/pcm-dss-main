@@ -1,3 +1,4 @@
+import { ASSIGNABLE_LABELS } from '@/lib/categorize/category-picker'
 import type { CategoryLabel, CategoryFlagReason } from '@/app/generated/prisma/client'
 
 // docs/raven/S4_Flag_Thresholds_Answers.md §1 — p10 of caption length across
@@ -28,7 +29,22 @@ export interface FlagReasonInput {
 export function computeFlagReasons({ categoryKeyword, categoryLlm, caption }: FlagReasonInput): CategoryFlagReason[] {
   const reasons: CategoryFlagReason[] = []
 
-  if (categoryKeyword !== null && categoryLlm !== null && categoryKeyword !== categoryLlm) {
+  // docs/raven/Content_Second_Pass.md §4 — UNCLASSIFIED means a method found
+  // nothing, so it is not a candidate a real suggestion can disagree with.
+  // Code review (2026-09-05) caught the first fix expressing this as a
+  // denylist (categoryKeyword !== 'UNCLASSIFIED'), the opposite shape from
+  // category-picker.ts's assignableSuggestion/ASSIGNABLE_LABELS allowlist —
+  // a denylist silently stops matching intent the moment a sixth label (or
+  // UNCLEAR reaching these fields) exists. Sharing ASSIGNABLE_LABELS keeps
+  // both "what counts as a real suggestion" checks the same shape by
+  // construction.
+  if (
+    categoryKeyword !== null &&
+    categoryLlm !== null &&
+    ASSIGNABLE_LABELS.includes(categoryKeyword) &&
+    ASSIGNABLE_LABELS.includes(categoryLlm) &&
+    categoryKeyword !== categoryLlm
+  ) {
     reasons.push('DISAGREEMENT')
   }
   if (categoryKeyword === 'UNCLASSIFIED' || categoryLlm === 'UNCLASSIFIED') {
@@ -53,11 +69,21 @@ export function computeFlagReasons({ categoryKeyword, categoryLlm, caption }: Fl
 // method names, ever, per docs/raven/S4_Flag_Thresholds_Answers.md §2 —
 // ENTERTAINMENT_SUGGESTED's text names the category, not which method
 // suggested it.
+//
+// docs/raven/Content_Second_Pass.md §6 — stacked reasons were mixing status
+// ("Needs your judgment") with instruction ("Check this one", "Open the
+// post"), so a row with several reasons read as two different kinds of
+// sentence in one block. All four are now status, since the row already
+// carries its own action (the picker/Open link) beside it.
 export const FLAG_REASON_SHORT: Record<CategoryFlagReason, string> = {
-  DISAGREEMENT: 'Needs your judgment. This post sits between two categories',
-  UNCLASSIFIED: "Needs your judgment. The system couldn't determine a category",
-  ENTERTAINMENT_SUGGESTED: 'Check this one. Entertainment is often over-suggested',
-  SHORT_CAPTION: 'Open the post. The caption is too short to classify from text',
+  DISAGREEMENT: 'Two categories suggested',
+  // Code review (2026-09-05) — fires when either or both methods return
+  // UNCLASSIFIED. "No suggestion from one method" is false in the
+  // both-abstain case (a real, currently-occurring post), so this has to
+  // stay true for one or two abstaining methods alike.
+  UNCLASSIFIED: 'No category suggested',
+  ENTERTAINMENT_SUGGESTED: 'Entertainment suggested, often over-applied',
+  SHORT_CAPTION: 'Caption too short to classify',
 }
 
 // docs/raven/S4_Presentation_Fix.md §2.2 — most-informative-first. Two

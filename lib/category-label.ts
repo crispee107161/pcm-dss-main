@@ -18,7 +18,12 @@ export const CATEGORY_LABEL_DISPLAY: Record<CategoryLabel, string> = {
   TESTIMONIAL: 'Testimonial',
   ENTERTAINMENT: 'Entertainment',
   UNCLASSIFIED: 'Unclassified',
-  // Ground-truth-only: a human coder's genuine "cannot decide" verdict
-  // (CODEBOOK_content_categories.md §5). Never produced by ALG-04/ALG-05.
+  // A human coder's genuine "cannot decide" verdict (CODEBOOK_content_
+  // categories.md §5), written by both the ground-truth and codebook
+  // imports — never produced by ALG-04/ALG-05. This raw label reads
+  // "Unclear"; every UI surface routes through
+  // lib/categorize/category-picker.ts's selectableLabelText instead, which
+  // renders it as "No category" alongside UNCLASSIFIED (docs/raven/
+  // Content_Second_Pass.md §1).
   UNCLEAR: 'Unclear',
 }

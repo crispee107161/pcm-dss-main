@@ -22,8 +22,16 @@ export const SELECTABLE_LABELS: CategoryLabel[] = [...ASSIGNABLE_LABELS, 'UNCLAS
 // picker chip, leaving "Unassigned" on the confirm dialog, the badge, and
 // the dropdown for the exact same value in the exact same interaction.
 // Changed once, here, so every caller stays in sync by construction.
+//
+// docs/raven/Content_Second_Pass.md §1 — UNCLEAR joined UNCLASSIFIED on the
+// "No category" tab (content-filter.ts's whereForFilter) as the same
+// concept from a different mechanism (human coder vs. system abstain). Code
+// review caught that this function still routed UNCLEAR to its raw
+// CATEGORY_LABEL_DISPLAY entry ("Unclear"), so the tab titled "No category"
+// was rendering manuscript language on every row it exists to surface —
+// exactly what §0.3 bans. UNCLEAR reads "No category" here too now.
 export function selectableLabelText(label: CategoryLabel): string {
-  return label === 'UNCLASSIFIED' ? 'No category' : CATEGORY_LABEL_DISPLAY[label]
+  return label === 'UNCLASSIFIED' || label === 'UNCLEAR' ? 'No category' : CATEGORY_LABEL_DISPLAY[label]
 }
 
 export function categoryEditLabel(value: string | null): string {

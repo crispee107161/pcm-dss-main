@@ -156,13 +156,16 @@ function CategoryBadge({ label }: { label: CategoryLabel }) {
     // would render literal default-Tailwind purple instead of the theme.
     ENTERTAINMENT: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30',
     UNCLASSIFIED: 'bg-secondary text-muted-foreground border-border',
-    // Ground-truth-only; never shown here in practice (S4 never assigns it), kept for exhaustiveness.
+    // docs/raven/Content_Second_Pass.md §1 — no longer exhaustiveness-only:
+    // UNCLEAR now appears on the Owner/Manager "No category" tab (codebook
+    // and ground-truth imports both write it), styled identically to
+    // UNCLASSIFIED since selectableLabelText renders both as "No category".
     UNCLEAR: 'bg-secondary text-muted-foreground border-border',
   }
   // Routed through selectableLabelText (not CATEGORY_LABEL_DISPLAY directly)
-  // so UNCLASSIFIED reads "Unassigned" here too — code review caught this
-  // badge showing "Unclassified" to Owner/Team while the Manager's own
-  // picker and dropdown call the same value "Unassigned".
+  // so UNCLASSIFIED/UNCLEAR both read "No category" here too — code review
+  // caught this badge showing "Unclassified"/"Unclear" to Owner/Team while
+  // the Manager's own picker and dropdown call the same value "No category".
   return (
     <Badge className={`rounded-full h-auto py-0.5 px-2 text-xs font-medium ${colors[label]}`}>
       {selectableLabelText(label)}
@@ -864,7 +867,12 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
 }
 
 const CATEGORY_FINAL_SOURCE_DISPLAY: Record<CategoryFinalSource, string> = {
-  MANUAL_GROUND_TRUTH: 'Ground truth import',
+  // docs/raven/Content_Second_Pass.md §2/§3 — this source now reaches the
+  // Owner's screen (whereForFilter's includeGroundTruth), which §3 just
+  // stripped "ground-truth benchmark" language from. "Ground truth import"
+  // was the same manuscript vocabulary in the next column over — plain
+  // language per §0.3, not a study/methodology term.
+  MANUAL_GROUND_TRUTH: 'Locked reference set',
   ACCEPTED_SUGGESTION: 'Accepted suggestion',
   MANUAL_OVERRIDE: 'Manual selection',
   // docs/raven/Content_Filters_Review.md §2 — the pre-2026-08-13 schema
@@ -955,7 +963,11 @@ function CategoryEditCell({ post, canEdit, baseRoute }: { post: ContentPostRow; 
     return (
       <div className="flex items-center gap-1.5">
         <CategoryBadge label={post.category_final} />
-        {isGroundTruth && <span className="text-[10px] text-muted-foreground">locked, ground truth</span>}
+        {/* docs/raven/Content_Second_Pass.md §2 — "ground truth" is the same
+            manuscript register §3 removed from this screen's subtitle; this
+            badge now reaches the Owner too, so it needs the same plain-
+            language treatment. */}
+        {isGroundTruth && <span className="text-[10px] text-muted-foreground">locked reference</span>}
       </div>
     )
   }
@@ -1171,6 +1183,18 @@ function LibraryTable({ posts, canEdit, filter, baseRoute }: { posts: ContentPos
           </Table>
           <PaginationBar page={clampedPage} pageCount={pageCount} onPageChange={setPage} />
         </div>
+      )}
+      {/* docs/raven/Content_Second_Pass.md §5 — a bare "Codebook assignment"
+          next to rows that name a person and a timestamp invites the
+          question of why some provenance entries have neither. Shown when
+          the filtered set has one of those rows anywhere, not just on the
+          current page — checking pagedPosts (code review, 2026-09-05) would
+          make the footnote flicker in and out while paginating even though
+          the table's contents haven't changed in the way that matters. */}
+      {filteredPosts.some((post) => post.category_final_source === 'MANUAL_CODEBOOK_ASSIGNMENT') && (
+        <p className="text-xs text-muted-foreground mt-3">
+          Codebook assignments were made outside the system by the research coders, so no individual account is recorded against them.
+        </p>
       )}
     </div>
   )

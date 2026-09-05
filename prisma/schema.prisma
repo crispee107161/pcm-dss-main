@@ -37,7 +37,10 @@ enum CategoryLabel {
   /// A legitimate 5th label from the external ground-truth codebook
   /// (CODEBOOK_content_categories.md §5) — a human coder's genuine "cannot
   /// decide" verdict. Never produced by ALG-04/ALG-05 (those return
-  /// UNCLASSIFIED instead); only ever arrives via the ground-truth CSV import.
+  /// UNCLASSIFIED instead); arrives via both import-ground-truth.ts (the 200
+  /// locked benchmark) and import-codebook-assignment.ts (the requeued
+  /// backlog, same codebook/procedure, not part of the locked set) — see
+  /// docs/raven/Content_Second_Pass.md §1.
   UNCLEAR
 }
 

@@ -45,8 +45,28 @@ export const EXCLUDE_GROUND_TRUTH = {
 // Prisma.FacebookPostWhereInput (not left to inference) so a typo'd field
 // name fails tsc instead of silently matching every post — same rationale
 // as the original inline version (code review, 2026-08-23).
-export function whereForFilter(filter: ContentFilter): Prisma.FacebookPostWhereInput {
-  if (filter === 'needs-review') return { category_final: null, ...EXCLUDE_GROUND_TRUTH }
-  if (filter === 'unassigned') return { category_final: 'UNCLASSIFIED', ...EXCLUDE_GROUND_TRUTH }
-  return { ...EXCLUDE_GROUND_TRUTH }
+//
+// docs/raven/Content_Second_Pass.md §2 — includeGroundTruth exists because
+// the Owner's screen is view-only everywhere on it (no Change action exists
+// for that role at all), so hiding the 200 protects nothing FR-08 doesn't
+// already get from the server-side write refusal (actions/categorize.ts)
+// and CategoryEditCell's own isGroundTruth branch, which already renders
+// them locked rather than editable. Hiding them there only opened an
+// unexplained 731-vs-531 gap against the Executive Dashboard's count.
+// Defaults to excluding them (old behavior) since the Marketing Manager's
+// screen keeps that exclusion — she can edit, so keeping the 200 out of her
+// query is still load-bearing there.
+export function whereForFilter(filter: ContentFilter, opts: { includeGroundTruth?: boolean } = {}): Prisma.FacebookPostWhereInput {
+  const groundTruth = opts.includeGroundTruth ? {} : EXCLUDE_GROUND_TRUTH
+  if (filter === 'needs-review') return { category_final: null, ...groundTruth }
+  // docs/raven/Content_Second_Pass.md §1 — UNCLASSIFIED (the system's own
+  // abstain) and UNCLEAR (a human coder's "cannot decide" verdict, written
+  // only by the codebook/ground-truth import scripts — see CategoryLabel's
+  // doc comments in prisma/schema.prisma) are two mechanisms for the same
+  // "no determinable category" concept this tab is meant to surface.
+  // Filtering on UNCLASSIFIED alone left every UNCLEAR-labelled post
+  // invisible here even though it's categorised and excluded from nothing
+  // else.
+  if (filter === 'unassigned') return { category_final: { in: ['UNCLASSIFIED', 'UNCLEAR'] }, ...groundTruth }
+  return { ...groundTruth }
 }

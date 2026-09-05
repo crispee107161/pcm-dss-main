@@ -74,12 +74,24 @@ describe('computeFlagReasons', () => {
 
   it('can report multiple conditions at once', () => {
     const reasons = computeFlagReasons(
-      input({ categoryKeyword: 'UNCLASSIFIED', categoryLlm: 'ENTERTAINMENT', caption: 'short' })
+      input({ categoryKeyword: 'TESTIMONIAL', categoryLlm: 'ENTERTAINMENT', caption: 'short' })
     )
     expect(reasons).toEqual(
-      expect.arrayContaining(['DISAGREEMENT', 'UNCLASSIFIED', 'ENTERTAINMENT_SUGGESTED', 'SHORT_CAPTION'])
+      expect.arrayContaining(['DISAGREEMENT', 'ENTERTAINMENT_SUGGESTED', 'SHORT_CAPTION'])
     )
-    expect(reasons).toHaveLength(4)
+    expect(reasons).toHaveLength(3)
+  })
+
+  it('does not flag DISAGREEMENT when one method returns UNCLASSIFIED and the other a real category', () => {
+    const keywordUnclassified = computeFlagReasons(input({ categoryKeyword: 'UNCLASSIFIED', categoryLlm: 'ENTERTAINMENT' }))
+    const llmUnclassified = computeFlagReasons(input({ categoryKeyword: 'ENTERTAINMENT', categoryLlm: 'UNCLASSIFIED' }))
+    expect(keywordUnclassified).not.toContain('DISAGREEMENT')
+    expect(llmUnclassified).not.toContain('DISAGREEMENT')
+  })
+
+  it('does not flag DISAGREEMENT when both methods return UNCLASSIFIED', () => {
+    const reasons = computeFlagReasons(input({ categoryKeyword: 'UNCLASSIFIED', categoryLlm: 'UNCLASSIFIED' }))
+    expect(reasons).not.toContain('DISAGREEMENT')
   })
 })
 

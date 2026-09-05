@@ -79,6 +79,20 @@ export async function updatePostCategory(postId: number, label: CategoryLabel | 
       data: { user_id: userId, action: 'OVERRIDE', facebook_post_id: postId, previous_category: previous?.category_final ?? null, new_category: label },
     })
 
+    // docs/raven/Content_Second_Pass.md §4 code review — the queue's
+    // category_flag_reasons is a snapshot, recomputed only when
+    // category_keyword/category_llm change (see recomputeQueueFlagReasons's
+    // doc comment). Un-finalizing a post here (label === null, "(None)" from
+    // All/Unassigned) puts it back in the queue without touching that
+    // snapshot, so a post finalized before the §4 DISAGREEMENT fix can
+    // re-surface the exact contradictory flag pair the fix removed. Only
+    // worth the cost on this path — a first assignment or revision can't
+    // regress a snapshot that already reflects the post's current
+    // suggestions.
+    if (label === null) {
+      await recomputeQueueFlagReasons()
+    }
+
     revalidateCategoryScreens()
     return {}
   } catch {

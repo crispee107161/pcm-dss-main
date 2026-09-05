@@ -33,9 +33,9 @@ describe('whereForFilter', () => {
     })
   })
 
-  it('unassigned requires UNCLASSIFIED and excludes ground truth', () => {
+  it('unassigned requires UNCLASSIFIED or UNCLEAR and excludes ground truth', () => {
     expect(whereForFilter('unassigned')).toEqual({
-      category_final: 'UNCLASSIFIED',
+      category_final: { in: ['UNCLASSIFIED', 'UNCLEAR'] },
       OR: [{ category_final_source: null }, { category_final_source: { not: 'MANUAL_GROUND_TRUTH' } }],
     })
   })
@@ -43,6 +43,14 @@ describe('whereForFilter', () => {
   it('all applies no predicate beyond excluding ground truth', () => {
     expect(whereForFilter('all')).toEqual({
       OR: [{ category_final_source: null }, { category_final_source: { not: 'MANUAL_GROUND_TRUTH' } }],
+    })
+  })
+
+  it('includeGroundTruth drops the exclusion for every filter', () => {
+    expect(whereForFilter('all', { includeGroundTruth: true })).toEqual({})
+    expect(whereForFilter('needs-review', { includeGroundTruth: true })).toEqual({ category_final: null })
+    expect(whereForFilter('unassigned', { includeGroundTruth: true })).toEqual({
+      category_final: { in: ['UNCLASSIFIED', 'UNCLEAR'] },
     })
   })
 })

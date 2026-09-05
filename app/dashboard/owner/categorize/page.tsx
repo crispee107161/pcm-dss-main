@@ -11,9 +11,13 @@ import { parseContentFilter, whereForFilter, type ContentFilter } from '@/lib/ca
 // docs/raven/Consolidation_Plan_Checklist.md). `/dashboard/owner/content` was
 // deleted — already orphaned before this merge.
 
+// docs/raven/Content_Second_Pass.md §3 — the "excluding the locked
+// ground-truth benchmark" clause described a screen that no longer exists
+// once §2 stops hiding those 200 posts here; removing the exclusion removed
+// the need to explain it.
 const FILTER_DESCRIPTIONS: Record<ContentFilter, string> = {
   'needs-review': 'Queue of posts awaiting a final category (view only).',
-  all: 'Every organic post and its assigned category, excluding the locked ground-truth benchmark (view only).',
+  all: 'Every organic post and its assigned category (view only).',
   // docs/raven-review/Unassigned_Labels_and_Coding_Procedure.md §2.1
   unassigned: 'Posts reviewed and found to have no determinable category. Reviewed, not skipped (view only).',
 }
@@ -32,7 +36,7 @@ export default async function OwnerCategorizePage({
   const filter = parseContentFilter(rawFilter)
 
   const posts = await prisma.facebookPost.findMany({
-    where: withStudyPeriod(whereForFilter(filter)),
+    where: withStudyPeriod(whereForFilter(filter, { includeGroundTruth: true })),
     orderBy: { publish_time: 'desc' },
     select: {
       id: true,
