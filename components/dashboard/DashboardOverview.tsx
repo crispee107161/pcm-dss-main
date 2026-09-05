@@ -1,6 +1,6 @@
 import { getGreeting } from '@/lib/greeting'
 import { getDashboardOverview } from '@/lib/data/dashboard'
-import { STUDY_PERIOD_LABEL } from '@/lib/data/study-period'
+import { STUDY_PERIOD_LABEL, STUDY_PERIOD_START_DAY, STUDY_PERIOD_END_DAY } from '@/lib/data/study-period'
 import { MIN_SPEND_THRESHOLD_PHP } from '@/lib/stats/budget-reallocation'
 import {
   interpretCpiDistribution, interpretFollowsRatio, interpretCategoryPerformance, interpretReachViewsTrend,
@@ -67,7 +67,7 @@ function AdTable({ title, subtitle, ads, emptyMessage, dimBelowSpend }: {
               <TableHead className="text-left px-3 py-2"><span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Ad</span></TableHead>
               <TableHead className="text-right px-3 py-2"><span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Conv.</span></TableHead>
               <TableHead className="text-right px-3 py-2"><span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Cost / Conv.</span></TableHead>
-              <TableHead className="text-right px-5 py-2"><span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Spend</span></TableHead>
+              <TableHead className="text-right px-5 py-2"><span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Messaging Spend</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -116,6 +116,11 @@ export default async function DashboardOverview({ role, displayName, from, to, a
   const categoryInterpretation = interpretCategoryPerformance(data.categoryPerformance, data.periodLabel, LOW_CONFIDENCE_N)
   const reachViewsInterpretation = interpretReachViewsTrend(data.postReachViewsTrend)
 
+  // Only the KPI cards' sub-line gets the resolved "All time" range
+  // (docs/raven/Dashboard_Second_Pass.md §3) — prose captions and table
+  // subtitles below keep interpolating the short data.periodLabel.
+  const periodSub = data.periodRangeLabel ? `${data.periodLabel} (${data.periodRangeLabel})` : data.periodLabel
+
   return (
     <div className="p-5 md:p-7 md:px-8 md:pb-12 max-w-[1440px] mx-auto space-y-[22px]">
 
@@ -128,7 +133,7 @@ export default async function DashboardOverview({ role, displayName, from, to, a
           <p className="text-muted-foreground text-sm mt-0.5">Facebook content performance &amp; advertising efficiency overview</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <DateRangeFilter from={from} to={to} anchor={data.dataAnchor} />
+          <DateRangeFilter from={from} to={to} anchor={data.dataAnchor} allTimeRange={{ from: STUDY_PERIOD_START_DAY, to: STUDY_PERIOD_END_DAY }} />
           {!isTeam && <ExportLink href={reportHref} />}
         </div>
       </div>
@@ -137,18 +142,20 @@ export default async function DashboardOverview({ role, displayName, from, to, a
         uncategorizedCount={data.alerts.uncategorizedCount}
         missingMonths={data.alerts.missingMonths}
         spendNoResultAds={data.alerts.spendNoResultAds}
+        spendNoResultTotalCount={data.alerts.spendNoResultTotalCount}
+        spendNoResultTotalSpend={data.alerts.spendNoResultTotalSpend}
         categorizeHref={categorizeHref}
       />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-[18px]">
         <KpiCard
-          label="Total Ad Spend" value={formatPhp(kpis.spend.value)} sub={data.periodLabel}
+          label="Total Ad Spend" value={formatPhp(kpis.spend.value)} sub={periodSub}
           delta={kpis.spend.delta} deltaLabel={data.deltaWindowLabel ?? undefined} invertSentiment
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
         />
         <KpiCard
-          label="Inquiries Generated" value={formatNumber(kpis.inquiries.value)} sub={data.periodLabel}
+          label="Inquiries Generated" value={formatNumber(kpis.inquiries.value)} sub={periodSub}
           delta={kpis.inquiries.delta} deltaLabel={data.deltaWindowLabel ?? undefined}
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
         />
@@ -158,7 +165,6 @@ export default async function DashboardOverview({ role, displayName, from, to, a
           sub={kpis.medianCpi.iqr
             ? `Half of the ${kpis.medianCpi.n} advertisements cost between ${formatPhpPrecise(kpis.medianCpi.iqr.q1)} and ${formatPhpPrecise(kpis.medianCpi.iqr.q3)}. No minimum spend filter.`
             : `No ads with enough data this period. No minimum spend filter.`}
-          note={kpis.medianCpi.value !== null ? 'Half of ads this period cost less than this per inquiry, half cost more.' : undefined}
           delta={kpis.medianCpi.delta} deltaLabel={data.deltaWindowLabel ?? undefined} invertSentiment
           icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0a3 3 0 106 0m-6 0a3 3 0 016 0M9 13h6" /></svg>}
         />

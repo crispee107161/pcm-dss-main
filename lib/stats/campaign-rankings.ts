@@ -1,5 +1,5 @@
 import { monthKey } from '@/lib/data/month-buckets'
-import { FR31_RESULT_TYPE } from './fr31-regression'
+import { MESSAGING_RESULT_TYPE } from './ad-population-constants'
 
 // One row per advertisement per calendar month (mvp.md §6's 93-column
 // monthly export). An advertisement that ran four months contributes four
@@ -27,7 +27,7 @@ export interface AggregatedAd {
   name: string
   adSetName: string
   amountSpent: number
-  // Spend summed only from rows where result_type is FR31_RESULT_TYPE
+  // Spend summed only from rows where result_type is MESSAGING_RESULT_TYPE
   // ("Messaging conversations started"). Filtering on result_type directly,
   // not on `total_messaging_contacts !== null`, matters: total_messaging_contacts
   // is null both for a non-messaging row AND for a messaging row whose
@@ -118,7 +118,7 @@ export function aggregateAdsById(ads: AdForRanking[]): AggregatedAd[] {
       name: ad.ad_name,
       adSetName: ad.ad_set_name,
       amountSpent: existing.amountSpent + ad.amount_spent,
-      messagingSpend: existing.messagingSpend + (ad.result_type === FR31_RESULT_TYPE ? ad.amount_spent : 0),
+      messagingSpend: existing.messagingSpend + (ad.result_type === MESSAGING_RESULT_TYPE ? ad.amount_spent : 0),
       impressions: existing.impressions + ad.impressions,
       linkClicks: existing.linkClicks + (ad.link_clicks ?? 0),
       messagingContacts: existing.messagingContacts + (ad.total_messaging_contacts ?? 0),

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { rankByAdSet, rankByCampaign, checkCampaignAdSetMapping, MIN_ADS_FOR_CONFIDENCE, type AdForGroupRanking } from './ad-set-ranking'
-import { FR31_RESULT_TYPE } from './fr31-regression'
+import { MESSAGING_RESULT_TYPE } from './ad-population-constants'
 
 function ad(overrides: Partial<AdForGroupRanking> & { ad_id: string }): AdForGroupRanking {
   return {
@@ -10,7 +10,7 @@ function ad(overrides: Partial<AdForGroupRanking> & { ad_id: string }): AdForGro
     campaign_name: 'Campaign One',
     amount_spent: 0,
     total_messaging_contacts: null,
-    result_type: FR31_RESULT_TYPE,
+    result_type: MESSAGING_RESULT_TYPE,
     ...overrides,
   }
 }
@@ -41,7 +41,7 @@ describe('rankByAdSet', () => {
     expect(rows[0].cpi).toBe(50)
   })
 
-  it('excludes non-messaging ads (result_type not FR31_RESULT_TYPE) entirely', () => {
+  it('excludes non-messaging ads (result_type not MESSAGING_RESULT_TYPE) entirely', () => {
     const ads = [
       ad({ ad_id: 'purchase-ad', ad_set_id: 'set-A', amount_spent: 1000, total_messaging_contacts: null, result_type: 'Link clicks' }),
       ad({ ad_id: 'messaging-ad', ad_set_id: 'set-B', amount_spent: 500, total_messaging_contacts: 10 }),
@@ -53,11 +53,11 @@ describe('rankByAdSet', () => {
 
   it('counts a messaging ad with a blank Results cell — total_messaging_contacts null does not mean non-messaging', () => {
     // Same trap fixed in campaign-rankings.ts: a messaging-optimised ad
-    // (result_type === FR31_RESULT_TYPE) can still have a null
+    // (result_type === MESSAGING_RESULT_TYPE) can still have a null
     // total_messaging_contacts if the CSV's "Results" cell was blank for
     // that month. Its spend must still count toward the group.
     const ads = [
-      ad({ ad_id: 'blank-results', ad_set_id: 'set-A', amount_spent: 500, total_messaging_contacts: null, result_type: FR31_RESULT_TYPE }),
+      ad({ ad_id: 'blank-results', ad_set_id: 'set-A', amount_spent: 500, total_messaging_contacts: null, result_type: MESSAGING_RESULT_TYPE }),
     ]
     const rows = rankByAdSet(ads)
     expect(rows).toHaveLength(1)

@@ -1,5 +1,6 @@
 import { parseIsoLocalAsManila } from './timezone'
 import type { RowValidationResult } from './row-validation'
+import { MESSAGING_RESULT_TYPE } from '../stats/ad-population-constants'
 
 export interface AdRecord {
   reporting_starts: Date
@@ -53,8 +54,6 @@ export function parseDate(value: string | undefined, fieldName: string): Date {
   }
   return date
 }
-
-const MESSAGING_RESULT_TYPE = 'Messaging conversations started'
 
 // FR-04/FR-07 — collects a parse error per row instead of throwing on the
 // first one, so one malformed row no longer discards every other row in

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { withStudyPeriod, STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, STUDY_PERIOD_PAGE_METRIC_WHERE, withStudyPeriodAd } from '@/lib/data/study-period'
+import { withStudyPeriod, STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, STUDY_PERIOD_PAGE_METRIC_WHERE, withStudyPeriodAd, STUDY_PERIOD_START, STUDY_PERIOD_END } from '@/lib/data/study-period'
+import { MESSAGING_RESULT_TYPE } from '@/lib/stats/ad-population-constants'
 import { manilaDayRange, priorEqualWindow, diffDaysInclusive, lastCompleteMonth, toISODate, type DateRangeWhere } from '@/lib/date-range'
 import { manilaYearMonth, monthKey, distinctMonths, rowsInMonth, MANILA_MONTH_LABEL_FMT } from '@/lib/data/month-buckets'
 import { median, iqr, type Iqr } from '@/lib/stats/descriptive'
@@ -28,6 +29,13 @@ export interface DashboardOverview {
   // instead of the wall clock (see date-range.ts's lastCompleteMonth).
   dataAnchor: string
   periodLabel: string
+  // Resolved date bound for "All time" only (null otherwise) — kept separate
+  // from periodLabel so prose captions and table subtitles that interpolate
+  // periodLabel ("ran in {periodLabel}") don't grow a 30-character
+  // parenthetical; only the KPI cards' sub-line needs the resolved range
+  // (docs/raven/Dashboard_Second_Pass.md §3 — "two KPI cards just say All
+  // time with nothing beneath").
+  periodRangeLabel: string | null
   deltaWindowLabel: string | null
   deltaReliable: boolean
   kpis: {
@@ -54,7 +62,11 @@ export interface DashboardOverview {
   alerts: {
     uncategorizedCount: number
     missingMonths: string[]
+    // Top 5 by spend, for the chip's tooltip list.
     spendNoResultAds: { name: string; spend: number }[]
+    // Full population these 5 are drawn from — may exceed 5.
+    spendNoResultTotalCount: number
+    spendNoResultTotalSpend: number
   }
 }
 
@@ -68,7 +80,19 @@ export interface DashboardOverview {
 // there) — same sum-then-divide idea, but this one only needs spend/messaging
 // for the dashboard's KPI cards and CPI distribution, not the fuller
 // per-ad shape (impressions, reach, months) that screen's ranking tables need.
-function sumSpendAndMessagingByAdId(ads: { ad_id: string; ad_name: string; ad_set_name: string; amount_spent: number; total_messaging_contacts: number | null }[]) {
+// Takes an already-filtered row set — for the messaging CPI population, the
+// caller filters to result_type === MESSAGING_RESULT_TYPE first (matching
+// ad-set-ranking.ts's rankByGroup, which filters before calling its own
+// aggregateByAdId), so spend AND messaging are summed from the same rows.
+// Filtering inside this function instead (zeroing only spend on a
+// non-matching row while still summing its messaging contacts) would let an
+// ad with contacts recorded on a non-messaging row enter the CPI population
+// at a spuriously low, even ₱0, cost per inquiry
+// (docs/raven/Dashboard_Second_Pass.md §4.2, data_catalog.md §4.3). The
+// "spend but no messaging conversations" alert below intentionally calls
+// this on the unfiltered row set instead — it needs the ad's full spend
+// regardless of result_type, since that's the whole point of the alert.
+export function sumSpendAndMessagingByAdId(ads: { ad_id: string; ad_name: string; ad_set_name: string; amount_spent: number; total_messaging_contacts: number | null }[]) {
   const perAd = new Map<string, { ad_name: string; ad_set_name: string; spend: number; messaging: number }>()
   for (const ad of ads) {
     const existing = perAd.get(ad.ad_id) ?? { ad_name: ad.ad_name, ad_set_name: ad.ad_set_name, spend: 0, messaging: 0 }
@@ -84,6 +108,7 @@ function sumSpendAndMessagingByAdId(ads: { ad_id: string; ad_name: string; ad_se
 
 interface ResolvedPeriod {
   periodLabel: string
+  periodRangeLabel: string | null
   curWindow: DateRangeWhere
   priorWindow: DateRangeWhere | null
   deltaWindowLabel: string | null
@@ -95,9 +120,22 @@ interface ResolvedPeriod {
 // present — the spec default of the last complete month of *data*, not of
 // the wall clock (mvp.md §4.1; the dataset is a fixed historical window, see
 // §4.7, so a wall-clock default would usually resolve to empty).
-function resolvePeriod(from: string | undefined, to: string | undefined, all: boolean, dataAnchor: Date): ResolvedPeriod {
+export function resolvePeriod(from: string | undefined, to: string | undefined, all: boolean, dataAnchor: Date): ResolvedPeriod {
   if (all) {
-    return { periodLabel: 'All time', curWindow: {}, priorWindow: null, deltaWindowLabel: null }
+    // "All time" here means the full study period (see withStudyPeriod/
+    // withStudyPeriodAd below), which already ended in the past — showing
+    // its resolved bound keeps a reader from assuming it runs through today
+    // (docs/raven/Dashboard_Second_Pass.md §3). periodRangeLabel carries the
+    // resolved bound separately from periodLabel so it can be attached only
+    // where the gap was reported (the KPI cards' sub-line), not injected
+    // into every prose caption that interpolates periodLabel.
+    return {
+      periodLabel: 'All time',
+      periodRangeLabel: `${fmtShort(STUDY_PERIOD_START)} – ${fmtShort(STUDY_PERIOD_END)}`,
+      curWindow: {},
+      priorWindow: null,
+      deltaWindowLabel: null,
+    }
   }
 
   let effectiveFrom = from
@@ -119,6 +157,7 @@ function resolvePeriod(from: string | undefined, to: string | undefined, all: bo
 
   return {
     periodLabel: `${fmtShort(new Date(`${effectiveFrom}T00:00:00`))} – ${fmtShort(new Date(`${effectiveTo}T00:00:00`))}`,
+    periodRangeLabel: null,
     curWindow,
     priorWindow,
     deltaWindowLabel: `vs prior ${windowDays} day${windowDays === 1 ? '' : 's'} (ending ${fmtShort(new Date(`${prior.to}T00:00:00`))})`,
@@ -139,7 +178,7 @@ export async function getDashboardOverview(from: string | undefined, to: string 
   const dataAnchor = latestAdForAnchor?.reporting_ends ?? new Date()
 
   const period = resolvePeriod(from, to, all, dataAnchor)
-  const { curWindow, priorWindow, periodLabel, deltaWindowLabel } = period
+  const { curWindow, priorWindow, periodLabel, periodRangeLabel, deltaWindowLabel } = period
 
   // `{}` (all-time) omits the where clause entirely rather than passing
   // `{ reporting_ends: {} }` — an empty scalar filter isn't the same no-op
@@ -167,12 +206,12 @@ export async function getDashboardOverview(from: string | undefined, to: string 
     prisma.ad.findFirst({ where: STUDY_PERIOD_AD_WHERE, select: { reporting_starts: true }, orderBy: { reporting_starts: 'asc' } }),
     prisma.ad.findMany({
       where: curAdWhere,
-      select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true },
+      select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true, result_type: true },
     }),
     priorAdWhere
       ? prisma.ad.findMany({
           where: priorAdWhere,
-          select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true },
+          select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true, result_type: true },
         })
       : Promise.resolve([]),
     prisma.facebookPost.findMany({ where: curPostWhere, select: { engagement_rate: true, category_final: true } }),
@@ -201,8 +240,8 @@ export async function getDashboardOverview(from: string | undefined, to: string 
   const priorSpend = priorAdRows.reduce((s, a) => s + a.amount_spent, 0)
   const priorInquiries = priorAdRows.reduce((s, a) => s + (a.total_messaging_contacts ?? 0), 0)
 
-  const curPerAd = sumSpendAndMessagingByAdId(curAdRows)
-  const priorPerAd = sumSpendAndMessagingByAdId(priorAdRows)
+  const curPerAd = sumSpendAndMessagingByAdId(curAdRows.filter(a => a.result_type === MESSAGING_RESULT_TYPE))
+  const priorPerAd = sumSpendAndMessagingByAdId(priorAdRows.filter(a => a.result_type === MESSAGING_RESULT_TYPE))
 
   const curCpiPopulation = [...curPerAd.values()].filter(a => a.messaging > 0).map(a => a.spend / a.messaging)
   const priorCpiPopulation = [...priorPerAd.values()].filter(a => a.messaging > 0).map(a => a.spend / a.messaging)
@@ -232,9 +271,17 @@ export async function getDashboardOverview(from: string | undefined, to: string 
   const uncategorizedCount = postCategoryCounts.find(c => c.category_final === null)?._count._all ?? 0
 
   const allPerAd = sumSpendAndMessagingByAdId(allAdsForGaps)
-  const spendNoResultAds = [...allPerAd.values()]
+  const spendNoResultAdsAll = [...allPerAd.values()]
     .filter(a => a.spend > 0 && a.messaging === 0)
     .sort((a, b) => b.spend - a.spend)
+  // Only the top 5 are listed by name, but the tooltip states a total count
+  // and total spend (docs/raven/Dashboard_Second_Pass.md §2.3) — computed
+  // over the full population here, not the slice below, so that total stays
+  // honest once a 6th qualifying ad appears rather than silently
+  // under-reporting.
+  const spendNoResultTotalCount = spendNoResultAdsAll.length
+  const spendNoResultTotalSpend = spendNoResultAdsAll.reduce((s, a) => s + a.spend, 0)
+  const spendNoResultAds = spendNoResultAdsAll
     .slice(0, 5)
     .map(a => ({ name: a.ad_name, spend: a.spend }))
 
@@ -311,6 +358,7 @@ export async function getDashboardOverview(from: string | undefined, to: string 
   return {
     dataAnchor: toISODate(dataAnchor),
     periodLabel,
+    periodRangeLabel,
     deltaWindowLabel: deltaReliable ? deltaWindowLabel : null,
     deltaReliable,
     kpis: {
@@ -328,7 +376,7 @@ export async function getDashboardOverview(from: string | undefined, to: string 
     postReachViewsTrend,
     pageFunnelTrend,
     recentUploads,
-    alerts: { uncategorizedCount, missingMonths, spendNoResultAds },
+    alerts: { uncategorizedCount, missingMonths, spendNoResultAds, spendNoResultTotalCount, spendNoResultTotalSpend },
   }
 }
 

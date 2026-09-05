@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { STUDY_PERIOD_POST_WHERE, withStudyPeriodAd, STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
+import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
 import { getDashboardOverview } from '@/lib/data/dashboard'
 import { loadAnalysisScreenData, loadAdLifecycleData } from '@/lib/data/analysis'
 import { computeBudgetReallocation, MIN_SPEND_THRESHOLD_PHP, type BudgetReallocationResult } from '@/lib/stats/budget-reallocation'
@@ -16,16 +16,15 @@ export interface ReportOptions {
 }
 
 export async function buildReportData({ role }: ReportOptions) {
-  const [overview, budgetAds, adSetAds, posts, analysis, lifecycle] = await Promise.all([
+  const [overview, studyPeriodAds, posts, analysis, lifecycle] = await Promise.all([
     getDashboardOverview(undefined, undefined, true),
-    prisma.ad.findMany({
-      where: withStudyPeriodAd({ total_messaging_contacts: { not: null } }),
-      select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true },
-    }),
+    // One query for both budgetAds and adSetAds below — same WHERE, and this
+    // select is the union of what each consumer needs (computeBudgetReallocation
+    // reads ad_name; rankByAdSet reads ad_set_id/campaign_id/campaign_name).
     prisma.ad.findMany({
       where: STUDY_PERIOD_AD_WHERE,
       select: {
-        ad_id: true, ad_set_id: true, ad_set_name: true, campaign_id: true, campaign_name: true,
+        ad_id: true, ad_name: true, ad_set_id: true, ad_set_name: true, campaign_id: true, campaign_name: true,
         amount_spent: true, total_messaging_contacts: true, result_type: true,
       },
     }),
@@ -37,8 +36,8 @@ export async function buildReportData({ role }: ReportOptions) {
     role === 'owner' ? loadAdLifecycleData() : Promise.resolve(null),
   ])
 
-  const budgetReallocation: BudgetReallocationResult = computeBudgetReallocation(budgetAds, MIN_SPEND_THRESHOLD_PHP)
-  const adSetRows: GroupRankingRow[] = rankByAdSet(adSetAds)
+  const budgetReallocation: BudgetReallocationResult = computeBudgetReallocation(studyPeriodAds, MIN_SPEND_THRESHOLD_PHP)
+  const adSetRows: GroupRankingRow[] = rankByAdSet(studyPeriodAds)
   const postTypeRows: PostTypeRow[] = computePostTypePerformance(posts)
   const watchThroughEligible = posts.filter((p) => p.duration_sec !== null && p.avg_seconds_viewed !== null)
   const watchThrough: WatchThroughResult | null = watchThroughEligible.length > 0 ? computeWatchThrough(posts) : null

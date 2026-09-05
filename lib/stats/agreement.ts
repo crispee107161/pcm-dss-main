@@ -91,3 +91,28 @@ export function computeAgreement(rows: AgreementRow[]): AgreementResult {
 
   return { n, percentAgreement: po, kappa, confusionMatrix }
 }
+
+export interface CategoryRecall {
+  category: CategoryLabel
+  n: number
+  recall: number | null
+}
+
+// Recall per actual category: of the posts whose final category was X, what
+// share did this method also predict as X. `recall: null` (not 0) when a
+// category never occurs as `actual` in the sample — there's nothing to
+// recall, which is a different situation from "recalled none of it".
+export function computeRecallByCategory(rows: AgreementRow[]): CategoryRecall[] {
+  const actualCounts = new Map<CategoryLabel, number>()
+  const correctCounts = new Map<CategoryLabel, number>()
+
+  for (const { predicted, actual } of rows) {
+    actualCounts.set(actual, (actualCounts.get(actual) ?? 0) + 1)
+    if (predicted === actual) correctCounts.set(actual, (correctCounts.get(actual) ?? 0) + 1)
+  }
+
+  return AGREEMENT_LABELS.map((category) => {
+    const n = actualCounts.get(category) ?? 0
+    return { category, n, recall: n > 0 ? (correctCounts.get(category) ?? 0) / n : null }
+  })
+}

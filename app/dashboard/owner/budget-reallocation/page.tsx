@@ -7,7 +7,7 @@ import InsightHeader from '@/components/analytics/InsightHeader'
 import { computeBudgetReallocation, MIN_SPEND_THRESHOLD_PHP } from '@/lib/stats/budget-reallocation'
 import { budgetReallocationFindingSentence } from '@/lib/stats/analysis-narrative'
 import { MinSpendSelect, BudgetReallocationView } from '@/components/analytics/BudgetReallocation'
-import { withStudyPeriodAd } from '@/lib/data/study-period'
+import { STUDY_PERIOD_AD_WHERE } from '@/lib/data/study-period'
 
 export default async function BudgetReallocationPage({
   searchParams,
@@ -24,8 +24,8 @@ export default async function BudgetReallocationPage({
   const minSpendThreshold = Number.isFinite(parsed) && parsed >= 0 ? parsed : MIN_SPEND_THRESHOLD_PHP
 
   const ads = await prisma.ad.findMany({
-    where: withStudyPeriodAd({ total_messaging_contacts: { not: null } }),
-    select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true },
+    where: STUDY_PERIOD_AD_WHERE,
+    select: { ad_id: true, ad_name: true, ad_set_name: true, amount_spent: true, total_messaging_contacts: true, result_type: true },
   })
 
   const result = computeBudgetReallocation(ads, minSpendThreshold)
@@ -59,9 +59,11 @@ export default async function BudgetReallocationPage({
 
       <div className="mt-4">
         <MethodologyNote>
-          Messaging-optimised ads (Result type = &quot;Messaging conversations started&quot;) with spend at or
-          above the selected threshold are ranked by cost per messaging conversation (spend ÷ inquiries, summed
-          per Ad ID across all uploaded months before dividing) and split into four equal-size groups. The
+          Messaging conversations are summed per advertisement across every month it ran; spend is summed
+          only from the months where &quot;Result type&quot; is &quot;Messaging conversations started&quot;.
+          For an advertisement that also ran non-messaging months, that month&apos;s spend does not count
+          toward its cost per messaging conversation. Ads with total messaging spend at or above the
+          selected threshold are ranked by that figure and split into four equal-size groups. The
           minimum-spend filter exists because an unfiltered split is confounded by regression to the mean (the
           worst quartile would mostly be low-volume ads with noisy CPI, not genuinely inefficient ones). The
           reallocation comparison above shows what a portion of Q4&apos;s (worst) spend would have generated at

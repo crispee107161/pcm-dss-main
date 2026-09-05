@@ -14,7 +14,7 @@ import { studentTPValue, fPValue, chiSquareUpperTailEvenDf, normalTwoTailedPValu
 import { shapiroWilk } from './shapiro-wilk'
 import { median } from './descriptive'
 import { seededKFoldIndices } from './seeded-random'
-import { MIN_SPEND_THRESHOLD_PHP } from './budget-reallocation'
+import { MIN_SPEND_THRESHOLD_PHP, MESSAGING_RESULT_TYPE } from './ad-population-constants'
 
 export const FR31_PREDICTORS = ['engagement_rate', 'frequency', 'ctr', 'cpm'] as const
 export type Fr31Predictor = (typeof FR31_PREDICTORS)[number]
@@ -32,7 +32,7 @@ export const FR31_TERM_LABEL: Record<Fr31Term, string> = {
   cpm: 'CPM',
 }
 
-export const FR31_RESULT_TYPE = 'Messaging conversations started'
+export const FR31_RESULT_TYPE = MESSAGING_RESULT_TYPE
 export const FR31_MIN_SPEND_PHP = MIN_SPEND_THRESHOLD_PHP
 export const FR31_MIN_N = 30
 export const FR31_CV_FOLDS = 10

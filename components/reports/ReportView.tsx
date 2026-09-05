@@ -167,7 +167,7 @@ export default function ReportView({ variant, role, data, canExport = true, hide
                 <tr className={isPrint ? undefined : 'bg-gray-50'}>
                   <th className={th}>#</th>
                   <th className={th}>Ad Name</th>
-                  <th className={thRight}>Spend</th>
+                  <th className={thRight}>Messaging Spend</th>
                   <th className={thRight}>Messaging Conversations</th>
                   <th className={thRight}>CPI</th>
                 </tr>

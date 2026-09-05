@@ -1,25 +1,40 @@
+import type { CategoryLabel } from '@/app/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { withStudyPeriod } from '@/lib/data/study-period'
-import { computeAgreement, type AgreementResult } from '@/lib/stats/agreement'
+import { computeAgreement, computeRecallByCategory, type AgreementResult, type CategoryRecall } from '@/lib/stats/agreement'
 
 export interface GroundTruthMethodEvaluationData {
   n: number
   keywordAgreement: AgreementResult
   llmAgreement: AgreementResult
+  keywordRecall: CategoryRecall[]
+  llmRecall: CategoryRecall[]
 }
 
-// Developer_Note_Ground_Truth_Labelling.md §4/§5 — the authoritative FR-15
-// comparison: each method against category_final restricted to rows where
-// category_final_source = MANUAL_GROUND_TRUTH, i.e. only posts labelled via
-// the external two-coder codebook process, never the S4 finalisation queue's
-// own accept/override output (see loadMethodEvaluation's circularity note
-// below for why that distinction matters).
-export async function loadGroundTruthMethodEvaluation(): Promise<GroundTruthMethodEvaluationData> {
-  const posts = await prisma.facebookPost.findMany({
-    where: withStudyPeriod({ category_final_source: 'MANUAL_GROUND_TRUTH' }),
-    select: { category_keyword: true, category_llm: true, category_final: true },
-  })
+export interface GroundTruthComparison {
+  // Docs/raven/Backlog_Coding_Complete_v2.md §3 — the pre-specified figure:
+  // MANUAL_GROUND_TRUTH only (the original 200-post reference sample), the
+  // target committed to before any result was seen.
+  referenceOnly: GroundTruthMethodEvaluationData
+  // Same §3 — MANUAL_GROUND_TRUTH + MANUAL_CODEBOOK_ASSIGNMENT combined
+  // (~707 posts, effectively the whole in-period corpus less the 12 posts
+  // held back for the demonstration). Both sets were produced by the same
+  // two coders under the same blind, caption-only, suggestion-blind
+  // procedure, so scoring them together is not a change of methodology —
+  // see the memo for the contamination argument. Reported alongside, never
+  // instead of, referenceOnly.
+  combined: GroundTruthMethodEvaluationData
+}
 
+const GROUND_TRUTH_SOURCES = ['MANUAL_GROUND_TRUTH', 'MANUAL_CODEBOOK_ASSIGNMENT'] as const
+
+type GroundTruthPost = {
+  category_keyword: CategoryLabel | null
+  category_llm: CategoryLabel | null
+  category_final: CategoryLabel | null
+}
+
+export function scoreGroundTruthPosts(posts: GroundTruthPost[]): GroundTruthMethodEvaluationData {
   const keywordRows = posts
     .filter((p) => p.category_keyword !== null)
     .map((p) => ({ predicted: p.category_keyword!, actual: p.category_final! }))
@@ -31,6 +46,31 @@ export async function loadGroundTruthMethodEvaluation(): Promise<GroundTruthMeth
     n: posts.length,
     keywordAgreement: computeAgreement(keywordRows),
     llmAgreement: computeAgreement(llmRows),
+    keywordRecall: computeRecallByCategory(keywordRows),
+    llmRecall: computeRecallByCategory(llmRows),
+  }
+}
+
+// Developer_Note_Ground_Truth_Labelling.md §4/§5 — the authoritative FR-15
+// comparison: each method against category_final restricted to rows labelled
+// via the external two-coder codebook process (MANUAL_GROUND_TRUTH, and now
+// MANUAL_CODEBOOK_ASSIGNMENT — see GroundTruthComparison above), never the S4
+// finalisation queue's own accept/override output (see loadMethodEvaluation's
+// circularity note below for why that distinction matters).
+export async function loadGroundTruthMethodEvaluation(): Promise<GroundTruthComparison> {
+  const posts = await prisma.facebookPost.findMany({
+    where: withStudyPeriod({
+      category_final_source: { in: [...GROUND_TRUTH_SOURCES] },
+      category_final: { not: null },
+    }),
+    select: { category_keyword: true, category_llm: true, category_final: true, category_final_source: true },
+  })
+
+  const referenceOnly = posts.filter((p) => p.category_final_source === 'MANUAL_GROUND_TRUTH')
+
+  return {
+    referenceOnly: scoreGroundTruthPosts(referenceOnly),
+    combined: scoreGroundTruthPosts(posts),
   }
 }
 
@@ -43,12 +83,16 @@ export interface InterCoderReliabilitySummary {
 }
 
 // Developer_Note_Ground_Truth_Labelling.md §6 — the human "ceiling" kappa
-// between the two external coders, imported once via
+// between the two external coders, imported via
 // scripts/import-inter-coder-reliability.ts after compute_kappa.py runs.
-export async function getInterCoderReliability(): Promise<InterCoderReliabilitySummary | null> {
-  const row = await prisma.interCoderReliability.findFirst({ orderBy: { computed_at: 'desc' } })
-  if (!row) return null
-  return { n: row.n, percentAgreement: row.percent_agreement, kappa: row.kappa, computedAt: row.computed_at, notes: row.notes }
+// FR08_707_Figures_to_Reconcile.md §3 — three sessions can now coexist here:
+// the reference sample (n=200), the backlog session (n=507), and a pooled
+// figure across both (n=707). Returning every row (not just the latest) lets
+// the page match each section's ceiling banner to its own n rather than one
+// row winning by recency and silently displacing the others.
+export async function getInterCoderReliabilityRows(): Promise<InterCoderReliabilitySummary[]> {
+  const rows = await prisma.interCoderReliability.findMany({ orderBy: { computed_at: 'desc' } })
+  return rows.map((row) => ({ n: row.n, percentAgreement: row.percent_agreement, kappa: row.kappa, computedAt: row.computed_at, notes: row.notes }))
 }
 
 export interface AcceptanceRatePeriod {

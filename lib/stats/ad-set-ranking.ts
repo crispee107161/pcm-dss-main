@@ -3,7 +3,7 @@
 // distinct `Ad set name` values are spread across 26 distinct `Ad set ID`s,
 // so grouping by name silently merges two different ad sets into one row.
 
-import { FR31_RESULT_TYPE } from './fr31-regression'
+import { MESSAGING_RESULT_TYPE } from './ad-population-constants'
 
 export interface AdForGroupRanking {
   ad_id: string
@@ -39,7 +39,7 @@ export const MIN_ADS_FOR_CONFIDENCE = 3
 // spend/inquiries per Ad ID first, then group, matching the sum-then-divide
 // aggregation rule in data_catalog.md §4.
 //
-// Spend is summed only from rows where result_type is FR31_RESULT_TYPE
+// Spend is summed only from rows where result_type is MESSAGING_RESULT_TYPE
 // ("Messaging conversations started"), not gated on
 // `total_messaging_contacts !== null` — total_messaging_contacts is null both
 // for a non-messaging row AND for a messaging row whose "Results" cell was
@@ -54,7 +54,7 @@ function aggregateByAdId(ads: AdForGroupRanking[], groupId: (a: AdForGroupRankin
     perAd.set(ad.ad_id, {
       groupId: groupId(ad),
       groupName: groupName(ad),
-      spend: existing.spend + (ad.result_type === FR31_RESULT_TYPE ? ad.amount_spent : 0),
+      spend: existing.spend + (ad.result_type === MESSAGING_RESULT_TYPE ? ad.amount_spent : 0),
       inquiries: existing.inquiries + (ad.total_messaging_contacts ?? 0),
     })
   }
@@ -65,7 +65,7 @@ function rankByGroup(ads: AdForGroupRanking[], groupId: (a: AdForGroupRanking) =
   // Messaging-optimised ads only, matching the FR-25/data_catalog §4.3 filter.
   // Filtered on result_type directly, not total_messaging_contacts !== null
   // — see aggregateByAdId above for why the null-proxy under-counts.
-  const messagingAds = ads.filter(a => a.result_type === FR31_RESULT_TYPE)
+  const messagingAds = ads.filter(a => a.result_type === MESSAGING_RESULT_TYPE)
   const perAd = aggregateByAdId(messagingAds, groupId, groupName)
 
   const perGroup = new Map<string, { name: string; spend: number; inquiries: number; adCount: number }>()

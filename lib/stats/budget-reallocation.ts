@@ -1,9 +1,13 @@
-// Shared with FR-31 (see lib/stats/fr31-regression.ts), which the FR-31 spec
-// explicitly requires to use "the same named constant" as FR-25 for its
-// ≥₱1,000 population filter — hoisted here rather than left as separate
-// private literals in app/dashboard/owner/budget-reallocation/page.tsx and
-// lib/reports/report-data.ts.
-export const MIN_SPEND_THRESHOLD_PHP = 1000
+import { MIN_SPEND_THRESHOLD_PHP, MESSAGING_RESULT_TYPE } from './ad-population-constants'
+
+// Re-exported so existing call sites (app/dashboard/owner/budget-reallocation/page.tsx,
+// lib/reports/report-data.ts, components/dashboard/DashboardOverview.tsx,
+// fr31-regression.ts) don't need to change their import for the spend
+// threshold — the value lives in a leaf module with no imports of its own,
+// so nothing that depends on it risks an import cycle. MESSAGING_RESULT_TYPE
+// itself is not re-exported: import it from './ad-population-constants'
+// directly, the same as every other consumer, so there's one canonical path.
+export { MIN_SPEND_THRESHOLD_PHP }
 
 export interface AdForReallocation {
   ad_id: string
@@ -11,6 +15,7 @@ export interface AdForReallocation {
   ad_set_name: string
   amount_spent: number
   total_messaging_contacts: number | null
+  result_type: string | null
 }
 
 export interface ReallocationAd {
@@ -57,6 +62,21 @@ export function sortQ4WorstFirst(q4Ads: ReallocationAd[]): ReallocationAd[] {
 // A monthly-export ad can have up to 12 rows (one per uploaded month) — sum
 // spend/inquiries per Ad ID first, then compute one CPI per ad, matching the
 // aggregation rule in data_catalog.md §4.3 (sum-then-divide, never mean-of-ratios).
+//
+// Spend is summed only from rows where result_type is MESSAGING_RESULT_TYPE,
+// not gated on `total_messaging_contacts !== null`. Both callers already
+// filter to messaging-only rows in their Prisma query, so on live data this
+// makes no difference (verified 2026-09-05 against the frozen 187-ad
+// messaging dump: zero rows have a blank Results cell). It matters if a
+// future caller passes an unfiltered row set: total_messaging_contacts is
+// null both for a genuinely non-messaging row AND for a messaging row whose
+// "Results" cell was blank in the CSV, so gating on it there would either
+// wrongly include non-messaging spend or wrongly drop real messaging spend
+// depending on which check is used — the mistake already caught and fixed in
+// lib/stats/campaign-rankings.ts and lib/stats/ad-set-ranking.ts
+// (docs/raven/Top_Ads_Accepted_and_Filter_Question.md §2). Filtering on
+// result_type here means this function is correct regardless of what its
+// caller's query does.
 function aggregateByAdId(ads: AdForReallocation[]) {
   const perAd = new Map<string, { ad_name: string; ad_set_name: string; spend: number; inquiries: number }>()
   for (const ad of ads) {
@@ -64,7 +84,7 @@ function aggregateByAdId(ads: AdForReallocation[]) {
     perAd.set(ad.ad_id, {
       ad_name: ad.ad_name,
       ad_set_name: ad.ad_set_name,
-      spend: existing.spend + ad.amount_spent,
+      spend: existing.spend + (ad.result_type === MESSAGING_RESULT_TYPE ? ad.amount_spent : 0),
       inquiries: existing.inquiries + (ad.total_messaging_contacts ?? 0),
     })
   }

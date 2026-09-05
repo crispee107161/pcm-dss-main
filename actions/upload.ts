@@ -18,7 +18,8 @@ import { upsertPageViewers } from '@/lib/db/upsert-page-viewers'
 import { upsertDemographics } from '@/lib/db/upsert-demographics'
 import { upsertAudience } from '@/lib/db/upsert-audience'
 import { prisma } from '@/lib/prisma'
-import { isInStudyPeriod } from '@/lib/data/study-period'
+import { isInStudyPeriod, STUDY_PERIOD_LABEL } from '@/lib/data/study-period'
+import { parseIsoLocalAsManila } from '@/lib/csv/timezone'
 import { revalidatePath } from 'next/cache'
 import type { UploadResult, UploadType, RowRejection } from '@/types/index'
 import type { AdRecord } from '@/lib/csv/validate-ads'
@@ -39,6 +40,16 @@ const UPLOAD_ALLOWED_ROLES = new Set(['MARKETING_MANAGER', 'BUSINESS_OWNER'])
 function formatPeriodLabel(min: Date, max: Date): string {
   const fmt = new Intl.DateTimeFormat('en-PH', { month: 'long', year: 'numeric', day: 'numeric' })
   return min.toDateString() === max.toDateString() ? fmt.format(min) : `${fmt.format(min)} – ${fmt.format(max)}`
+}
+
+// docs/raven/Upload_Data_Second_Pass.md §3.1 — FR-04a's out-of-period flag
+// only covered Posts; every other dated upload type silently excluded
+// out-of-period rows from analysis with no indication in the upload result.
+// Shared across branches so the wording (and the STUDY_PERIOD_LABEL source
+// of truth) stays in one place rather than drifting per file type.
+function buildOutOfPeriodWarning(outOfPeriodCount: number, total: number, noun: string): string | undefined {
+  if (outOfPeriodCount === 0) return undefined
+  return `${outOfPeriodCount} of ${total} ${noun}${total === 1 ? '' : 's'} in this file fall outside the declared study period (${STUDY_PERIOD_LABEL}) and are excluded from analysis.`
 }
 
 // FR-05 (Response_Forecast_Upload_Sidebar.md §2.3): with two roles able to
@@ -202,6 +213,9 @@ export async function uploadCSV(
       records_updated   = updated
       records_unchanged = unchanged
 
+      const outOfPeriodCount = validated.rows.filter((r) => !isInStudyPeriod(parseIsoLocalAsManila(r.date))).length
+      warning_message = buildOutOfPeriodWarning(outOfPeriodCount, validated.rows.length, 'row')
+
     } else {
       // --- Standard CSV files ---
       const { headers, rows } = parseCsvBuffer(buffer)
@@ -226,6 +240,9 @@ export async function uploadCSV(
         records_updated   = counts.updated
         records_unchanged = counts.unchanged
 
+        const outOfPeriodCount = parsedAdRecords.filter((r) => !isInStudyPeriod(r.reporting_starts)).length
+        warning_message = buildOutOfPeriodWarning(outOfPeriodCount, parsedAdRecords.length, 'ad')
+
       } else if (csvType === 'POSTS_CSV') {
         const { valid: postRecords, rejected } = validatePostsRows(rows)
         records_read = rows.length
@@ -245,9 +262,7 @@ export async function uploadCSV(
         // delete) but flagged so an upload that silently drifts outside the
         // declared study period is visible, not just excluded downstream.
         const outOfPeriodCount = postRecords.filter((r) => !isInStudyPeriod(r.publish_time)).length
-        if (outOfPeriodCount > 0) {
-          warning_message = `${outOfPeriodCount} of ${postRecords.length} post${postRecords.length === 1 ? '' : 's'} in this file fall outside the declared study period (Aug 2025 – Jul 2026) and are excluded from analysis.`
-        }
+        warning_message = buildOutOfPeriodWarning(outOfPeriodCount, postRecords.length, 'post')
 
       } else if (csvType === 'FOLLOWER_HISTORY_CSV') {
         const { valid: records, rejected } = validateFollowerHistoryRows(rows)
@@ -258,6 +273,9 @@ export async function uploadCSV(
         records_updated   = updated
         records_unchanged = unchanged
 
+        const outOfPeriodCount = records.filter((r) => !isInStudyPeriod(r.date)).length
+        warning_message = buildOutOfPeriodWarning(outOfPeriodCount, records.length, 'day')
+
       } else if (csvType === 'PAGE_VIEWERS_CSV') {
         const { valid: records, rejected } = validatePageViewersRows(rows)
         records_read = rows.length
@@ -266,6 +284,9 @@ export async function uploadCSV(
         records_inserted  = inserted
         records_updated   = updated
         records_unchanged = unchanged
+
+        const outOfPeriodCount = records.filter((r) => !isInStudyPeriod(r.date)).length
+        warning_message = buildOutOfPeriodWarning(outOfPeriodCount, records.length, 'day')
 
       } else if (csvType === 'DEMOGRAPHICS_CSV') {
         const { valid: result, rejected } = validateDemographicsRows(headers, rows)

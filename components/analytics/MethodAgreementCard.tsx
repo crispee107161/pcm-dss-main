@@ -1,4 +1,4 @@
-import type { AgreementResult } from '@/lib/stats/agreement'
+import type { AgreementResult, CategoryRecall } from '@/lib/stats/agreement'
 import { AGREEMENT_LABELS, kappaMagnitude } from '@/lib/stats/agreement'
 import { CATEGORY_LABEL_DISPLAY } from '@/lib/category-label'
 
@@ -11,10 +11,11 @@ const SHORT_LABEL: Record<string, string> = {
   UNCLEAR: 'Unclear',
 }
 
-export default function MethodAgreementCard({ title, methodName, agreement }: {
+export default function MethodAgreementCard({ title, methodName, agreement, recall }: {
   title: string
   methodName: string
   agreement: AgreementResult
+  recall?: CategoryRecall[]
 }) {
   const magnitude = kappaMagnitude(agreement.kappa)
 
@@ -89,6 +90,39 @@ export default function MethodAgreementCard({ title, methodName, agreement }: {
                 </tbody>
               </table>
             </div>
+
+            {recall && recall.some((r) => r.n > 0) && (
+              <div className="mt-4 overflow-x-auto">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Recall by category</p>
+                <p className="text-[10px] text-gray-400 mb-1">
+                  Share of posts whose final category was X that this method also predicted as X — n per column is
+                  {' '}{methodName}&apos;s covered count for that actual category, not this card&apos;s overall n above.
+                </p>
+                <table className="text-xs border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="px-2 py-1 text-left text-gray-500 font-medium" />
+                      {recall.map((r) => (
+                        <th key={r.category} className="px-2 py-1 text-right text-gray-500 font-medium" title={CATEGORY_LABEL_DISPLAY[r.category as keyof typeof CATEGORY_LABEL_DISPLAY]}>
+                          {SHORT_LABEL[r.category]}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-gray-100">
+                      <td className="px-2 py-1.5 font-medium text-gray-700 whitespace-nowrap">{methodName}</td>
+                      {recall.map((r) => (
+                        <td key={r.category} className="px-2 py-1.5 text-right text-gray-600">
+                          {r.recall === null ? '—' : `${(r.recall * 100).toFixed(1)}%`}
+                          <span className="block text-[10px] text-gray-400">n={r.n}</span>
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </>
         )}
       </div>

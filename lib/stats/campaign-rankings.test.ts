@@ -13,7 +13,7 @@ import {
   type AdForRanking,
   type AggregatedAd,
 } from './campaign-rankings'
-import { FR31_RESULT_TYPE } from './fr31-regression'
+import { MESSAGING_RESULT_TYPE } from './ad-population-constants'
 
 function adRow(overrides: Partial<AdForRanking> & { ad_id: string; ad_name: string }): AdForRanking {
   const total_messaging_contacts = overrides.total_messaging_contacts ?? null
@@ -29,8 +29,8 @@ function adRow(overrides: Partial<AdForRanking> & { ad_id: string; ad_name: stri
     // filters messagingSpend on result_type. Override result_type directly
     // to test the case where the two diverge (a messaging row with a blank
     // "Results" CSV cell, where total_messaging_contacts is null but
-    // result_type is still FR31_RESULT_TYPE).
-    result_type: total_messaging_contacts !== null ? FR31_RESULT_TYPE : null,
+    // result_type is still MESSAGING_RESULT_TYPE).
+    result_type: total_messaging_contacts !== null ? MESSAGING_RESULT_TYPE : null,
     reach: null,
     reporting_starts: new Date('2026-01-01'),
     reporting_ends: new Date('2026-01-31'),
@@ -131,7 +131,7 @@ describe('aggregateAdsById', () => {
     // numerator — that would be the mirror-image bug (CPI deflated instead
     // of inflated).
     const rows = [
-      adRow({ ad_id: 'a1', ad_name: 'blank-results', amount_spent: 100, result_type: FR31_RESULT_TYPE, total_messaging_contacts: null }),
+      adRow({ ad_id: 'a1', ad_name: 'blank-results', amount_spent: 100, result_type: MESSAGING_RESULT_TYPE, total_messaging_contacts: null }),
     ]
     const [aggregated] = aggregateAdsById(rows)
     expect(aggregated.messagingSpend).toBe(100)

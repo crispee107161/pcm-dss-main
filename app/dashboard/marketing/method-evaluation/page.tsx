@@ -1,6 +1,6 @@
 import { requireSession } from '@/lib/auth-guard'
 import { redirect } from 'next/navigation'
-import { loadMethodEvaluation, loadGroundTruthMethodEvaluation, getInterCoderReliability, getSuggestionAcceptanceRate } from '@/lib/data/method-evaluation'
+import { loadMethodEvaluation, loadGroundTruthMethodEvaluation, getInterCoderReliabilityRows, getSuggestionAcceptanceRate } from '@/lib/data/method-evaluation'
 import { kappaMagnitude } from '@/lib/stats/agreement'
 import { PageHeader } from '@/components/nav/PageHeader'
 import MethodologyNote from '@/components/analytics/MethodologyNote'
@@ -13,12 +13,18 @@ export default async function MarketingMethodEvaluationPage() {
     redirect('/login')
   }
 
-  const [data, groundTruth, interCoder, acceptanceRate] = await Promise.all([
+  const [data, groundTruth, interCoderRows, acceptanceRate] = await Promise.all([
     loadMethodEvaluation(),
     loadGroundTruthMethodEvaluation(),
-    getInterCoderReliability(),
+    getInterCoderReliabilityRows(),
     getSuggestionAcceptanceRate(),
   ])
+
+  // Each section's ceiling banner is matched to its own n — a ceiling
+  // figure from a different blind-coding session is not interchangeable
+  // and must never be shown as if it were (FR08_707_Figures_to_Reconcile.md §3).
+  const referenceInterCoder = interCoderRows.find((r) => r.n === groundTruth.referenceOnly.n) ?? null
+  const combinedInterCoder = interCoderRows.find((r) => r.n === groundTruth.combined.n) ?? null
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
@@ -32,7 +38,7 @@ export default async function MarketingMethodEvaluationPage() {
           <span className="font-semibold">Sample caveat:</span> this compares each method against whatever posts
           currently have a final category assigned (n={data.sampleSize}, including any Ground Truth rows already
           finalised) — this is the S4 finalisation queue&apos;s output to date, not a random or complete sample.
-          {groundTruth.n > 0 ? (
+          {groundTruth.referenceOnly.n > 0 ? (
             <> mvp.md&apos;s recommended purpose-built random sample of 150–200 posts is the separate Ground
             Truth study below, which has been run — treat that comparison, not this one, as the authoritative
             FR-15 figure.</>
@@ -54,7 +60,7 @@ export default async function MarketingMethodEvaluationPage() {
             not independent judgment. Comparing the keyword method against a reference largely derived from
             itself inflates its agreement figures and is not the honest, independent comparison FR-15 requires.
             Treat the kappa values below as unreliable and use the Ground Truth comparison further down
-            instead{groundTruth.n === 0 && ' — which is still waiting on that independent manual sample'}.
+            instead{groundTruth.referenceOnly.n === 0 && ' — which is still waiting on that independent manual sample'}.
           </p>
         </div>
       )}
@@ -67,18 +73,23 @@ export default async function MarketingMethodEvaluationPage() {
       <div className="mt-8 mb-2">
         <h2 className="text-sm font-semibold text-gray-800">Ground truth (independent human review)</h2>
         <p className="text-xs text-gray-500 mt-0.5">
-          Two coders labelled a seeded random sample by hand, blind to the system&apos;s suggestions, following the
-          project codebook. This is the authoritative comparison, restricted to posts confirmed through that
-          independent manual review, so it can&apos;t be contaminated by the circularity above.
+          Two coders labelled posts by hand, blind to the system&apos;s suggestions, following the project codebook.
+          This is the authoritative comparison, restricted to posts confirmed through that independent manual
+          review, so it can&apos;t be contaminated by the circularity above.
         </p>
         <MethodologyNote label="Where this data comes from" className="mt-1">
           Coders&apos; labels follow <span className="font-medium">CODEBOOK_content_categories.md</span> and are
-          imported via <span className="font-mono">scripts/import-ground-truth.ts</span>, which sets{' '}
-          <span className="font-mono">category_final_source = MANUAL_GROUND_TRUTH</span> on each row.
+          imported via <span className="font-mono">scripts/import-ground-truth.ts</span> (sets{' '}
+          <span className="font-mono">category_final_source = MANUAL_GROUND_TRUTH</span>) and{' '}
+          <span className="font-mono">scripts/import-codebook-assignment.ts</span> (sets{' '}
+          <span className="font-mono">category_final_source = MANUAL_CODEBOOK_ASSIGNMENT</span>). Both sets were
+          produced by the same two coders under the same blind, caption-only, suggestion-blind procedure — see
+          Backlog_Coding_Complete_v2.md §2/§3 — so the two figures below can be read side by side rather than as
+          competing measurements.
         </MethodologyNote>
       </div>
 
-      {groundTruth.n === 0 ? (
+      {groundTruth.combined.n === 0 ? (
         <div className="bg-card rounded-2xl card-shadow p-4 border-l-4 border-status-warning">
           <p className="text-xs text-gray-600">
             No ground-truth sample has been imported yet — waiting on the two-coder codebook process. Once the
@@ -88,30 +99,85 @@ export default async function MarketingMethodEvaluationPage() {
         </div>
       ) : (
         <>
-          {interCoder && (
+          <h3 className="text-xs font-semibold text-gray-700 mb-1">
+            Pre-specified reference sample (n={groundTruth.referenceOnly.n})
+          </h3>
+          {/* Scoped to the reference section only, and only rendered when its
+              n matches the reference sample exactly — a ceiling figure from a
+              different blind-coding session (e.g. the backlog session in
+              Backlog_Coding_Complete_v2.md §2, n=507) is not interchangeable
+              with this one and must never be shown as if it were. */}
+          {referenceInterCoder && (
             <div className="bg-card rounded-2xl card-shadow p-4 mb-4 border-l-4 border-primary">
               <p className="text-xs text-gray-600">
-                <span className="font-semibold">Human inter-coder kappa (ceiling):</span> {interCoder.kappa.toFixed(3)}{' '}
-                ({kappaMagnitude(interCoder.kappa)}), {(interCoder.percentAgreement * 100).toFixed(1)}% agreement, n=
-                {interCoder.n}. This is the agreement two trained human coders reached on the same task — the
-                methods below can&apos;t reasonably be expected to exceed it.
-                {interCoder.notes && <span className="block mt-1 text-gray-500">{interCoder.notes}</span>}
+                <span className="font-semibold">Human inter-coder kappa (ceiling), n={referenceInterCoder.n}:</span> {referenceInterCoder.kappa.toFixed(3)}{' '}
+                ({kappaMagnitude(referenceInterCoder.kappa)}), {(referenceInterCoder.percentAgreement * 100).toFixed(1)}% agreement. This
+                is the agreement two trained human coders reached on this specific sample — the methods below can&apos;t
+                reasonably be expected to exceed it.
+                {referenceInterCoder.notes && <span className="block mt-1 text-gray-500">{referenceInterCoder.notes}</span>}
               </p>
             </div>
           )}
           <p className="text-xs text-gray-500 mb-3">
-            n={groundTruth.n} ground-truth-labelled posts — each method compared against the resolved human label.
+            The 150–200 post sample committed to before any result was seen — each method compared against the
+            resolved human label.
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <MethodAgreementCard
+              title={`Keyword Method — Reference Sample (n=${groundTruth.referenceOnly.keywordAgreement.n})`}
+              methodName="Keyword"
+              agreement={groundTruth.referenceOnly.keywordAgreement}
+              recall={groundTruth.referenceOnly.keywordRecall}
+            />
+            <MethodAgreementCard
+              title={`LLM Method — Reference Sample (n=${groundTruth.referenceOnly.llmAgreement.n})`}
+              methodName="LLM"
+              agreement={groundTruth.referenceOnly.llmAgreement}
+              recall={groundTruth.referenceOnly.llmRecall}
+            />
+          </div>
+
+          <h3 className="text-xs font-semibold text-gray-700 mb-1">
+            Full corpus, reference + backlog combined (n={groundTruth.combined.n})
+          </h3>
+          {/* Only renders once a pooled inter-coder figure whose n matches
+              this section exactly has been imported (FR08_707_Figures_to_
+              Reconcile.md §3) — a row from either single session alone
+              (n=200 or n=507) does not cover this combined set and must
+              never be shown here. */}
+          {combinedInterCoder && (
+            <div className="bg-card rounded-2xl card-shadow p-4 mb-4 border-l-4 border-primary">
+              <p className="text-xs text-gray-600">
+                <span className="font-semibold">Human inter-coder kappa (ceiling), n={combinedInterCoder.n}:</span> {combinedInterCoder.kappa.toFixed(3)}{' '}
+                ({kappaMagnitude(combinedInterCoder.kappa)}), {(combinedInterCoder.percentAgreement * 100).toFixed(1)}% agreement.
+                Pooled across both blind-coding sessions — the methods below can&apos;t reasonably be expected to
+                exceed it.
+                {combinedInterCoder.notes && <span className="block mt-1 text-gray-500">{combinedInterCoder.notes}</span>}
+              </p>
+            </div>
+          )}
+          <p className="text-xs text-gray-500 mb-3">
+            Every post the two coders have labelled under the same blind procedure — effectively the whole
+            in-period corpus less the posts held back for the demonstration. This set contains the reference sample
+            above plus the backlog session, not a separate independent sample; the two are not mutually exclusive.
+            {!combinedInterCoder && (
+              <> No single inter-coder ceiling applies here yet since it would span two separate blind-coding
+              sessions with different inter-coder kappas (Backlog_Coding_Complete_v2.md §2) — a pooled figure across
+              both sessions is pending.</>
+            )} Stronger, but reported alongside the reference figure above, not instead of it.
           </p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <MethodAgreementCard
-              title={`Keyword Method — Ground Truth (n=${groundTruth.keywordAgreement.n})`}
+              title={`Keyword Method — Full Corpus (n=${groundTruth.combined.keywordAgreement.n})`}
               methodName="Keyword"
-              agreement={groundTruth.keywordAgreement}
+              agreement={groundTruth.combined.keywordAgreement}
+              recall={groundTruth.combined.keywordRecall}
             />
             <MethodAgreementCard
-              title={`LLM Method — Ground Truth (n=${groundTruth.llmAgreement.n})`}
+              title={`LLM Method — Full Corpus (n=${groundTruth.combined.llmAgreement.n})`}
               methodName="LLM"
-              agreement={groundTruth.llmAgreement}
+              agreement={groundTruth.combined.llmAgreement}
+              recall={groundTruth.combined.llmRecall}
             />
           </div>
         </>

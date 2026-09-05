@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeAgreement, kappaMagnitude, type AgreementRow } from './agreement'
+import { computeAgreement, computeRecallByCategory, kappaMagnitude, type AgreementRow } from './agreement'
 
 function row(predicted: AgreementRow['predicted'], actual: AgreementRow['actual']): AgreementRow {
   return { predicted, actual }
@@ -64,6 +64,39 @@ describe('computeAgreement', () => {
 
     expect(result.confusionMatrix).toHaveLength(36)
     expect(result.confusionMatrix.filter(c => c.count === 0)).toHaveLength(35)
+  })
+})
+
+describe('computeRecallByCategory', () => {
+  it('computes recall per actual category, ignoring predictions for other categories', () => {
+    const rows: AgreementRow[] = [
+      row('PRODUCT_SHOWCASE', 'PRODUCT_SHOWCASE'),
+      row('ENTERTAINMENT', 'PRODUCT_SHOWCASE'),
+      row('ENTERTAINMENT', 'ENTERTAINMENT'),
+    ]
+
+    const result = computeRecallByCategory(rows)
+
+    const showcase = result.find((r) => r.category === 'PRODUCT_SHOWCASE')
+    const entertainment = result.find((r) => r.category === 'ENTERTAINMENT')
+
+    expect(showcase).toEqual({ category: 'PRODUCT_SHOWCASE', n: 2, recall: 0.5 })
+    expect(entertainment).toEqual({ category: 'ENTERTAINMENT', n: 1, recall: 1 })
+  })
+
+  it('reports null recall, not zero, for a category with no actual occurrences', () => {
+    const rows: AgreementRow[] = [row('PRODUCT_SHOWCASE', 'PRODUCT_SHOWCASE')]
+
+    const result = computeRecallByCategory(rows)
+
+    const testimonial = result.find((r) => r.category === 'TESTIMONIAL')
+    expect(testimonial).toEqual({ category: 'TESTIMONIAL', n: 0, recall: null })
+  })
+
+  it('covers every AGREEMENT_LABELS entry even on an empty sample', () => {
+    const result = computeRecallByCategory([])
+    expect(result).toHaveLength(6)
+    expect(result.every((r) => r.n === 0 && r.recall === null)).toBe(true)
   })
 })
 

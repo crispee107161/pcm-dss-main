@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { computeBudgetReallocation, sortQ4WorstFirst, type AdForReallocation, type ReallocationAd } from './budget-reallocation'
+import { MESSAGING_RESULT_TYPE } from './ad-population-constants'
 
 function ad(overrides: Partial<AdForReallocation> & { ad_id: string }): AdForReallocation {
   return {
@@ -7,6 +8,7 @@ function ad(overrides: Partial<AdForReallocation> & { ad_id: string }): AdForRea
     ad_set_name: 'set-1',
     amount_spent: 0,
     total_messaging_contacts: null,
+    result_type: MESSAGING_RESULT_TYPE,
     ...overrides,
   }
 }
@@ -81,6 +83,55 @@ describe('computeBudgetReallocation', () => {
     expect(result.quartiles).toHaveLength(4)
     expect(result.quartiles.every(q => q.n === 0)).toBe(true)
     expect(result.additionalInquiries).toBe(0)
+  })
+
+  it('excludes non-messaging-month spend from the CPI numerator (docs/raven/Top_Ads_Accepted_and_Filter_Question.md §2)', () => {
+    const ads = [
+      // Messaging month: spend 1000, 50 inquiries.
+      ad({ ad_id: 'mixed', amount_spent: 1000, total_messaging_contacts: 50, result_type: MESSAGING_RESULT_TYPE }),
+      // Same ad, a later non-messaging month: this spend must NOT inflate the CPI numerator.
+      ad({ ad_id: 'mixed', amount_spent: 4000, total_messaging_contacts: null, result_type: 'Link clicks' }),
+    ]
+    const result = computeBudgetReallocation(ads, 500)
+    expect(result.n).toBe(1)
+    expect(result.q1Cpi).toBe(20) // 1000 / 50, not 5000 / 50
+  })
+
+  // The actual live-behaviour delta of switching from `total_messaging_contacts
+  // !== null` to `result_type === MESSAGING_RESULT_TYPE`: a messaging row whose
+  // "Results" cell was blank in the CSV has total_messaging_contacts null
+  // (lib/csv/validate-ads.ts sets it to `results`, which parseIntOrNull leaves
+  // null for a blank cell) even though result_type correctly says it's a
+  // messaging row. Its spend must still count toward CPI.
+  it('includes spend from a messaging-optimised row with a blank Results cell', () => {
+    const ads = [
+      ad({ ad_id: 'blank-results', amount_spent: 1000, total_messaging_contacts: 50 }), // normal month
+      ad({ ad_id: 'blank-results', amount_spent: 500, total_messaging_contacts: null, result_type: MESSAGING_RESULT_TYPE }), // blank Results cell, still messaging
+    ]
+    const result = computeBudgetReallocation(ads, 1000)
+    expect(result.n).toBe(1)
+    expect(result.q1Cpi).toBe(30) // (1000 + 500) / 50, not 1000 / 50
+  })
+
+  it('excludes an ad from the population whose messaging spend does not clear the threshold, even if its total spend would', () => {
+    const ads = [
+      ad({ ad_id: 'mostly-non-messaging', amount_spent: 400, total_messaging_contacts: 20, result_type: MESSAGING_RESULT_TYPE }),
+      ad({ ad_id: 'mostly-non-messaging', amount_spent: 4000, total_messaging_contacts: null, result_type: 'Link clicks' }), // total spend 4400, but only 400 is messaging spend
+    ]
+    const result = computeBudgetReallocation(ads, 1000)
+    expect(result.n).toBe(0)
+  })
+
+  it('treats a null result_type as non-messaging, not as messaging by default', () => {
+    const ads = [ad({ ad_id: 'no-result-type', amount_spent: 2000, total_messaging_contacts: null, result_type: null })]
+    const result = computeBudgetReallocation(ads, 1000)
+    expect(result.n).toBe(0)
+  })
+
+  it('never enters an ad with only non-messaging rows into the population, even at a zero threshold', () => {
+    const ads = [ad({ ad_id: 'never-messaging', amount_spent: 100, total_messaging_contacts: null, result_type: 'Link clicks' })]
+    const result = computeBudgetReallocation(ads, 0)
+    expect(result.n).toBe(0)
   })
 })
 

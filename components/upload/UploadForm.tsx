@@ -14,6 +14,7 @@ import {
   AttachmentTitle,
 } from '@/components/ui/attachment'
 import { Spinner } from '@/components/ui/spinner'
+import { STUDY_PERIOD_LABEL } from '@/lib/data/study-period'
 import { Loading01Icon } from '@animateicons/react/huge'
 import { DatabaseIcon, CircleCheckIcon, type CircleCheckIconHandle } from 'lucide-animated'
 import { ClockIcon, CheckIcon, FileWarningIcon, RefreshCwIcon, XIcon } from 'lucide-react'
@@ -103,6 +104,12 @@ export default function UploadForm() {
               identifier and reporting period. Worded generically rather than
               naming all three, since the matching field differs by file type. */}
           Records are matched on the identifier each file type carries, so re-uploading the same file is safe and never creates duplicates.
+        </p>
+        <p className="text-muted-foreground text-xs mt-1">
+          {/* docs/raven/Upload_Data_Second_Pass.md §3.2 — stated as a date
+              range the owner can check against his own file, placed where
+              he's about to upload rather than under Coverage Status (§3.3). */}
+          Only records from {STUDY_PERIOD_LABEL} are included in the figures. Records outside that range are kept but not counted.
         </p>
         <input
           ref={fileInputRef}

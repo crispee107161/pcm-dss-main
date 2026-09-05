@@ -7,6 +7,7 @@ import { parseCsvBuffer } from '../lib/csv/parse'
 import { detectCsvType } from '../lib/csv/detect'
 import { validateAdsRows } from '../lib/csv/validate-ads'
 import { upsertAds } from '../lib/db/upsert-ads'
+import { MESSAGING_RESULT_TYPE } from '../lib/stats/ad-population-constants'
 
 const DATA_DIR = join(__dirname, '..', 'data', 'New_FB_Ads_Data')
 
@@ -54,7 +55,7 @@ async function main() {
   const spendAgg = await prisma.ad.aggregate({ _sum: { amount_spent: true } })
   const messagingAgg = await prisma.ad.aggregate({
     _sum: { amount_spent: true },
-    where: { result_type: 'Messaging conversations started' },
+    where: { result_type: MESSAGING_RESULT_TYPE },
   })
   console.log(`Ad rows in DB: ${adCount}`)
   console.log(`Total spend (all ads): ${spendAgg._sum.amount_spent}`)

@@ -244,6 +244,36 @@ function IndexedComparisonChart<T extends { period: string }>({
 }) {
   const { rows: indexedData, basePeriod } = useMemo(() => buildIndexedData(data, series), [data, series])
   const caption = interpret ? interpret(data, basePeriod) : `Indexed to ${basePeriod} = 100%, so both trends are comparable on one scale.`
+
+  // Recharts' own "nice" tick algorithm can space gridlines unevenly once the
+  // domain bounds below aren't round multiples of its chosen step (e.g.
+  // 60/75/90/120 — gaps of 15, 15, 30), which reads as an axis error even
+  // though the values are correct (docs/raven/Dashboard_Second_Pass.md §5).
+  // Computing the domain here (not via Recharts' dataMin/dataMax callbacks)
+  // lets ticks be generated as truly equal integer steps between the same
+  // bounds. The span is snapped up to a multiple of (tickCount - 1) *before*
+  // dividing, rather than dividing then rounding each tick — rounding each
+  // tick independently (Math.round(domainMin + step * i)) still produces
+  // unequal gaps whenever the raw span isn't itself a multiple of
+  // (tickCount - 1) (e.g. a 50-point span gives ticks 0/13/25/38/50, gaps
+  // 13/12/13/12) — the same defect this replaced, just smaller.
+  const { yDomain, yTicks } = useMemo(() => {
+    const tickCount = 5
+    const values = indexedData.flatMap(row => series.map(s => Number((row as Record<string, unknown>)[s.indexKey])))
+    const finiteValues = values.filter(Number.isFinite)
+    const rawMin = finiteValues.length > 0 ? Math.min(...finiteValues) : 0
+    const rawMax = finiteValues.length > 0 ? Math.max(...finiteValues) : 100
+    const domainMin = Math.max(0, Math.floor(rawMin / 10) * 10 - 10)
+    const paddedMax = Math.ceil(rawMax / 10) * 10 + 10
+    const segments = tickCount - 1
+    const step = Math.max(10, Math.ceil((paddedMax - domainMin) / segments / 10) * 10)
+    const domainMax = domainMin + step * segments
+    return {
+      yDomain: [domainMin, domainMax] as [number, number],
+      yTicks: Array.from({ length: tickCount }, (_, i) => domainMin + step * i),
+    }
+  }, [indexedData, series])
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 min-h-0">
@@ -256,19 +286,14 @@ function IndexedComparisonChart<T extends { period: string }>({
                 band (e.g. 77-102%), and a 0-based axis compresses that band
                 into the top of the plot, hiding the decline it exists to show
                 (docs/dashboard/Dashboard_Plain_Language_and_Notation.md §2).
-                Each accessor pads 10 beyond its own rounded bound (not just
-                floor/ceil to the nearest 10) so the domain can never
-                collapse to a single point when every series happens to sit
-                at the same index value (a one-row or perfectly flat trend) -
-                Recharts calls dataMin/dataMax independently, so the padding
-                has to be baked into each accessor rather than compared
-                across them. Number.isFinite guards an empty dataset, where
-                Recharts reports dataMin/dataMax as +/-Infinity. */}
+                yDomain/yTicks above pad 10 beyond the rounded bound so the
+                domain can never collapse to a single point when every series
+                sits at the same index value (a one-row or perfectly flat
+                trend), and the empty-dataset case falls back to a fixed
+                0/30/60/90/120 domain below. */}
             <YAxis
-              domain={[
-                (dataMin: number) => Number.isFinite(dataMin) ? Math.max(0, Math.floor(dataMin / 10) * 10 - 10) : 0,
-                (dataMax: number) => Number.isFinite(dataMax) ? Math.ceil(dataMax / 10) * 10 + 10 : 100,
-              ]}
+              domain={yDomain}
+              ticks={yTicks}
               tickFormatter={v => `${v}%`} tickLine={false} axisLine={false} tickMargin={8} />
             <ChartTooltip
               cursor={false}
