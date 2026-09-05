@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest'
 import {
   lgamma,
   normalCdf,
+  normalUpperTail,
   normalQuantile,
   regularizedIncompleteBeta,
   studentTPValue,
   fPValue,
   chiSquareUpperTailEvenDf,
+  chiSquareUpperTail,
   normalTwoTailedPValue,
 } from './normal-dist'
 
@@ -137,6 +139,41 @@ describe('chiSquareUpperTailEvenDf', () => {
     expect(() => chiSquareUpperTailEvenDf(5, 0)).toThrow()
     expect(() => chiSquareUpperTailEvenDf(5, -2)).toThrow()
     expect(() => chiSquareUpperTailEvenDf(5, 2.5)).toThrow()
+  })
+})
+
+describe('chiSquareUpperTail', () => {
+  it('agrees with chiSquareUpperTailEvenDf across even df', () => {
+    for (const [x, df] of [[9.2866, 4], [106.005, 2], [5, 4], [15, 4]] as const) {
+      expect(chiSquareUpperTail(x, df)).toBeCloseTo(chiSquareUpperTailEvenDf(x, df), 10)
+    }
+  })
+
+  it('matches the exact df=1 closed form 2 * (1 - normalCdf(sqrt(x)))', () => {
+    for (const x of [1, 3.84, 10.83]) {
+      expect(chiSquareUpperTail(x, 1)).toBeCloseTo(2 * normalUpperTail(Math.sqrt(x)), 6)
+    }
+  })
+
+  it('matches published chi-square critical values (df=3, the Kruskal-Wallis case)', () => {
+    // Standard chi-square table: df=3, alpha=0.05 critical value is 7.815
+    expect(chiSquareUpperTail(7.815, 3)).toBeCloseTo(0.05, 3)
+    // df=3, alpha=0.01 critical value is 11.345
+    expect(chiSquareUpperTail(11.345, 3)).toBeCloseTo(0.01, 3)
+  })
+
+  it('reproduces the finding-L memo\'s reference Kruskal-Wallis result: H=16.8145, df=3 -> p=0.000772', () => {
+    expect(chiSquareUpperTail(16.8145, 3)).toBeCloseTo(0.000772, 5)
+  })
+
+  it('is 1 at x=0 and monotonically decreasing', () => {
+    expect(chiSquareUpperTail(0, 3)).toBe(1)
+    expect(chiSquareUpperTail(15, 3)).toBeLessThan(chiSquareUpperTail(5, 3))
+  })
+
+  it('rejects non-positive df', () => {
+    expect(() => chiSquareUpperTail(5, 0)).toThrow()
+    expect(() => chiSquareUpperTail(5, -1)).toThrow()
   })
 })
 

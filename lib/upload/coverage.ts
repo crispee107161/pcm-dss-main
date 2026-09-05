@@ -15,7 +15,7 @@ function formatUploadDate(date: Date): string {
   return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
 
-async function latestUpload(types: UploadType[]) {
+export async function latestUpload(types: UploadType[]) {
   const log = await prisma.uploadLog.findFirst({
     where: { upload_type: { in: types }, status: 'SUCCESS' },
     orderBy: { uploaded_at: 'desc' },

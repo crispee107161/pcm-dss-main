@@ -40,6 +40,11 @@ export const FR31_CV_SEED = 42
 export const FR31_RESIDUAL_RATIO_THRESHOLD = 1.5
 export const FR31_VIF_WARNING_THRESHOLD = 10
 const FR31_SIGNIFICANCE_ALPHA = 0.05
+// A Breusch-Pagan p-value that clears 0.05 but sits below this is a narrow
+// pass, not a clean one — the narrative below says so instead of reading as
+// an unqualified "homoscedastic" (docs/raven/analysis-tab-memo-final.md
+// Finding B: 0.0543 is technically a pass but not a comfortable one).
+const FR31_BP_BORDERLINE_ALPHA = 0.10
 
 export interface AdForRegression {
   ad_id: string
@@ -290,6 +295,13 @@ export interface BreuschPaganResult {
   pValue: number
   auxRSquared: number
   homoscedastic: boolean
+  // code-review-analyst: the UI's pass/fail tag still rendered green for a
+  // narrow pass (Finding B — p=0.0543, just above 0.05) even after the
+  // wording changed to stop calling it a clean "homoscedastic". Exposed here
+  // so the UI can render borderline in the same warning tone as an outright
+  // fail, using the one threshold this module already defines, rather than
+  // re-deriving the cutoff in the component.
+  borderline: boolean
 }
 
 export interface JarqueBeraResult {
@@ -382,8 +394,14 @@ export interface Fr31Insufficient {
 
 export type Fr31Result = Fr31Fit | Fr31Insufficient
 
+// Finding J (docs/raven/analysis-tab-memo-final.md): the fit is on ln(cost
+// per inquiry), so exp() of a fitted value back-transforms to the typical
+// (median-equivalent) cost for that advertisement's characteristics, not the
+// mean — a systematic, known property of a log-scale fit, not an error. The
+// caveat states this explicitly now instead of leaving "the level associated
+// with its characteristics" to be misread as an average.
 const RESIDUAL_DIAGNOSTIC_CAPTION =
-  "Compares each advertisement's recorded cost per inquiry against the level associated with its characteristics. Not a prediction of future performance."
+  "Compares each advertisement's recorded cost per inquiry against the typical cost for its characteristics (predictions come from a log-scale fit, so they estimate a typical value, not an average). Not a prediction of future performance."
 
 // ─── Lower-level statistics (exported for direct testing) ─────────────────
 
@@ -431,7 +449,8 @@ export function breuschPagan(X: readonly number[][], residuals: readonly number[
   const auxFit = olsFit(X, eSquared)
   const lm = n * auxFit.rSquared
   const pValue = chiSquareUpperTailEvenDf(Math.max(lm, 1e-12), df)
-  return { lm, df, pValue, auxRSquared: auxFit.rSquared, homoscedastic: pValue >= FR31_SIGNIFICANCE_ALPHA }
+  const homoscedastic = pValue >= FR31_SIGNIFICANCE_ALPHA
+  return { lm, df, pValue, auxRSquared: auxFit.rSquared, homoscedastic, borderline: homoscedastic && pValue < FR31_BP_BORDERLINE_ALPHA }
 }
 
 /**
@@ -632,14 +651,33 @@ function fitOneSpecification(
     shapiroError = (e as Error).message
   }
   const residualsNormal = jb.pValue >= FR31_SIGNIFICANCE_ALPHA
+  // Narrative names whichever diagnostics actually motivate HC3, rather than
+  // citing non-normality alone when the Breusch-Pagan result is also a
+  // narrow pass (Finding B) or an outright fail — the robust-error
+  // justification should cover everything it actually covers.
+  const bpBorderline = bp.borderline
+  const narrative = (() => {
+    if (residualsNormal && bp.homoscedastic && !bpBorderline) return 'Residuals are approximately normal.'
+    if (residualsNormal && bpBorderline) {
+      return 'Residuals are approximately normal, though variance unevenness is borderline (just above the 0.05 threshold), so robust (HC3) standard errors are reported as a precaution.'
+    }
+    if (residualsNormal && !bp.homoscedastic) {
+      return 'Residuals are approximately normal, but variance is uneven, so robust (HC3) standard errors are reported.'
+    }
+    if (!residualsNormal && bpBorderline) {
+      return 'Residuals are non-normal, and variance unevenness is borderline (just above the 0.05 threshold), so robust (HC3) standard errors are reported to cover both.'
+    }
+    if (!residualsNormal && !bp.homoscedastic) {
+      return 'Residuals are non-normal and variance is uneven, so robust (HC3) standard errors are reported to cover both.'
+    }
+    return 'Residuals are non-normal, so robust (HC3) standard errors are reported.'
+  })()
   const normality: NormalityDiagnostics = {
     jarqueBera: jb,
     shapiroWilk: shapiroResult,
     shapiroWilkError: shapiroError,
     residualsNormal,
-    narrative: residualsNormal
-      ? 'Residuals are approximately normal.'
-      : 'Residuals are non-normal, so robust (HC3) standard errors are reported.',
+    narrative,
   }
 
   // Residual diagnostic (spec §6): in-sample, on the primary spec's own fit.

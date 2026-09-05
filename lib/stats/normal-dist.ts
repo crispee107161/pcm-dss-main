@@ -290,10 +290,72 @@ function erfcApprox(x: number): number {
   return x >= 0 ? ans : 2 - ans
 }
 
+// code-review-analyst (LOW-2, 2026-09-06): previously branched to the A&S
+// erf approximation below |z|=5 and only switched to the more accurate
+// erfcApprox continued fraction above it — a discontinuity at the boundary
+// (confirmed: ~0.7-1% relative error in the 4.5-5 band) that matters now
+// that the category-significance pairwise table prints four decimals of a
+// p-value that can land in that band. erfcApprox is accurate (~1.2e-7
+// relative error) across the whole range, so there's no accuracy reason to
+// keep two branches — using it unconditionally removes the discontinuity.
 export function normalTwoTailedPValue(z: number): number {
-  const az = Math.abs(z)
-  if (az <= 5) {
-    return 2 * normalUpperTail(az)
+  return erfcApprox(Math.abs(z) / Math.SQRT2)
+}
+
+// Regularized lower incomplete gamma P(a, x) via its power series (Numerical
+// Recipes §6.2, "gser") — converges quickly for x < a+1.
+function incompleteGammaSeries(a: number, x: number): number {
+  if (x <= 0) return 0
+  const gln = lgamma(a)
+  let ap = a
+  let sum = 1 / a
+  let del = sum
+  for (let n = 1; n <= 200; n++) {
+    ap += 1
+    del *= x / ap
+    sum += del
+    if (Math.abs(del) < Math.abs(sum) * 1e-14) break
   }
-  return erfcApprox(az / Math.SQRT2)
+  return sum * Math.exp(-x + a * Math.log(x) - gln)
+}
+
+// Regularized upper incomplete gamma Q(a, x) via its continued fraction
+// (Numerical Recipes §6.2, "gcf") — used instead of the series for x >= a+1,
+// where the series above converges too slowly to be reliable.
+function incompleteGammaContinuedFraction(a: number, x: number): number {
+  const gln = lgamma(a)
+  const TINY = 1e-300
+  let b = x + 1 - a
+  let c = 1 / TINY
+  let d = 1 / b
+  let h = d
+  for (let i = 1; i <= 200; i++) {
+    const an = -i * (i - a)
+    b += 2
+    d = an * d + b
+    if (Math.abs(d) < TINY) d = TINY
+    c = b + an / c
+    if (Math.abs(c) < TINY) c = TINY
+    d = 1 / d
+    const del = d * c
+    h *= del
+    if (Math.abs(del - 1) < 1e-14) break
+  }
+  return Math.exp(-x + a * Math.log(x) - gln) * h
+}
+
+// Upper-tail probability P(X > x) for a chi-square statistic with ANY
+// positive df (even, odd, or fractional) — unlike chiSquareUpperTailEvenDf
+// above, which only handles even df via its closed-form finite sum. This is
+// the general Kruskal-Wallis case: df = (number of groups - 1), which is odd
+// whenever the comparison has an even number of groups (e.g. df=3 for the
+// four content categories on the Analysis screen's category panel).
+export function chiSquareUpperTail(x: number, df: number): number {
+  if (df <= 0) throw new Error('chiSquareUpperTail: df must be positive')
+  if (x <= 0) return 1
+  const a = df / 2
+  const half = x / 2
+  // Series converges quickly below a+1; the continued fraction is used past
+  // that point, matching Numerical Recipes' own gammp/gammq split.
+  return half < a + 1 ? 1 - incompleteGammaSeries(a, half) : incompleteGammaContinuedFraction(a, half)
 }

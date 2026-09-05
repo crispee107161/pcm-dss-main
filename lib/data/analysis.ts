@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma'
-import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, withStudyPeriodAd } from '@/lib/data/study-period'
+import { STUDY_PERIOD_POST_WHERE, STUDY_PERIOD_AD_WHERE, withStudyPeriodAd, STUDY_PERIOD_LABEL } from '@/lib/data/study-period'
+import { latestUpload } from '@/lib/upload/coverage'
 import { computeRankingComparison, type RankingComparisonResult } from '@/lib/stats/ranking-comparison'
 import { computeCategoryDistribution, type CategoryDistributionRow } from '@/lib/stats/category-distribution'
+import { computeCategorySignificance, groupEngagementRatesByCategory, type CategorySignificanceResult } from '@/lib/stats/category-significance'
 import { selectCorrelation, type CorrelationSelectionResult } from '@/lib/stats/correlation-selection'
 import { computeAdLifecycle, type AdLifecycleResult } from '@/lib/stats/ad-lifecycle'
 import {
@@ -12,10 +14,25 @@ import {
   type SpecificationComparison,
 } from '@/lib/stats/fr31-regression'
 
+// Finding P §3.1 (docs/raven/analysis-tab-finding-l-memo.md) — states the
+// corpus once, above every panel, rather than leaving each panel's own
+// record count as the reader's only way to piece together what this screen
+// covers. No longer load-bearing for the population problem (Finding D
+// already threads a count through every headline), so this is deliberately
+// thin: the study period, the two counts, and when data was last uploaded.
+export interface AnalysisCoverage {
+  periodLabel: string
+  adCount: number
+  postCount: number
+  lastUploadDate: Date | null
+}
+
 export interface AnalysisScreenData {
   ranking: RankingComparisonResult // FR-19 / ALG-07
   categoryDistribution: CategoryDistributionRow[] // FR-20
+  categorySignificance: CategorySignificanceResult | null // Finding L
   correlation: CorrelationSelectionResult // FR-21 / ALG-08
+  coverage: AnalysisCoverage
 }
 
 // S7 Analysis screen (mvp.md §4.4). FR-19/20 run on organic posts, FR-21
@@ -42,7 +59,30 @@ export async function loadAnalysisScreenData(): Promise<AnalysisScreenData> {
   const categoryDistribution = computeCategoryDistribution(
     posts.map(p => ({ views: p.views, organic_engagement_rate: p.engagement_rate, category_final: p.category_final }))
   )
+  // Finding L (docs/raven/analysis-tab-finding-l-memo.md §1.2) — run on
+  // exactly the population the panel displays (STUDY_PERIOD_POST_WHERE,
+  // real categories only), not the 707 inter-coder reliability set and not
+  // any smaller subset either side of the review could individually reach.
+  const categorySignificance = computeCategorySignificance(groupEngagementRatesByCategory(posts))
   const correlation = selectCorrelation(ads)
+
+  const [adUpload, postUpload] = await Promise.all([latestUpload(['ADS_CSV']), latestUpload(['POSTS_CSV'])])
+  const lastUploadDate =
+    adUpload && postUpload
+      ? adUpload.date > postUpload.date ? adUpload.date : postUpload.date
+      : adUpload?.date ?? postUpload?.date ?? null
+  // code-review-analyst (HIGH-1, 2026-09-06): `ads` is one row per
+  // advertisement PER MONTH (Ad ID + Reporting starts is the table's key —
+  // see validate-ads.ts's duplicate-key comment), not one row per
+  // advertisement. `ads.length` here is ad-month rows (~700+), which would
+  // have rendered as "advertisements" directly above panels stating the
+  // real distinct-advertisement count (e.g. "Across 187 advertisements").
+  const coverage: AnalysisCoverage = {
+    periodLabel: STUDY_PERIOD_LABEL,
+    adCount: new Set(ads.map(a => a.ad_id)).size,
+    postCount: posts.length,
+    lastUploadDate,
+  }
 
   await prisma.correlationAssumptionRun.create({
     data: {
@@ -57,7 +97,7 @@ export async function loadAnalysisScreenData(): Promise<AnalysisScreenData> {
     },
   })
 
-  return { ranking, categoryDistribution, correlation }
+  return { ranking, categoryDistribution, categorySignificance, correlation, coverage }
 }
 
 // FR-27 — Owner-facing month-of-life cohort curves, loaded separately from
@@ -68,7 +108,7 @@ export async function loadAdLifecycleData(): Promise<AdLifecycleResult> {
   const [lifecycleRows, frequencyRows] = await Promise.all([
     prisma.ad.findMany({
       where: STUDY_PERIOD_AD_WHERE,
-      select: { ad_id: true, reporting_starts: true, amount_spent: true, total_messaging_contacts: true },
+      select: { ad_id: true, reporting_starts: true, amount_spent: true, total_messaging_contacts: true, result_type: true },
     }),
     prisma.ad.findMany({
       where: STUDY_PERIOD_AD_WHERE,

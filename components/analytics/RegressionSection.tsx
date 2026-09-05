@@ -115,16 +115,20 @@ export default function RegressionSection({ data }: RegressionSectionProps) {
 
   const stabilityByPredictor = new Map((comparison ?? []).map(c => [c.predictor, c]))
   const regressionHeadline =
-    predictorStabilitySentence(comparison) ??
+    predictorStabilitySentence(comparison, primary.fit.n, secondary.status === 'ok' ? secondary.fit.n : primary.fit.n) ??
     'Four advertisement characteristics, engagement rate, frequency, CTR, and CPM, are checked for association with cost per inquiry.'
 
   return (
     <>
-      {/* 1. Regression: model specification, diagnostics, coefficients */}
+      {/* 1. Regression: model specification, diagnostics, coefficients.
+          Finding P §3.2 (docs/raven/analysis-tab-finding-l-memo.md): the
+          bold headline sentence InsightHeader renders already says what
+          this panel is, so a redundant "REGRESSION" label above it was
+          removed rather than kept for its own sake. sr-only h2 kept so the
+          heading hierarchy (h1 -> h2 -> h3) stays intact for screen readers
+          (code-review-analyst LOW-1). */}
       <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
-        <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">
-          Regression
-        </h2>
+        <h2 className="sr-only">Regression</h2>
         <InsightHeader
           headline={regressionHeadline}
           detail="This is an explanatory model, not a predictor or forecast. It answers which advertisement characteristics are associated with cost per inquiry among ads that ran, not what would happen if a setting were changed."
@@ -167,12 +171,12 @@ export default function RegressionSection({ data }: RegressionSectionProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             <div className="bg-secondary/50 rounded-xl p-3">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">
-                Breusch-Pagan (heteroscedasticity)
+                Studentized Breusch-Pagan, Koenker (heteroscedasticity)
               </p>
               <p className="text-sm font-semibold text-foreground">
                 LM = {primary.breuschPagan.lm.toFixed(4)}, p = {fmtP(primary.breuschPagan.pValue)}{' '}
-                <span className={primary.breuschPagan.homoscedastic ? 'text-status-positive' : 'text-status-warning'}>
-                  ({primary.breuschPagan.homoscedastic ? 'homoscedastic' : 'heteroscedastic'})
+                <span className={primary.breuschPagan.homoscedastic && !primary.breuschPagan.borderline ? 'text-status-positive' : 'text-status-warning'}>
+                  ({primary.breuschPagan.homoscedastic ? 'no significant unevenness at the 0.05 level' : 'significant unevenness at the 0.05 level'})
                 </span>
               </p>
             </div>
@@ -273,10 +277,8 @@ export default function RegressionSection({ data }: RegressionSectionProps) {
       {/* 2. Accuracy */}
       {primary.accuracy && (
         <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
-          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">
-            Accuracy
-          </h2>
-          <InsightHeader headline={accuracySentence(primary.accuracy)}>
+          <h2 className="sr-only">Accuracy</h2>
+          <InsightHeader headline={accuracySentence(primary.accuracy, primary.fit.n)}>
             <div className="overflow-x-auto rounded-xl border border-border">
               <Table>
                 <TableCaption className="sr-only">Accuracy metrics: in-sample, 10-fold cross-validated, and median baseline</TableCaption>
@@ -293,9 +295,20 @@ export default function RegressionSection({ data }: RegressionSectionProps) {
                 <TableBody>
                   <TableRow className="border-t border-border">
                     <TableHead scope="row" className="px-4 py-3 text-sm font-medium text-foreground">R²</TableHead>
-                    <TableCell className="px-4 py-3 text-right text-sm text-foreground">{primary.accuracy.inSample.rSquared?.toFixed(3) ?? '—'}</TableCell>
-                    <TableCell className="px-4 py-3 text-right text-sm text-foreground">{primary.accuracy.crossValidated.rSquared?.toFixed(3) ?? '—'}</TableCell>
-                    <TableCell className="px-4 py-3 text-right text-sm text-muted-foreground">—</TableCell>
+                    <TableCell className="px-4 py-3 text-right text-sm text-foreground">
+                      {primary.accuracy.inSample.rSquared?.toFixed(3) ?? '—'}
+                      <span className="block text-[10px] text-muted-foreground font-normal">log scale</span>
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-right text-sm text-foreground">
+                      {primary.accuracy.crossValidated.rSquared?.toFixed(3) ?? '—'}
+                      <span className="block text-[10px] text-muted-foreground font-normal">peso scale</span>
+                    </TableCell>
+                    <TableCell
+                      className="px-4 py-3 text-right text-sm text-muted-foreground"
+                      title="Not applicable: a middle-value (median) baseline has no fit statistic to report."
+                    >
+                      —
+                    </TableCell>
                   </TableRow>
                   <TableRow className="border-t border-border">
                     <TableHead scope="row" className="px-4 py-3 text-sm font-medium text-foreground">MAE</TableHead>
@@ -322,7 +335,7 @@ export default function RegressionSection({ data }: RegressionSectionProps) {
               MAPE {primary.accuracy.crossValidated.mape.toFixed(1)}% on held-out data, versus{' '}
               {primary.accuracy.baselineMedian.mape.toFixed(1)}% for a median baseline
               {primary.accuracy.maeImprovementVsBaseline > 0
-                ? ` (${(primary.accuracy.maeImprovementVsBaseline * 100).toFixed(0)}% lower MAE than the baseline).`
+                ? ` (${(primary.accuracy.maeImprovementVsBaseline * 100).toFixed(1)}% lower MAE than the baseline).`
                 : '.'}
             </p>
           </InsightHeader>
@@ -336,9 +349,7 @@ export default function RegressionSection({ data }: RegressionSectionProps) {
           the full (unflagged-included) list is disclosure-gated, via
           ResidualDiagnosticTable's own show-all toggle. */}
       <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
-        <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">
-          Residual Diagnostic
-        </h2>
+        <h2 className="sr-only">Residual Diagnostic</h2>
         <p className="text-sm text-foreground mb-4">{residualSentence(primary.residualDiagnostic)}</p>
         <div className="rounded-xl border border-border overflow-hidden mb-3">
           <ResidualDiagnosticTable diagnostic={primary.residualDiagnostic} />

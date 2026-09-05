@@ -4,7 +4,7 @@ import { interpretCorrelation } from '@/lib/stats/interpret'
 import {
   rankingOverlapSentence,
   viewsReachSentence,
-  categoryDistributionSentence,
+  categorySignificanceSentence,
   categoryCoverageSentence,
   isNonCategoryLabel,
   monthOfLifeSentence,
@@ -59,8 +59,12 @@ const NON_CATEGORY_ROW_LABEL: Partial<Record<CategoryLabel, string>> = {
 // Marketing Manager routes load identically).
 function LifecycleSection({ lifecycle }: { lifecycle: AdLifecycleResult }) {
   const { singleMonthComparison, frequencyDiagnostic } = lifecycle
+  // Finding D (docs/raven/analysis-tab-memo-final.md): total distinct ads in
+  // the messaging-ad lifecycle population, derived from the same
+  // distribution the panel already renders rather than a separate count.
+  const totalLifecycleAds = lifecycle.maxMonthOfLifeDistribution.reduce((s, d) => s + d.n, 0)
   const monthOfLifeHeadline =
-    monthOfLifeSentence(lifecycle.cohorts) ?? 'Not enough advertisements have run long enough yet to compare cost per inquiry over time.'
+    monthOfLifeSentence(lifecycle.cohorts, totalLifecycleAds) ?? 'Not enough advertisements have run long enough yet to compare cost per inquiry over time.'
 
   return (
     <>
@@ -114,19 +118,15 @@ function LifecycleSection({ lifecycle }: { lifecycle: AdLifecycleResult }) {
             Month-of-life is each ad&apos;s calendar month minus its own first month, not a calendar-wide origin.
             Each cohort curve is restricted to ads that survived to its own minimum threshold before being shown,
             so a rising or falling CPI trend isn&apos;t an artefact of bad ads leaving the denominator early. CPI
-            at each point is spend summed over results summed, never an average of per-row CPI. A dip in the
-            Ad-Months column inside the curve is a paused advertisement missing a row that month, not an
-            advertisement leaving the cohort, since the cohort itself is fixed for the whole curve.
+            at each point is spend summed over results summed, never an average of per-row CPI.
           </p>
         </InsightHeader>
       </div>
 
       {frequencyDiagnostic && (
         <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
-          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">
-            Frequency Diagnostic
-          </h2>
-          <InsightHeader headline={frequencySentence(frequencyDiagnostic.correlationWithCpi.rho, frequencyDiagnostic.correlationWithCpi.p)}>
+          <h2 className="sr-only">Frequency Diagnostic</h2>
+          <InsightHeader headline={frequencySentence(frequencyDiagnostic.correlationWithCpi.rho, frequencyDiagnostic.correlationWithCpi.p, frequencyDiagnostic.n, frequencyDiagnostic.adCount)}>
             <p className="text-sm text-foreground mb-2">
               Median frequency (Impressions/Reach): <span className="font-semibold">{frequencyDiagnostic.medianFrequency.toFixed(2)}</span>{' '}
               across {frequencyDiagnostic.n} ad-months, {frequencyDiagnostic.adCount} distinct advertisements.
@@ -134,6 +134,13 @@ function LifecycleSection({ lifecycle }: { lifecycle: AdLifecycleResult }) {
             <p className="text-sm text-foreground mb-2">
               {interpretCorrelation(frequencyDiagnostic.correlationWithCpi.rho, frequencyDiagnostic.n, frequencyDiagnostic.correlationWithCpi.p).summary}
             </p>
+            {frequencyDiagnostic.excludedNoFrequency > 0 && (
+              <p className="text-[11px] text-muted-foreground mb-2">
+                {frequencyDiagnostic.excludedNoFrequency} record{frequencyDiagnostic.excludedNoFrequency === 1 ? '' : 's'} with no recorded frequency{' '}
+                {frequencyDiagnostic.excludedNoFrequency === 1 ? 'was' : 'were'} excluded, since a correlation can&apos;t use
+                {frequencyDiagnostic.excludedNoFrequency === 1 ? ' it' : ' them'}.
+              </p>
+            )}
             <p className="text-[11px] text-muted-foreground">
               Each advertisement contributes multiple rows here, so this significance is indicative, not a formal
               test on independent observations.
@@ -160,12 +167,13 @@ export default function AnalysisView({
   // docs/raven/FR_Table_Clarifications_Response_2026-08-25.md §2.5.
   hideAdEfficiency?: boolean
 }) {
-  const { ranking, categoryDistribution, correlation } = data
+  const { ranking, categoryDistribution, categorySignificance, correlation, coverage } = data
   const rankingInterpretation = interpretCorrelation(ranking.rho, ranking.n, ranking.p)
   const viewsReachInterpretation = interpretCorrelation(ranking.viewsReachRho, ranking.n, ranking.viewsReachP)
   const correlationInterpretation = interpretCorrelation(correlation.coefficient, correlation.n, correlation.p)
   const distributionHeadline =
-    categoryDistributionSentence(categoryDistribution) ?? 'Not enough categorised posts yet to compare engagement rates by category.'
+    categorySignificanceSentence(categoryDistribution, categorySignificance) ??
+    'Not enough categorised posts yet to compare engagement rates by category.'
   const coverageNote = categoryCoverageSentence(categoryDistribution)
   const realCategoryRows = categoryDistribution.filter(r => !isNonCategoryLabel(r.category))
   const nonCategoryRows = categoryDistribution.filter(r => isNonCategoryLabel(r.category))
@@ -177,11 +185,69 @@ export default function AnalysisView({
         description="Ranking comparison, category distribution, and correlation with assumption-driven method selection"
       />
 
+      {/* Finding P §3.1 (docs/raven/analysis-tab-finding-l-memo.md): states
+          the corpus once, above every panel, rather than leaving each
+          panel's own record count as the only way to piece together what
+          this screen covers. */}
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-muted-foreground mb-6 px-1">
+        <span>{coverage.periodLabel}</span>
+        <span>{coverage.adCount.toLocaleString()} advertisements</span>
+        <span>{coverage.postCount.toLocaleString()} posts</span>
+        {coverage.lastUploadDate && (
+          <span>
+            Last upload {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(coverage.lastUploadDate)}
+          </span>
+        )}
+      </div>
+
+      {/* Finding G (docs/raven/analysis-tab-memo-final.md): no panel on this
+          screen states how its own measures are calculated, and "Engagement
+          Rate" quietly means two different things (post engagements over
+          reach for advertisements; reactions, comments, and shares over
+          reach for organic posts). One shared disclosure up top, named
+          distinctly per audience, instead of repeating (or omitting) the
+          definitions in every panel below.
+          code-review-analyst caught two real bugs in the first draft: (1) it
+          claimed every figure is "calculated the same way," which is false —
+          the frequency diagnostic below computes cost per inquiry per
+          ad-month row, not summed-then-divided per ad like every other panel
+          on this screen, so the card now says so instead of asserting a
+          uniform rule it can't back up; (2) the ad-only rows (CTR, CPM,
+          frequency, cost per inquiry) rendered for Marketing Team too, who
+          are gated away from the ad-efficiency panels these define — now
+          gated behind the same hideAdEfficiency flag as those panels. */}
+      <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
+        {/* code-review-analyst (LOW-1): a visible label here was removed as
+            redundant (the InsightHeader h3 below already says what this is),
+            but the page still needs an h2 in the heading hierarchy between
+            PageHeader's h1 and every panel's h3 — sr-only keeps the DOM
+            structure correct without reintroducing the visible duplicate. */}
+        <h2 className="sr-only">How These Are Calculated</h2>
+        <InsightHeader headline="Every figure below is a ratio of raw Facebook-reported columns.">
+          <ul className="text-sm text-foreground space-y-2">
+            <li><span className="font-semibold">Engagement rate, organic posts:</span> (Reactions + Comments + Shares) ÷ Reach, shown as a percentage.</li>
+            {!hideAdEfficiency && (
+              <>
+                <li><span className="font-semibold">Engagement rate, advertisements:</span> Post engagements ÷ Reach, shown as a bare ratio (not a percentage). A different figure from the organic-post version above, on a different scale, despite the shared name: the category table above shows organic engagement rate as a percentage (for example 0.85%), while the regression coefficient for this figure is on that bare ratio.</li>
+                <li><span className="font-semibold">CTR (click-through rate):</span> Link clicks ÷ Impressions. This uses link clicks specifically, not Facebook&apos;s own &quot;CTR (all)&quot; column, since link clicks are the relevant action for a messaging objective.</li>
+                <li><span className="font-semibold">CPM (cost per thousand impressions):</span> Spend ÷ Impressions × 1000.</li>
+                <li><span className="font-semibold">Frequency:</span> Impressions ÷ Reach.</li>
+                <li>
+                  <span className="font-semibold">Cost per inquiry:</span> total spend ÷ total messaging conversations. For
+                  the regression, accuracy, and residual panels, this is summed across every qualifying month an
+                  advertisement ran before dividing, per advertisement. The frequency diagnostic below is the one
+                  exception: it correlates each individual month&apos;s own cost per inquiry against that same
+                  month&apos;s own frequency, so nothing there is summed across months first.
+                </li>
+              </>
+            )}
+          </ul>
+        </InsightHeader>
+      </div>
+
       {/* Ranking comparison */}
       <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
-        <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">
-          Ranking Comparison
-        </h2>
+        <h2 className="sr-only">Ranking Comparison</h2>
         <InsightHeader headline={rankingOverlapSentence(ranking)}>
           <p className="text-sm text-foreground mb-4">{rankingInterpretation.summary}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
@@ -213,9 +279,7 @@ export default function AnalysisView({
       {/* Views vs. Reach — why Views and engagement rate rank posts
           differently: Views is very nearly a restatement of Reach. */}
       <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
-        <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">
-          Views vs. Reach
-        </h2>
+        <h2 className="sr-only">Views vs. Reach</h2>
         <InsightHeader headline={viewsReachSentence(ranking)}>
           <p className="text-sm text-foreground mb-2">{viewsReachInterpretation.summary}</p>
           <p className="text-[11px] text-muted-foreground">
@@ -228,15 +292,43 @@ export default function AnalysisView({
       {/* Distribution by Category */}
       <div className="bg-card rounded-2xl card-shadow overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">
-            Distribution by Category
-          </h2>
+          <h2 className="sr-only">Distribution by Category</h2>
           <InsightHeader headline={distributionHeadline}>
             <p className="text-sm text-foreground">
               Median Views and median post engagement rate per category, the median of each post&apos;s own
               individually-computed engagement rate, not a reach-weighted aggregate. Category Performance reports
               a different, reach-weighted figure for the same categories; the two will not match, by design.
             </p>
+            {categorySignificance && (
+              <div className="mt-4 pt-3 border-t border-border/60">
+                <p className="text-sm text-foreground mb-2">
+                  Kruskal-Wallis test across {categorySignificance.groups.length} categories with at least 3 posts
+                  (n = {categorySignificance.n}): H = {categorySignificance.h.toFixed(4)}, df = {categorySignificance.df},
+                  p = {categorySignificance.p < 0.001 ? '< 0.001' : categorySignificance.p.toFixed(4)}.
+                  Pairwise follow-up uses Mann-Whitney U with Holm-Bonferroni correction across all pairs.
+                </p>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-secondary/30 border-b border-border">
+                      <TableHead className="px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Pair</TableHead>
+                      <TableHead className="px-3 py-2 text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Adjusted p</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categorySignificance.pairwise.map(pair => (
+                      <TableRow key={`${pair.a}-${pair.b}`} className="border-t border-border">
+                        <TableCell className="px-3 py-2 text-sm text-foreground">
+                          {CATEGORY_LABEL_DISPLAY[pair.a]} vs {CATEGORY_LABEL_DISPLAY[pair.b]}
+                        </TableCell>
+                        <TableCell className={`px-3 py-2 text-right text-sm ${pair.significant ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                          {pair.adjustedP < 0.001 ? '< 0.001' : pair.adjustedP.toFixed(4)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </InsightHeader>
           {coverageNote && <p className="text-sm text-muted-foreground mt-2">{coverageNote}</p>}
         </div>
@@ -294,9 +386,7 @@ export default function AnalysisView({
       {/* Correlation with method selection; advertising-efficiency, not shown to Marketing Team */}
       {!hideAdEfficiency && (
         <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
-          <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em] mb-3">
-            Correlation with Method Selection
-          </h2>
+          <h2 className="sr-only">Correlation with Method Selection</h2>
           <InsightHeader headline={correlationWithMethodSentence(correlation)}>
             <div className="bg-secondary/50 rounded-xl p-4 mb-4">
               <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">Normality test (Shapiro-Wilk)</p>
@@ -313,7 +403,7 @@ export default function AnalysisView({
               {correlationInterpretation.summary}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Shapiro-Wilk tests both variables for normality first; Pearson is used only when both pass, Spearman
+              Shapiro-Wilk tests both variables for normality first. Pearson is used only when both pass, Spearman
               otherwise. The two coefficients are never both computed and the more favourable one shown.
             </p>
           </InsightHeader>

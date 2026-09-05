@@ -10,6 +10,7 @@
 import { magnitudeLabel } from './interpret'
 import type { RankingComparisonResult } from './ranking-comparison'
 import type { CategoryDistributionRow } from './category-distribution'
+import type { CategorySignificanceResult } from './category-significance'
 import type { CorrelationSelectionResult } from './correlation-selection'
 import type { CohortCurve } from './ad-lifecycle'
 import type { AccuracyPanel, ResidualDiagnostic, SpecificationComparison, Fr31Term } from './fr31-regression'
@@ -59,11 +60,12 @@ function joinList(items: string[]): string {
 // (e.g. 72 of 73) still reads as agreement rather than "mostly not."
 export function rankingOverlapSentence(ranking: RankingComparisonResult): string {
   const top10 = ranking.overlaps.find(o => o.k === 10)
-  if (!top10) return 'The posts that get the most views are not necessarily the posts that earn the most engagement.'
+  const countClause = ` Across ${ranking.n} posts.`
+  if (!top10) return `The posts that get the most views are not necessarily the posts that earn the most engagement.${countClause}`
   if (top10.overlapFraction >= 0.9) {
-    return `The posts that get the most views are almost exactly the posts that earn the most engagement. ${top10.overlapCount} of the ${top10.topCount} posts in the top tenth by views also appear in the top tenth by engagement rate.`
+    return `The posts that get the most views are almost exactly the posts that earn the most engagement. ${top10.overlapCount} of the ${top10.topCount} posts in the top tenth by views also appear in the top tenth by engagement rate.${countClause}`
   }
-  return `The posts that get the most views are mostly not the posts that earn the most engagement. Of the ${top10.topCount} posts in the top tenth by views, only ${top10.overlapCount} also appear in the top tenth by engagement rate.`
+  return `The posts that get the most views are mostly not the posts that earn the most engagement. Of the ${top10.topCount} posts in the top tenth by views, only ${top10.overlapCount} also appear in the top tenth by engagement rate.${countClause}`
 }
 
 // direction matters, not just magnitude: a strong NEGATIVE correlation
@@ -71,17 +73,18 @@ export function rankingOverlapSentence(ranking: RankingComparisonResult): string
 // holds for a strong positive relationship.
 export function viewsReachSentence(ranking: RankingComparisonResult): string {
   const magnitude = magnitudeLabel(ranking.viewsReachRho)
+  const countClause = ` Across ${ranking.n} posts.`
   if (magnitude === 'strong' && ranking.viewsReachRho > 0) {
-    return 'View count rises almost exactly in step with how many people a post reached. It measures audience size more than it measures how well a post performed.'
+    return `View count rises almost exactly in step with how many people a post reached. It measures audience size more than it measures how well a post performed.${countClause}`
   }
   if (magnitude === 'strong') {
-    return 'View count falls almost exactly in step with how many people a post reached, an unusual pattern worth checking against how Reach and Views are being recorded.'
+    return `View count falls almost exactly in step with how many people a post reached, an unusual pattern worth checking against how Reach and Views are being recorded.${countClause}`
   }
   if (magnitude === 'moderate') {
     const verb = ranking.viewsReachRho > 0 ? 'rise' : 'fall'
-    return `View count tends to ${verb} with how many people a post reached, though the relationship is not exact.`
+    return `View count tends to ${verb} with how many people a post reached, though the relationship is not exact.${countClause}`
   }
-  return "View count and reach are only loosely related for this account's posts."
+  return `View count and reach are only loosely related for this account's posts.${countClause}`
 }
 
 const NON_CATEGORY_LABELS: ReadonlySet<CategoryLabel> = new Set(['UNCLASSIFIED', 'UNCLEAR'])
@@ -90,19 +93,83 @@ export function isNonCategoryLabel(category: CategoryLabel): boolean {
   return NON_CATEGORY_LABELS.has(category)
 }
 
-// FR-20 headline + §3's accepted correction: UNCLEAR must be excluded here
-// exactly like UNCLASSIFIED, or a reviewed-no-category label with n>=3 can
-// be named best or worst performing.
-export function categoryDistributionSentence(rows: CategoryDistributionRow[]): string | null {
+// Finding L (docs/raven/analysis-tab-finding-l-memo.md §1.3) — replaces the
+// old median-only "highest"/"lowest" headline, which asserted a difference
+// without ever testing whether it was distinguishable from noise. Generated
+// from the Kruskal-Wallis + Holm-adjusted pairwise Mann-Whitney result
+// (lib/stats/category-significance.ts) computed on the same population this
+// panel displays, so the claim always matches what the test actually found
+// rather than being hardcoded ahead of a re-run. "Not distinguishable"
+// (never "equal" or "the same") is deliberate: a non-significant result
+// means the test found no evidence of a difference, not evidence of no
+// difference — the memo's own phrasing, kept verbatim.
+//
+// significance is null when fewer than two categories have 3+ posts
+// (computeCategorySignificance's own eligibility floor); the eligible-count
+// guard below already independently confirms the same threshold, so a null
+// significance with 2+ eligible rows should not occur in practice, but the
+// median-only fallback covers it defensively rather than throwing.
+export function categorySignificanceSentence(
+  rows: CategoryDistributionRow[],
+  significance: CategorySignificanceResult | null
+): string | null {
   const eligible = rows.filter(r => !isNonCategoryLabel(r.category) && r.n >= 3)
   if (eligible.length < 2) return null
-  const byEngagement = [...eligible].sort((a, b) => b.engagementRate.median - a.engagementRate.median)
-  const best = byEngagement[0]
-  const worst = byEngagement[byEngagement.length - 1]
-  if (best.engagementRate.median === worst.engagementRate.median) {
-    return `Every category has a similar median engagement rate, around ${best.engagementRate.median.toFixed(2)}%.`
+  // Finding D (docs/raven/analysis-tab-memo-final.md): total CATEGORISED
+  // posts, not the n>=3 "eligible" subset above — every real-category row
+  // counts here even if too small to be included in the test.
+  const totalCategorized = rows.filter(r => !isNonCategoryLabel(r.category)).reduce((s, r) => s + r.n, 0)
+  const countClause = ` Across ${totalCategorized} categorised posts.`
+  const medianByCategory = new Map(eligible.map(r => [r.category, r.engagementRate.median]))
+
+  // code-review-analyst (MEDIUM-2, 2026-09-06): gated on the omnibus test
+  // rejecting, not just on individual pairs — Holm already controls the
+  // family-wise error rate on its own, so a pair can in principle survive
+  // adjustment even when the omnibus doesn't reject. Without this gate the
+  // headline could claim a difference in the same breath as a disclosure
+  // printing a non-significant omnibus p, directly above it on screen.
+  const significantPairs = significance?.significant ? significance.pairwise.filter(p => p.significant) : []
+  if (significantPairs.length === 0) {
+    const values = eligible.map(r => r.engagementRate.median)
+    if (values.every(v => v === values[0])) {
+      return `Every category has a similar median engagement rate, around ${values[0].toFixed(2)}%.${countClause}`
+    }
+    return `Median engagement rate differs across categories, but not by enough to be distinguishable at this sample size.${countClause}`
   }
-  return `${CATEGORY_LABEL_DISPLAY[best.category]} has the highest median engagement rate (${best.engagementRate.median.toFixed(2)}%); ${CATEGORY_LABEL_DISPLAY[worst.category]} has the lowest (${worst.engagementRate.median.toFixed(2)}%).`
+
+  // Orient every significant pair as (lower-median category) -> (higher-median
+  // categories it's distinguishable from), then group by the lower side so
+  // "Testimonial is lower than both X and Y" reads as one sentence rather
+  // than two nearly-identical ones.
+  const lowerToHigher = new Map<CategoryLabel, CategoryLabel[]>()
+  const involved = new Set<CategoryLabel>()
+  for (const pair of significantPairs) {
+    const [lower, higher] =
+      (medianByCategory.get(pair.a) ?? 0) <= (medianByCategory.get(pair.b) ?? 0) ? [pair.a, pair.b] : [pair.b, pair.a]
+    involved.add(lower)
+    involved.add(higher)
+    const highers = lowerToHigher.get(lower) ?? []
+    highers.push(higher)
+    lowerToHigher.set(lower, highers)
+  }
+
+  const clauses = [...lowerToHigher.entries()].map(
+    ([lower, highers]) =>
+      `${CATEGORY_LABEL_DISPLAY[lower]} posts earn a significantly lower rate than ${joinList(highers.map(h => CATEGORY_LABEL_DISPLAY[h]))} posts.`
+  )
+  // code-review-analyst (LOW-3, 2026-09-06): "from one another" reads oddly
+  // when only one category is left uninvolved — there's nothing for it to
+  // be indistinguishable "from one another" with, only from the categories
+  // already named above.
+  const uninvolved = eligible.filter(r => !involved.has(r.category))
+  const tail =
+    uninvolved.length === 0
+      ? ''
+      : uninvolved.length === 1
+        ? ` ${CATEGORY_LABEL_DISPLAY[uninvolved[0].category]} is not distinguishable from the others at this sample size.`
+        : ' The other categories are not distinguishable from one another at this sample size.'
+
+  return `Median engagement rate by content category. ${clauses.join(' ')}${tail}${countClause}`
 }
 
 // FR-18 (docs/raven/Budget_Reallocation_Review.md §4) — plain-language
@@ -185,7 +252,12 @@ export function categoryCoverageSentence(rows: CategoryDistributionRow[]): strin
 // evidence — so preferring the loosest available cohort, not the
 // strictest, is the correct "most representative" choice. Returns null if
 // no cohort's curve has at least two points (nothing to compare).
-export function monthOfLifeSentence(cohorts: CohortCurve[]): string | null {
+// totalAds (Finding D): distinct advertisements in the whole messaging-ad
+// lifecycle population, not any one cohort's (smaller, survival-restricted)
+// n — callers pass the sum of AdLifecycleResult.maxMonthOfLifeDistribution,
+// so this stays tied to the same computation as the rest of the panel
+// rather than a separately-maintained constant.
+export function monthOfLifeSentence(cohorts: CohortCurve[], totalAds: number): string | null {
   const candidate = [...cohorts]
     .filter(c => c.curve.length >= 2 && c.curve[0].cpi != null && c.curve[c.curve.length - 1].cpi != null)
     .sort((a, b) => a.minSurvivalMonths - b.minSurvivalMonths)[0]
@@ -202,7 +274,7 @@ export function monthOfLifeSentence(cohorts: CohortCurve[]): string | null {
   const changeSentence = direction === 'held steady'
     ? `Among advertisements that ran ${runLength} months or more, cost per inquiry stayed near ${formatPHP(first.cpi!)} from the first month to the ${ordinal(last.monthIndex + 1)}.`
     : `Among advertisements that ran ${runLength} months or more, cost per inquiry ${direction} from ${formatPHP(first.cpi!)} in the first month to ${formatPHP(last.cpi!)} in the ${ordinal(last.monthIndex + 1)}.`
-  return `${claim} ${changeSentence}`
+  return `${claim} ${changeSentence} Of ${totalAds} advertisements that recorded a messaging conversation.`
 }
 
 function ordinal(n: number): string {
@@ -227,7 +299,7 @@ export function correlationWithMethodSentence(correlation: CorrelationSelectionR
   const methodSentence = bothNormal
     ? 'Both figures were tested for normal distribution first, and both passed, so a standard correlation was used.'
     : 'Both figures were tested for normal distribution first, and at least one is not normally distributed, so a rank-based method was used.'
-  return `${relationshipSentence} ${methodSentence}`
+  return `${relationshipSentence} ${methodSentence} Across ${correlation.n} advertisements.`
 }
 
 // FR-27's frequency diagnostic — docs/raven/Analysis_Corrections_Accepted.md
@@ -235,24 +307,40 @@ export function correlationWithMethodSentence(correlation: CorrelationSelectionR
 // causal recommendation. A rising-frequency case is reported with the same
 // discipline as the falling case that prompted the original fix — never a
 // lever the correlational data can't support.
-export function frequencySentence(rho: number, p: number): string {
+// Finding C (docs/raven/analysis-tab-memo-final.md): this is the one
+// correlation on a screen otherwise built around "tested for normality
+// first, method named accordingly" (correlationWithMethodSentence above)
+// that didn't say which method it used. It always uses a rank-based
+// correlation here (computeFrequencyDiagnostic in ad-lifecycle.ts), so the
+// method is stated plainly rather than run through that same selection logic.
+const FREQUENCY_METHOD_NOTE = 'This uses a rank-based (Spearman) correlation.'
+
+// Open question 1 (docs/raven/Analysis_Tab_Response_2026-09-06.md), resolved
+// in docs/raven/Analysis_Tab_Response_2026-9-6.md: FR-18 wants the count the
+// correlation actually rests on (n, the ad-month rows), but the panel's own
+// non-independent-observations caveat only makes sense once the reader can
+// also see how many distinct advertisements those rows come from — so both
+// numbers are stated together rather than picking one.
+export function frequencySentence(rho: number, p: number, n: number, adCount: number): string {
+  const countClause = `Across ${n} monthly records from ${adCount} advertisements.`
   if (magnitudeLabel(rho) === 'negligible' || p >= 0.05) {
-    return "Frequency is not clearly related to cost per inquiry at this account's levels."
+    return `Frequency is not clearly related to cost per inquiry at this account's levels. ${FREQUENCY_METHOD_NOTE} ${countClause}`
   }
   return rho < 0
-    ? "Cost per inquiry does not rise as frequency rises at this account's levels."
-    : "Cost per inquiry tends to rise as frequency rises at this account's levels."
+    ? `Cost per inquiry does not rise as frequency rises at this account's levels. ${FREQUENCY_METHOD_NOTE} ${countClause}`
+    : `Cost per inquiry tends to rise as frequency rises at this account's levels. ${FREQUENCY_METHOD_NOTE} ${countClause}`
 }
 
 // A negative improvement means the model did worse than the baseline on
 // held-out data — a real (if undesirable) outcome the sentence must be able
 // to state, not just the improving case the launch dataset happens to show.
-export function accuracySentence(accuracy: AccuracyPanel): string {
+export function accuracySentence(accuracy: AccuracyPanel, n: number): string {
   const improvement = accuracy.maeImprovementVsBaseline * 100
+  const countClause = ` Across ${n} advertisements.`
   if (improvement <= 0) {
-    return "The model's estimates are not more accurate than simply guessing the middle value for every advertisement."
+    return `The model's estimates are not more accurate than simply guessing the middle value for every advertisement.${countClause}`
   }
-  return `The model's estimates are about ${improvement.toFixed(1)} per cent closer to the actual cost per inquiry than simply guessing the middle value for every advertisement.`
+  return `The model's estimates are about ${improvement.toFixed(1)} per cent closer to the actual cost per inquiry than simply guessing the middle value for every advertisement.${countClause}`
 }
 
 export function residualSentence(diagnostic: ResidualDiagnostic): string {
@@ -268,19 +356,53 @@ export function residualSentence(diagnostic: ResidualDiagnostic): string {
 // FR-31 — which predictors survive being checked against a second sample of
 // the same population (spend-filtered vs. unfiltered). comparison is null
 // only when one specification has insufficient data.
-export function predictorStabilitySentence(comparison: SpecificationComparison[] | null): string | null {
+// code-review-analyst (MEDIUM-2): the stability claim is about BOTH
+// specifications ("across both ways of selecting advertisements"), so a
+// single count naming only the spend-filtered n contradicted its own
+// sentence — this now names both populations the comparison actually drew
+// from.
+export function predictorStabilitySentence(comparison: SpecificationComparison[] | null, primaryN: number, secondaryN: number): string | null {
   if (!comparison || comparison.length === 0) return null
   const stable = comparison.filter(c => c.stable).map(c => c.predictor)
-  const unstable = comparison.filter(c => !c.stable).map(c => c.predictor)
+  // Finding F (docs/raven/analysis-tab-memo-final.md): "not robust" covers
+  // two different failure modes (compareSpecifications' own `stable` check
+  // is signFlip OR fails HC3 significance in either spec) that read as one
+  // claim ("changes direction") when only some of the unstable predictors
+  // actually flip sign — frequency stays negative in both specs but loses
+  // HC3 significance, which is not the same finding as engagement rate
+  // reversing sign entirely. Split them so the sentence only claims a
+  // direction reversal for predictors that actually reverse.
+  const signFlip = comparison.filter(c => !c.stable && c.signFlip).map(c => c.predictor)
+  // code-review-analyst (HIGH-1): "!stable && !signFlip" covers two
+  // different findings that must not share the "changes in strength"
+  // wording — a predictor significant in one spec but not the other really
+  // did change in strength, but a predictor significant in NEITHER spec was
+  // never associated with cost per inquiry at all, so nothing "changed."
+  const strengthChange = comparison
+    .filter(c => !c.stable && !c.signFlip && (c.robustSignificantPrimary || c.robustSignificantSecondary))
+    .map(c => c.predictor)
+  const neverSignificant = comparison
+    .filter(c => !c.stable && !c.signFlip && !c.robustSignificantPrimary && !c.robustSignificantSecondary)
+    .map(c => c.predictor)
+  const unstable = [...signFlip, ...strengthChange, ...neverSignificant]
   const label = (terms: Fr31Predictor[]) => joinList(terms.map(t => FR31_TERM_LABEL[t as Fr31Term]))
+  const countClause = ` Across ${primaryN} advertisements at or above the spend threshold, and ${secondaryN} without it.`
 
   if (unstable.length === 0) {
-    return `${label(stable)} are consistently associated with cost per inquiry across both ways of selecting advertisements.`
+    return `${label(stable)} are consistently associated with cost per inquiry across both ways of selecting advertisements.${countClause}`
   }
-  const changeVerb = unstable.length === 1 ? 'changes' : 'change'
+
+  const clauses: string[] = []
+  if (signFlip.length > 0) clauses.push(`${label(signFlip)} ${signFlip.length === 1 ? 'reverses' : 'reverse'} direction`)
+  if (strengthChange.length > 0) clauses.push(`${label(strengthChange)} ${strengthChange.length === 1 ? 'changes' : 'change'} in strength`)
+  if (neverSignificant.length > 0) {
+    clauses.push(`${label(neverSignificant)} ${neverSignificant.length === 1 ? 'is' : 'are'} not clearly associated with cost per inquiry in either selection`)
+  }
+  const unstableClause = clauses.join(', and ')
+  const reliedOnSubject = unstable.length === 1 ? 'it cannot' : unstable.length === 2 ? 'neither can' : 'none of them can'
+
   if (stable.length === 0) {
-    return `${label(unstable)} ${changeVerb} direction depending on which advertisements are included, so none of the predictors can be relied on.`
+    return `${unstableClause}, so ${reliedOnSubject} be relied on.${countClause}`
   }
-  const reliedOnSubject = unstable.length === 1 ? 'it cannot' : 'none of them can'
-  return `${label(stable)} ${stable.length === 1 ? 'is' : 'are'} consistently associated with cost per inquiry across both ways of selecting advertisements. ${label(unstable)} ${changeVerb} direction depending on which advertisements are included, so ${reliedOnSubject} be relied on.`
+  return `${label(stable)} ${stable.length === 1 ? 'is' : 'are'} consistently associated with cost per inquiry across both ways of selecting advertisements. ${unstableClause}, so ${reliedOnSubject} be relied on.${countClause}`
 }

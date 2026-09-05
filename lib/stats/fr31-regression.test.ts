@@ -98,6 +98,19 @@ describe('fitFr31Regression — primary spec (n=108) against published reference
     expect(fit.breuschPagan.homoscedastic).toBe(true)
   })
 
+  // Finding B (docs/raven/analysis-tab-memo-final.md): this fixture's own
+  // p=0.0543 is a real narrow pass, not a synthetic one — the exact case the
+  // finding was about. Locks in that the "clean pass" tag and the combined
+  // non-normality/borderline-heteroscedasticity narrative both fire here,
+  // against real production numbers rather than a manufactured example.
+  it('flags the real narrow Breusch-Pagan pass as borderline and states both reasons for HC3', () => {
+    if (fit.status !== 'ok') throw new Error('unreachable')
+    expect(fit.breuschPagan.borderline).toBe(true)
+    expect(fit.normality.narrative).toContain('non-normal')
+    expect(fit.normality.narrative).toContain('borderline')
+    expect(fit.normality.narrative).toContain('cover both')
+  })
+
   it('reproduces Jarque-Bera and corroborating Shapiro-Wilk', () => {
     if (fit.status !== 'ok') throw new Error('unreachable')
     expect(fit.normality.jarqueBera.jb).toBeCloseTo(106.005, 0)

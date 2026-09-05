@@ -61,6 +61,17 @@ export function parseDate(value: string | undefined, fieldName: string): Date {
 // `assertNoDuplicateKeys`, which threw for the whole file) as a per-row
 // rejection: the first occurrence of (Ad ID, Reporting starts) wins, later
 // duplicates are rejected with a reason rather than aborting the upload.
+// Finding M (docs/raven/analysis-tab-memo-final.md): the 93-column monthly
+// export repeats five headers verbatim (Ad ID, Ad set ID, Campaign ID,
+// Campaign name, Result value type). Confirmed this is handled deliberately,
+// not by accident: Papa Parse's `header: true` mode (lib/csv/parse.ts)
+// renames every header after the first occurrence to `<name>_1`, `<name>_2`,
+// etc., rather than silently overwriting the first column's values as the
+// row object is built. `row['Ad ID']` below therefore always reads the
+// FIRST "Ad ID" column, and the duplicate's cells simply sit unread under
+// `row['Ad ID_1']` — not lost, just never consulted, and both copies agree
+// in every export seen so far. If a future export ever disagreed between
+// the two copies, this file would still read the first one, silently.
 export function validateAdsRows(rows: Record<string, string>[]): RowValidationResult<AdRecord> {
   const valid: AdRecord[] = []
   const rejected: RowValidationResult<AdRecord>['rejected'] = []

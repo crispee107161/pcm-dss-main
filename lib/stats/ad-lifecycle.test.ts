@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { computeAdLifecycle, type AdRowForLifecycle, type AdRowForFrequency } from './ad-lifecycle'
+import { MESSAGING_RESULT_TYPE } from './ad-population-constants'
 
 function row(overrides: Partial<AdRowForLifecycle> & { ad_id: string; reporting_starts: Date }): AdRowForLifecycle {
-  return { amount_spent: 1000, total_messaging_contacts: 10, ...overrides }
+  return { amount_spent: 1000, total_messaging_contacts: 10, result_type: MESSAGING_RESULT_TYPE, ...overrides }
 }
 
 const d = (y: number, m: number) => new Date(Date.UTC(y, m, 1))
@@ -51,6 +52,66 @@ describe('computeAdLifecycle', () => {
     const month0 = cohort.curve.find(p => p.monthIndex === 0)!
     // spend = 500+300=800, results = 10+5=15, cpi = 800/15
     expect(month0.cpi).toBeCloseTo(800 / 15, 6)
+  })
+
+  // Raven's Analysis_Tab_Response_2026-9-6.md: 28 real rows carry a blank
+  // result_type but real spend, on a month belonging to an otherwise-
+  // messaging ad. That spend must not enter the CPI numerator for a month
+  // that produced no messaging result — the ₱21.50-vs-₱21.39 discrepancy.
+  it('excludes a non-messaging month\'s row entirely from an otherwise-messaging ad\'s curve', () => {
+    const ads: AdRowForLifecycle[] = [
+      row({ ad_id: 'A', reporting_starts: d(2025, 0), amount_spent: 500, total_messaging_contacts: 10 }),
+      // Same ad, later month: blank result_type, real spend, no messaging result.
+      row({
+        ad_id: 'A',
+        reporting_starts: d(2025, 1),
+        amount_spent: 300,
+        total_messaging_contacts: null,
+        result_type: null,
+      }),
+    ]
+
+    const result = computeAdLifecycle(ads, [], [1])
+
+    // Ad A now has only ONE messaging row (month 0), so it never reaches the
+    // "ran 2+ months" (minSurvivalMonths=1) cohort at all — the dropped row
+    // must not count toward its survival either.
+    const cohort = result.cohorts.find(c => c.minSurvivalMonths === 1)!
+    expect(cohort.n).toBe(0)
+    expect(cohort.curve.find(p => p.monthIndex === 1)).toBeUndefined()
+  })
+
+  // code-review-analyst (HIGH-2, 2026-09-06): an earlier version of this fix
+  // zeroed a non-messaging row's spend/results but still pushed it into the
+  // ad's row list, so a non-messaging row that happened to be an ad's
+  // EARLIEST observed row became month-of-life index 0 (an always-empty
+  // point), shifting every real messaging month's index by one. Pins the
+  // fix: the non-messaging row is dropped before month-of-life indexing, so
+  // month-of-life index 0 anchors on the ad's first MESSAGING row.
+  it('anchors month-of-life on the first messaging row, not an earlier non-messaging one', () => {
+    const ads: AdRowForLifecycle[] = [
+      // Earliest row for this ad: non-messaging, real spend, would otherwise
+      // become month-of-life index 0 if not dropped.
+      row({
+        ad_id: 'A',
+        reporting_starts: d(2025, 0),
+        amount_spent: 999,
+        total_messaging_contacts: null,
+        result_type: null,
+      }),
+      row({ ad_id: 'A', reporting_starts: d(2025, 1), amount_spent: 500, total_messaging_contacts: 10 }),
+      row({ ad_id: 'A', reporting_starts: d(2025, 2), amount_spent: 300, total_messaging_contacts: 5 }),
+    ]
+
+    const result = computeAdLifecycle(ads, [], [1])
+
+    const cohort = result.cohorts.find(c => c.minSurvivalMonths === 1)!
+    expect(cohort.n).toBe(1)
+    const month0 = cohort.curve.find(p => p.monthIndex === 0)!
+    const month1 = cohort.curve.find(p => p.monthIndex === 1)!
+    expect(month0.cpi).toBeCloseTo(500 / 10, 6)
+    expect(month1.cpi).toBeCloseTo(300 / 5, 6)
+    expect(cohort.curve.find(p => p.monthIndex === 2)).toBeUndefined()
   })
 
   it('returns null CPI (not 0 or Infinity) when a month index has zero results', () => {
@@ -199,5 +260,59 @@ describe('computeAdLifecycle', () => {
   it('returns a null frequencyDiagnostic when fewer than 3 rows qualify', () => {
     const result = computeAdLifecycle([], [{ ad_id: 'a', frequency: 1, amount_spent: 100, total_messaging_contacts: 10 }])
     expect(result.frequencyDiagnostic).toBeNull()
+  })
+
+  // Finding E (docs/raven/analysis-tab-memo-final.md): a messaging row with
+  // no recorded reach (frequency null) must be counted as excluded, not
+  // silently dropped from n with no trace — distinct from the non-messaging
+  // rows above, which are excluded from the population entirely rather than
+  // "excluded for lacking reach."
+  it('counts messaging rows with no reach as excludedNoReach, separately from non-messaging rows', () => {
+    const freqRows: AdRowForFrequency[] = [
+      ...Array.from({ length: 5 }, (_, i) => ({
+        ad_id: `msg-${i}`,
+        frequency: 1 + i * 0.2,
+        amount_spent: 100,
+        total_messaging_contacts: 10,
+      })),
+      // messaging rows with no recorded reach (frequency null)
+      { ad_id: 'no-reach-1', frequency: null, amount_spent: 50, total_messaging_contacts: 5 },
+      { ad_id: 'no-reach-2', frequency: null, amount_spent: 50, total_messaging_contacts: 5 },
+      // non-messaging row — excluded from the population, not counted as excludedNoReach
+      { ad_id: 'other', frequency: 1, amount_spent: 50, total_messaging_contacts: null },
+    ]
+
+    const result = computeAdLifecycle([], freqRows)
+
+    expect(result.frequencyDiagnostic!.n).toBe(5)
+    expect(result.frequencyDiagnostic!.excludedNoFrequency).toBe(2)
+  })
+
+  // code-review-analyst (MEDIUM-1): the earlier test only covered
+  // frequency: null. A stored 0 must count as excluded the same way, and
+  // the footnote must not render (excludedNoFrequency === 0) when nothing
+  // was actually dropped.
+  it('counts a stored zero frequency as excluded, and reports zero when nothing is dropped', () => {
+    const zeroFreqRows: AdRowForFrequency[] = [
+      ...Array.from({ length: 5 }, (_, i) => ({
+        ad_id: `msg-${i}`,
+        frequency: 1 + i * 0.2,
+        amount_spent: 100,
+        total_messaging_contacts: 10,
+      })),
+      { ad_id: 'zero-freq', frequency: 0, amount_spent: 50, total_messaging_contacts: 5 },
+    ]
+    const withDrop = computeAdLifecycle([], zeroFreqRows)
+    expect(withDrop.frequencyDiagnostic!.n).toBe(5)
+    expect(withDrop.frequencyDiagnostic!.excludedNoFrequency).toBe(1)
+
+    const cleanRows: AdRowForFrequency[] = Array.from({ length: 5 }, (_, i) => ({
+      ad_id: `msg-${i}`,
+      frequency: 1 + i * 0.2,
+      amount_spent: 100,
+      total_messaging_contacts: 10,
+    }))
+    const withoutDrop = computeAdLifecycle([], cleanRows)
+    expect(withoutDrop.frequencyDiagnostic!.excludedNoFrequency).toBe(0)
   })
 })
