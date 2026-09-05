@@ -46,16 +46,17 @@ export const EXCLUDE_GROUND_TRUTH = {
 // name fails tsc instead of silently matching every post — same rationale
 // as the original inline version (code review, 2026-08-23).
 //
-// docs/raven/Content_Second_Pass.md §2 — includeGroundTruth exists because
-// the Owner's screen is view-only everywhere on it (no Change action exists
-// for that role at all), so hiding the 200 protects nothing FR-08 doesn't
-// already get from the server-side write refusal (actions/categorize.ts)
-// and CategoryEditCell's own isGroundTruth branch, which already renders
-// them locked rather than editable. Hiding them there only opened an
-// unexplained 731-vs-531 gap against the Executive Dashboard's count.
-// Defaults to excluding them (old behavior) since the Marketing Manager's
-// screen keeps that exclusion — she can edit, so keeping the 200 out of her
-// query is still load-bearing there.
+// docs/raven/Content_Second_Pass.md §2 and docs/raven/Show_All_731_and_
+// Chapter3_Wording.md §2.2 — includeGroundTruth exists because hiding the
+// 200 reference posts protects nothing FR-08 doesn't already get from the
+// server-side write refusal (actions/categorize.ts's updatePostCategory)
+// and CategoryEditCell's own isGroundTruth branch, which renders them locked
+// rather than editable regardless of role. Hiding them only opened an
+// unexplained 731-vs-531 gap against the Executive Dashboard's count. Both
+// Owner and Marketing Manager routes now pass includeGroundTruth: true;
+// the locked-and-visible treatment does the same job the exclusion used to
+// do for the Manager (who can edit other rows), so the flag defaults to
+// false only for callers that don't opt in explicitly.
 export function whereForFilter(filter: ContentFilter, opts: { includeGroundTruth?: boolean } = {}): Prisma.FacebookPostWhereInput {
   const groundTruth = opts.includeGroundTruth ? {} : EXCLUDE_GROUND_TRUTH
   if (filter === 'needs-review') return { category_final: null, ...groundTruth }

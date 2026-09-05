@@ -8,6 +8,7 @@ import { resolveCaption } from '@/lib/keywords/caption'
 import { CATEGORY_NAME_TO_LABEL } from '@/lib/category-label'
 import { recomputeQueueFlagReasons, isUnflaggedAgreed } from '@/lib/data/category-flags'
 import { withStudyPeriod } from '@/lib/data/study-period'
+import { EXCLUDE_GROUND_TRUTH } from '@/lib/categorize/content-filter'
 import type { CategoryLabel } from '@/app/generated/prisma/client'
 
 // Ads no longer carry a category (mvp.md §5.1 — content category → ad
@@ -173,6 +174,13 @@ export async function batchConfirmAgreed(postIds?: number[]): Promise<BatchConfi
     const candidates = await prisma.facebookPost.findMany({
       where: {
         category_final: null,
+        // Ground-truth rows never actually satisfy category_final: null (see
+        // updatePostCategory's guard above), so this was safe by invariant
+        // rather than by statement. Made explicit — code review, 2026-09-05
+        // (docs/raven/Show_All_731_and_Chapter3_Wording.md §2.2) — now that
+        // these rows are visible on the Manager's screen, matching the
+        // explicit check every other write/read path in this file uses.
+        ...EXCLUDE_GROUND_TRUTH,
         // Fails closed: an explicitly-passed empty array scopes to nothing,
         // not "everything" — only an omitted (undefined) postIds means
         // unscoped. An empty array reading as "no scope" would be a fail-open

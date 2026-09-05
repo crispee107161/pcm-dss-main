@@ -867,9 +867,10 @@ function QueueView({ posts, role }: { posts: ContentPostRow[]; role: Role }) {
 }
 
 const CATEGORY_FINAL_SOURCE_DISPLAY: Record<CategoryFinalSource, string> = {
-  // docs/raven/Content_Second_Pass.md §2/§3 — this source now reaches the
-  // Owner's screen (whereForFilter's includeGroundTruth), which §3 just
-  // stripped "ground-truth benchmark" language from. "Ground truth import"
+  // docs/raven/Content_Second_Pass.md §2/§3 and docs/raven/Show_All_731_and_
+  // Chapter3_Wording.md §2.2 — this source now reaches both the Owner's and
+  // Marketing Manager's screens (whereForFilter's includeGroundTruth), which
+  // §3 stripped "ground-truth benchmark" language from. "Ground truth import"
   // was the same manuscript vocabulary in the next column over — plain
   // language per §0.3, not a study/methodology term.
   MANUAL_GROUND_TRUTH: 'Locked reference set',
@@ -950,6 +951,27 @@ function CategoryEditCell({ post, canEdit, baseRoute }: { post: ContentPostRow; 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const isGroundTruth = post.category_final_source === 'MANUAL_GROUND_TRUTH'
 
+  // Checked before the !post.category_final branch below, not after — every
+  // writer today guarantees a ground-truth row always carries a non-null
+  // category_final (code review, 2026-09-05), so the two orderings behave
+  // identically in practice, but this ordering doesn't depend on that
+  // invariant: even if it were ever violated, a ground-truth row can never
+  // fall into the "Categorise in review →" link, which for a canEdit role
+  // would otherwise open a write path this cell exists to close off.
+  if (isGroundTruth) {
+    return (
+      <div className="flex items-center gap-1.5">
+        {post.category_final ? <CategoryBadge label={post.category_final} /> : <span className="text-muted-foreground text-xs">Uncategorised</span>}
+        {/* docs/raven/Content_Second_Pass.md §2 — "ground truth" is the same
+            manuscript register §3 removed from this screen's subtitle; this
+            badge now reaches the Owner and the Marketing Manager too (docs/
+            raven/Show_All_731_and_Chapter3_Wording.md §2.2), so it needs the
+            same plain-language treatment on both. */}
+        <span className="text-[10px] text-muted-foreground">locked reference</span>
+      </div>
+    )
+  }
+
   if (!post.category_final) {
     if (!canEdit) return <span className="text-muted-foreground text-xs">Uncategorised</span>
     return (
@@ -959,15 +981,10 @@ function CategoryEditCell({ post, canEdit, baseRoute }: { post: ContentPostRow; 
     )
   }
 
-  if (!canEdit || isGroundTruth) {
+  if (!canEdit) {
     return (
       <div className="flex items-center gap-1.5">
         <CategoryBadge label={post.category_final} />
-        {/* docs/raven/Content_Second_Pass.md §2 — "ground truth" is the same
-            manuscript register §3 removed from this screen's subtitle; this
-            badge now reaches the Owner too, so it needs the same plain-
-            language treatment. */}
-        {isGroundTruth && <span className="text-[10px] text-muted-foreground">locked reference</span>}
       </div>
     )
   }
@@ -1194,6 +1211,18 @@ function LibraryTable({ posts, canEdit, filter, baseRoute }: { posts: ContentPos
       {filteredPosts.some((post) => post.category_final_source === 'MANUAL_CODEBOOK_ASSIGNMENT') && (
         <p className="text-xs text-muted-foreground mt-3">
           Codebook assignments were made outside the system by the research coders, so no individual account is recorded against them.
+        </p>
+      )}
+      {/* docs/raven/Show_All_731_and_Chapter3_Wording.md §2.2 — on the
+          Marketing Manager's screen every other row shows a "Change" link;
+          the 200 locked reference rows silently don't, which reads as a
+          broken button without an explanation. Same visibility rule as the
+          codebook footnote above (filteredPosts, not pagedPosts, so it
+          doesn't flicker while paginating). Not shown to the Owner, whose
+          whole screen is already view-only and needs no such distinction. */}
+      {canEdit && filteredPosts.some((post) => post.category_final_source === 'MANUAL_GROUND_TRUTH') && (
+        <p className="text-xs text-muted-foreground mt-3">
+          Locked reference posts are part of the study&apos;s external benchmark and can&apos;t be edited here.
         </p>
       )}
     </div>

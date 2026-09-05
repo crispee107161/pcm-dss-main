@@ -11,9 +11,14 @@ import { parseContentFilter, whereForFilter, type ContentFilter } from '@/lib/ca
 // docs/raven/Consolidation_Plan_Checklist.md). `/dashboard/marketing/content`
 // redirects here with `?filter=all`.
 
+// docs/raven/Show_All_731_and_Chapter3_Wording.md §2.2 — the 200 locked
+// reference posts are now visible here too (CategoryEditCell already renders
+// them locked, and updatePostCategory already refuses the write), so the
+// "excluding the locked ground-truth benchmark" clause described a screen
+// that no longer exists.
 const FILTER_DESCRIPTIONS: Record<ContentFilter, string> = {
   'needs-review': 'Review and finalise categories for uncategorised posts.',
-  all: 'Every organic post and its assigned category (excluding the locked ground-truth benchmark).',
+  all: 'Every organic post and its assigned category.',
   // docs/raven-review/Unassigned_Labels_and_Coding_Procedure.md §2.1
   unassigned: 'Posts reviewed and found to have no determinable category. Reviewed, not skipped.',
 }
@@ -32,7 +37,7 @@ export default async function CategorizePage({
   const filter = parseContentFilter(rawFilter)
 
   const posts = await prisma.facebookPost.findMany({
-    where: withStudyPeriod(whereForFilter(filter)),
+    where: withStudyPeriod(whereForFilter(filter, { includeGroundTruth: true })),
     orderBy: { publish_time: 'desc' },
     select: {
       id: true,
