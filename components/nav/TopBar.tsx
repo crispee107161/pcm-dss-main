@@ -188,17 +188,17 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
               aria-haspopup="menu"
               aria-label="Account menu"
               aria-expanded={dropdownOpen}
-              className="flex items-center rounded-full p-0.5 hover:bg-muted transition-[background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              className="flex items-center rounded-full p-0.5 hover:bg-muted active:scale-[0.96] transition-[background-color,scale] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
-              <Avatar className="w-8 h-8 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
+              <Avatar className="w-8 h-8 flex-shrink-0 ring-2 rounded-full ring-crimson-200 dark:ring-crimson-800">
                 <AvatarFallback className="bg-crimson-500 text-white text-xs font-bold">{initial}</AvatarFallback>
               </Avatar>
             </button>
           }
         >
           {/* Identity */}
-          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
-            <Avatar className="w-10 h-10 flex-shrink-0 ring-2 rounded-full ring-crimson-200">
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border bg-secondary/50">
+            <Avatar className="w-10 h-10 flex-shrink-0 ring-2 rounded-full ring-crimson-200 dark:ring-crimson-800 shadow-[0_2px_8px_-2px_rgb(from_var(--color-crimson-500)_r_g_b_/_0.35)]">
               <AvatarFallback className="bg-crimson-500 text-white text-sm font-bold">{initial}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -211,14 +211,16 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
             {/* Change password toggle */}
             <button
               onClick={() => setChangePwOpen(v => !v)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left"
+              aria-expanded={changePwOpen}
+              aria-controls="account-change-password-panel"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground active:bg-secondary/80 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             >
               <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
               </svg>
               Change Password
               <svg
-                className={`w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform ${changePwOpen ? 'rotate-180' : ''}`}
+                className={`w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform duration-200 ${changePwOpen ? 'rotate-180' : ''}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -226,7 +228,7 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
             </button>
 
             {/* Change password form — grid height transition */}
-            <div className={`expand-grid${changePwOpen ? ' open' : ''}`}>
+            <div id="account-change-password-panel" className={`expand-grid${changePwOpen ? ' open' : ''}`}>
               <div>
                 <form action={pwAction} className="px-3 pb-2 pt-1 space-y-2">
                   {pwState?.error && (
@@ -269,11 +271,11 @@ export default function TopBar({ navItems, email, roleLabel, expanded, onToggleE
           </div>
 
           {/* Sign out */}
-          <div className="p-1.5 pt-0 border-t border-border">
+          <div className="p-1.5 pt-1.5 border-t border-border">
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="w-full flex items-center gap-3 px-3 py-2 mt-1.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 active:bg-destructive/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-inset"
               >
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
