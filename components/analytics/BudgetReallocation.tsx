@@ -57,11 +57,14 @@ const QUARTILE_STYLE: Record<1 | 2 | 3 | 4, string> = {
 
 function QuartileCard({ q }: { q: BudgetReallocationResult['quartiles'][number] }) {
   return (
-    <div className={`bg-card rounded-2xl card-shadow p-5 border-t-2 ${QUARTILE_STYLE[q.quartile]}`}>
+    <div
+      className={`bg-card rounded-2xl p-5 border-t-2 ${QUARTILE_STYLE[q.quartile]}`}
+      style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}
+    >
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
         Q{q.quartile} {q.quartile === 1 ? '(best)' : q.quartile === 4 ? '(worst)' : ''}
       </p>
-      <p className="sensitive text-2xl font-bold text-foreground mt-1">{q.n > 0 ? formatPHP(q.cpi) : '—'}</p>
+      <p className="sensitive text-2xl font-bold text-foreground mt-1 tabular">{q.n > 0 ? formatPHP(q.cpi) : '—'}</p>
       <p className="text-xs text-muted-foreground mt-1">cost per messaging conversation</p>
       <div className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground space-y-1">
         <p>{q.n} advertisements</p>
@@ -85,12 +88,12 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
   const projectedInquiries = result.q4Inquiries + additionalAtPct
 
   return (
-    <div className="bg-card rounded-2xl card-shadow p-5 space-y-4">
+    <div className="bg-card rounded-2xl p-5 space-y-4" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
           Reallocation comparison
         </p>
-        <span className="text-sm font-bold text-foreground">{pct}% of Q4 spend</span>
+        <span className="text-sm font-bold text-foreground tabular">{pct}% of Q4 spend</span>
       </div>
 
       <div className="space-y-1.5">
@@ -110,18 +113,18 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
         <div>
           <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Spend compared</p>
-          <p className="sensitive text-lg font-bold text-foreground">{formatPHP(reallocatedSpend)}</p>
+          <p className="sensitive text-lg font-bold text-foreground tabular">{formatPHP(reallocatedSpend)}</p>
         </div>
         <div>
           <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Would have generated at Q1&apos;s rate</p>
-          <p className="sensitive text-lg font-bold text-foreground">{Math.round(projectedInquiries).toLocaleString()} inquiries</p>
+          <p className="sensitive text-lg font-bold text-foreground tabular">{Math.round(projectedInquiries).toLocaleString()} inquiries</p>
         </div>
         <div>
           <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Additional, based on recorded results</p>
           {/* Neutral, not text-status-positive (docs/raven/Budget_Reallocation_Review.md
               §2): green reads as a promise, but this is a retrospective
               comparison, not a recommendation. */}
-          <p className="sensitive text-lg font-bold text-foreground">+{Math.round(additionalAtPct).toLocaleString()}</p>
+          <p className="sensitive text-lg font-bold text-foreground tabular">+{Math.round(additionalAtPct).toLocaleString()}</p>
         </div>
       </div>
 
@@ -145,7 +148,7 @@ function Q4Table({ q4Ads }: { q4Ads: BudgetReallocationResult['q4Ads'] }) {
   const hasMore = q4Ads.length > Q4_TABLE_COLLAPSED_COUNT
 
   return (
-    <div className="bg-card rounded-2xl card-shadow overflow-hidden">
+    <div className="bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}>
       <div className="px-5 py-4 border-b border-border">
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
           Worst-performing advertisements ({q4Ads.length} total)
@@ -168,16 +171,16 @@ function Q4Table({ q4Ads }: { q4Ads: BudgetReallocationResult['q4Ads'] }) {
               </TableHeader>
               <TableBody>
                 {visible.map(a => (
-                  <TableRow key={a.ad_id} className="border-t border-border hover:bg-secondary/50/50 transition-colors">
+                  <TableRow key={a.ad_id} className="border-t border-border hover:bg-secondary/50 transition-colors">
                     <TableCell className="px-4 py-3">
                       <span className="font-medium text-foreground text-sm max-w-xs truncate block" title={a.ad_name}>{a.ad_name}</span>
                     </TableCell>
                     <TableCell className="px-4 py-3">
                       <span className="text-xs text-muted-foreground truncate block" title={a.ad_set_name}>{a.ad_set_name}</span>
                     </TableCell>
-                    <TableCell className="sensitive px-4 py-3 text-right text-sm text-foreground">{formatPHP(a.spend)}</TableCell>
-                    <TableCell className="sensitive px-4 py-3 text-right text-sm text-foreground">{a.inquiries.toLocaleString()}</TableCell>
-                    <TableCell className="sensitive px-4 py-3 text-right font-semibold text-foreground">{formatPHP(a.cpi)}</TableCell>
+                    <TableCell className="sensitive px-4 py-3 text-right text-sm text-foreground tabular-nums">{formatPHP(a.spend)}</TableCell>
+                    <TableCell className="sensitive px-4 py-3 text-right text-sm text-foreground tabular-nums">{a.inquiries.toLocaleString()}</TableCell>
+                    <TableCell className="sensitive px-4 py-3 text-right font-semibold text-foreground tabular-nums">{formatPHP(a.cpi)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -191,7 +194,7 @@ function Q4Table({ q4Ads }: { q4Ads: BudgetReallocationResult['q4Ads'] }) {
               </p>
               <button
                 onClick={() => setShowAll(v => !v)}
-                className="text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {showAll ? (
                   <> Show less <span>▲</span> </>
