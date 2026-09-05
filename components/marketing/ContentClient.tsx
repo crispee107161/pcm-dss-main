@@ -1219,10 +1219,13 @@ function LibraryTable({ posts, canEdit, filter, baseRoute }: { posts: ContentPos
           broken button without an explanation. Same visibility rule as the
           codebook footnote above (filteredPosts, not pagedPosts, so it
           doesn't flicker while paginating). Not shown to the Owner, whose
-          whole screen is already view-only and needs no such distinction. */}
+          whole screen is already view-only and needs no such distinction.
+          docs/raven/Content_Closed.md §2 — "the study's external benchmark"
+          named the research to a reader who isn't part of it; reworded to
+          describe what the lock does rather than why it exists. */}
       {canEdit && filteredPosts.some((post) => post.category_final_source === 'MANUAL_GROUND_TRUTH') && (
         <p className="text-xs text-muted-foreground mt-3">
-          Locked reference posts are part of the study&apos;s external benchmark and can&apos;t be edited here.
+          Locked posts are part of a fixed set used to check the system&apos;s accuracy and cannot be edited.
         </p>
       )}
     </div>
