@@ -35,7 +35,7 @@ export default async function BudgetReallocationPage({
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <PageHeader
         title="Budget Reallocation"
-        description="Messaging ads ranked into CPI quartiles, filtered by minimum spend to avoid comparing low-volume ads against high-volume ones"
+        description="Messaging ads ranked by cost per inquiry and split into four groups, filtered by minimum spend to avoid comparing low-volume ads against high-volume ones"
       />
 
       <div className="flex items-center gap-3 mb-6">
@@ -46,7 +46,7 @@ export default async function BudgetReallocationPage({
 
       <div className="bg-card rounded-2xl card-shadow p-6 mb-6">
         <InsightHeader
-          headline={finding ?? 'Not enough data at this threshold to compare Q1 and Q4.'}
+          headline={finding ?? 'Not enough data at this threshold to compare the most and least efficient groups.'}
           disclosure="always"
           // mathLabel="" suppresses InsightHeader's default "See the numbers
           // behind this" label in disclosure="always" mode — the quartile
@@ -59,16 +59,27 @@ export default async function BudgetReallocationPage({
 
       <div className="mt-4">
         <MethodologyNote>
-          Messaging conversations are summed per advertisement across every month it ran; spend is summed
-          only from the months where &quot;Result type&quot; is &quot;Messaging conversations started&quot;.
-          For an advertisement that also ran non-messaging months, that month&apos;s spend does not count
-          toward its cost per messaging conversation. Ads with total messaging spend at or above the
-          selected threshold are ranked by that figure and split into four equal-size groups. The
-          minimum-spend filter exists because an unfiltered split is confounded by regression to the mean (the
-          worst quartile would mostly be low-volume ads with noisy CPI, not genuinely inefficient ones). The
-          reallocation comparison above shows what a portion of Q4&apos;s (worst) spend would have generated at
-          Q1&apos;s (best) rate, based on recorded results: a retrospective comparison, not a forecast or
-          simulation of future performance.
+          <p>
+            Messaging conversations are summed per advertisement across every month it ran; spend is summed
+            only from the months where &quot;Result type&quot; is &quot;Messaging conversations started&quot;.
+            For an advertisement that also ran non-messaging months, that month&apos;s spend does not count
+            toward its cost per messaging conversation.
+          </p>
+          <p className="mt-2">
+            Ads with total messaging spend at or above the selected threshold are ranked by that figure and
+            split into four groups of as equal a size as the count allows (differing by at most one
+            advertisement when the total doesn&apos;t divide evenly by four; ties in cost per inquiry at a
+            group boundary are broken by advertisement ID). The minimum-spend filter exists because an
+            unfiltered split is confounded by regression to the mean: the worst group would mostly be
+            low-volume ads with noisy cost per inquiry, not genuinely inefficient ones.
+          </p>
+          <p className="mt-2">
+            The reallocation comparison above shows what a portion of the least efficient group&apos;s spend
+            would have generated at the most efficient group&apos;s rate, based on recorded results: a
+            retrospective comparison, not a forecast or simulation of future performance. Advertisements that
+            perform worst also tend to improve on their own over time, so acting on this comparison would
+            likely recover less than the full difference shown.
+          </p>
         </MethodologyNote>
       </div>
     </div>

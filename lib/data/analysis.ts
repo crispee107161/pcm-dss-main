@@ -25,6 +25,17 @@ export interface AnalysisCoverage {
   adCount: number
   postCount: number
   lastUploadDate: Date | null
+  // docs/raven/analysis-tab-post-fix-memo.md §3 — the study window silently
+  // excludes rows outside it (FR-04a), which is invisible on screen unless
+  // stated. postsExcluded is an exact row count (one row = one post).
+  // adsExcluded is advertisements with NO in-period row at all — the Ad
+  // table is one row per advertisement PER MONTH, so an ad with some months
+  // in period and some outside it is not counted here (code-review-analyst,
+  // MEDIUM-2, 2026-09-07: it still has in-period activity, so it belongs in
+  // adCount, not this figure — this only counts ads absent from the period
+  // entirely, and the UI states it that way).
+  adsExcluded: number
+  postsExcluded: number
 }
 
 export interface AnalysisScreenData {
@@ -66,7 +77,16 @@ export async function loadAnalysisScreenData(): Promise<AnalysisScreenData> {
   const categorySignificance = computeCategorySignificance(groupEngagementRatesByCategory(posts))
   const correlation = selectCorrelation(ads)
 
-  const [adUpload, postUpload] = await Promise.all([latestUpload(['ADS_CSV']), latestUpload(['POSTS_CSV'])])
+  const [adUpload, postUpload, totalPostCount, totalAdIdCount] = await Promise.all([
+    latestUpload(['ADS_CSV']),
+    latestUpload(['POSTS_CSV']),
+    prisma.facebookPost.count(),
+    // code-review-analyst (MEDIUM-6, 2026-09-07): groupBy + length, not
+    // findMany + distinct — the latter pulls every distinct ad_id string
+    // over the wire just to count them, on a request path that already runs
+    // three other queries plus a write.
+    prisma.ad.groupBy({ by: ['ad_id'] }),
+  ])
   const lastUploadDate =
     adUpload && postUpload
       ? adUpload.date > postUpload.date ? adUpload.date : postUpload.date
@@ -77,11 +97,14 @@ export async function loadAnalysisScreenData(): Promise<AnalysisScreenData> {
   // advertisement. `ads.length` here is ad-month rows (~700+), which would
   // have rendered as "advertisements" directly above panels stating the
   // real distinct-advertisement count (e.g. "Across 187 advertisements").
+  const inPeriodAdCount = new Set(ads.map(a => a.ad_id)).size
   const coverage: AnalysisCoverage = {
     periodLabel: STUDY_PERIOD_LABEL,
-    adCount: new Set(ads.map(a => a.ad_id)).size,
+    adCount: inPeriodAdCount,
     postCount: posts.length,
     lastUploadDate,
+    adsExcluded: Math.max(0, totalAdIdCount.length - inPeriodAdCount),
+    postsExcluded: Math.max(0, totalPostCount - posts.length),
   }
 
   await prisma.correlationAssumptionRun.create({

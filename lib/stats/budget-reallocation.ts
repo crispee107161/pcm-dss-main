@@ -33,6 +33,11 @@ export interface QuartileSummary {
   spend: number
   inquiries: number
   cpi: number
+  // Median spend per ad within the group (docs/raven/budget-reallocation-memo-v3
+  // finding G) — surfaces that the most-efficient group is also the
+  // highest-spend group, the fact that makes the reallocation's
+  // rate-holds-at-scale assumption plausible or not.
+  medianSpend: number
 }
 
 export interface BudgetReallocationResult {
@@ -49,7 +54,14 @@ export interface BudgetReallocationResult {
   additionalInquiries: number
 }
 
-const EMPTY_QUARTILES: QuartileSummary[] = [1, 2, 3, 4].map(q => ({ quartile: q as 1 | 2 | 3 | 4, n: 0, spend: 0, inquiries: 0, cpi: 0 }))
+const EMPTY_QUARTILES: QuartileSummary[] = [1, 2, 3, 4].map(q => ({ quartile: q as 1 | 2 | 3 | 4, n: 0, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 }))
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+}
 
 // q4Ads arrives in ascending-CPI order (least-bad-of-the-worst first, see
 // computeBudgetReallocation below), so the true worst ads sit at the end.
@@ -92,10 +104,23 @@ function aggregateByAdId(ads: AdForReallocation[]) {
 }
 
 // FR-25 (mvp.md §4.5): ranks messaging ads with spend at/above a configurable
-// minimum into four equal-size CPI quartiles (rank-based split, so n divides
-// evenly whenever possible — reproduces the reference 27/27/27/27 split at
-// the default ₱1,000 threshold), then compares Q4's (worst) actual inquiries
-// against what its spend would have bought at Q1's (best) rate.
+// minimum into four CPI quartiles (rank-based split on the sorted list, index
+// i lands in group floor(i*4/n) — this distributes any remainder across the
+// leading groups rather than dropping it or dumping it all on one group, so
+// group sizes differ by at most one ad when n isn't divisible by four; e.g.
+// n=131 gives 33/33/33/32, not a fixed 32/32/32/32 that would silently
+// discard the three costliest ads. Reproduces the reference 27/27/27/27
+// split at the default ₱1,000 threshold, where n happens to divide evenly.
+// docs/raven/budget-reallocation-memo-v3 finding A — verified this branch,
+// not the discarding one).
+//
+// Ties at a group boundary: broken by Ad ID, not input row order — the
+// callers' Prisma queries (page.tsx, report-data.ts, DashboardOverview.tsx)
+// carry no `orderBy`, so Postgres row order is not guaranteed to be stable
+// or meaningful, and can't be relied on as a tiebreaker. Ad ID makes the
+// split deterministic regardless of what order the caller's query happens
+// to return (docs/raven/budget-reallocation-memo-v3 finding H). No tie
+// currently occurs in the data.
 //
 // The minimum-spend filter exists because an unfiltered split is confounded
 // by regression to the mean: without it, the "worst" quartile is mostly
@@ -106,7 +131,7 @@ export function computeBudgetReallocation(ads: AdForReallocation[], minSpendThre
   const eligible: ReallocationAd[] = [...perAd.entries()]
     .map(([ad_id, a]) => ({ ad_id, ad_name: a.ad_name, ad_set_name: a.ad_set_name, spend: a.spend, inquiries: a.inquiries, cpi: a.spend / a.inquiries }))
     .filter(a => a.inquiries > 0 && a.spend >= minSpendThreshold)
-    .sort((a, b) => a.cpi - b.cpi)
+    .sort((a, b) => a.cpi - b.cpi || a.ad_id.localeCompare(b.ad_id))
 
   const n = eligible.length
 
@@ -132,7 +157,14 @@ export function computeBudgetReallocation(ads: AdForReallocation[], minSpendThre
   const quartiles: QuartileSummary[] = groups.map((group, i) => {
     const spend = group.reduce((s, a) => s + a.spend, 0)
     const inquiries = group.reduce((s, a) => s + a.inquiries, 0)
-    return { quartile: (i + 1) as 1 | 2 | 3 | 4, n: group.length, spend, inquiries, cpi: inquiries > 0 ? spend / inquiries : 0 }
+    return {
+      quartile: (i + 1) as 1 | 2 | 3 | 4,
+      n: group.length,
+      spend,
+      inquiries,
+      cpi: inquiries > 0 ? spend / inquiries : 0,
+      medianSpend: median(group.map(a => a.spend)),
+    }
   })
 
   const q1 = quartiles[0]

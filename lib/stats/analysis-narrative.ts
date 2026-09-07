@@ -157,6 +157,35 @@ export function categorySignificanceSentence(
     ([lower, highers]) =>
       `${CATEGORY_LABEL_DISPLAY[lower]} posts earn a significantly lower rate than ${joinList(highers.map(h => CATEGORY_LABEL_DISPLAY[h]))} posts.`
   )
+
+  // Finding D (docs/raven/analysis-tab-post-fix-memo.md): any two categories
+  // that both get named above — whether on the "higher" side of different
+  // pairs, the "lower" side, or one of each — can end up with no sentence
+  // ever comparing them to EACH OTHER. A reader seeing them at different
+  // values in the table below, with nothing separating them, can reasonably
+  // infer a real difference. Explicitly name every such pair that the test
+  // did NOT find distinguishable, so silence between two named categories
+  // never reads as an implied finding. code-review-analyst (MEDIUM-5,
+  // 2026-09-07): the first draft only checked pairs among the "higher"
+  // side, which missed a silent pair when both categories sit on the
+  // "lower" side of different comparisons, or when one is lower in one
+  // comparison and higher in another.
+  const nonNullSignificance = significance as CategorySignificanceResult
+  const statedPairKeys = new Set(significantPairs.map(p => [p.a, p.b].sort().join('|')))
+  const involvedList = [...involved]
+  const otherPairClauses: string[] = []
+  for (let i = 0; i < involvedList.length; i++) {
+    for (let j = i + 1; j < involvedList.length; j++) {
+      const [a, b] = [involvedList[i], involvedList[j]]
+      if (statedPairKeys.has([a, b].sort().join('|'))) continue // already stated as a significant clause above
+      const pair = nonNullSignificance.pairwise.find(p => (p.a === a && p.b === b) || (p.a === b && p.b === a))
+      if (pair && !pair.significant) {
+        otherPairClauses.push(`${CATEGORY_LABEL_DISPLAY[a]} and ${CATEGORY_LABEL_DISPLAY[b]} are not distinguishable from each other.`)
+      }
+    }
+  }
+  if (otherPairClauses.length > 0) clauses.push(...otherPairClauses)
+
   // code-review-analyst (LOW-3, 2026-09-06): "from one another" reads oddly
   // when only one category is left uninvolved — there's nothing for it to
   // be indistinguishable "from one another" with, only from the categories
@@ -272,9 +301,17 @@ export function monthOfLifeSentence(cohorts: CohortCurve[], totalAds: number): s
       : 'Cost per inquiry stays roughly flat as advertisements run.'
   const runLength = candidate.minSurvivalMonths + 1
   const changeSentence = direction === 'held steady'
-    ? `Among advertisements that ran ${runLength} months or more, cost per inquiry stayed near ${formatPHP(first.cpi!)} from the first month to the ${ordinal(last.monthIndex + 1)}.`
-    : `Among advertisements that ran ${runLength} months or more, cost per inquiry ${direction} from ${formatPHP(first.cpi!)} in the first month to ${formatPHP(last.cpi!)} in the ${ordinal(last.monthIndex + 1)}.`
-  return `${claim} ${changeSentence} Of ${totalAds} advertisements that recorded a messaging conversation.`
+    ? `Among the ${candidate.n} advertisements that ran ${runLength} months or more, cost per inquiry stayed near ${formatPHP(first.cpi!)} from the first month to the ${ordinal(last.monthIndex + 1)}.`
+    : `Among the ${candidate.n} advertisements that ran ${runLength} months or more, cost per inquiry ${direction} from ${formatPHP(first.cpi!)} in the first month to ${formatPHP(last.cpi!)} in the ${ordinal(last.monthIndex + 1)}.`
+  // Finding B (docs/raven/analysis-tab-post-fix-memo.md): the trailing count
+  // used to name totalAds (the full messaging-ad corpus, 187) as if the
+  // result rested on it — it doesn't, it rests on candidate.n (the cohort
+  // that actually ran runLength+ months, 111 or 123 depending on Finding A's
+  // answer). candidate.n is now stated inline above, and this closing clause
+  // gives totalAds only as the "of N in total" context, matching the
+  // frequency panel's "Across 482 monthly records from 187 advertisements"
+  // pattern of naming both the unit and the wider population.
+  return `${claim} ${changeSentence} Of ${totalAds} advertisements that recorded a messaging conversation in total.`
 }
 
 function ordinal(n: number): string {

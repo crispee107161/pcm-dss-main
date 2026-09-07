@@ -189,6 +189,34 @@ describe('categorySignificanceSentence', () => {
     const s = categorySignificanceSentence(rows, sig)
     expect(s).toContain('Across 40 categorised posts') // 23 + 15 + 2, not the 18 UNCLEAR
   })
+
+  // Finding D (docs/raven/analysis-tab-post-fix-memo.md): Product Showcase
+  // and Entertainment are both named as "higher than Testimonial" with no
+  // sentence ever comparing them to each other — a reader seeing different
+  // values for the two in the table below could reasonably infer a real
+  // difference that the test didn't find. The sentence must say so.
+  it('names a pair of "higher" categories explicitly when they are not distinguishable from each other', () => {
+    const rows: CategoryDistributionRow[] = [
+      categoryRow({ category: 'ENTERTAINMENT', n: 65, engagementRate: { median: 0.85, q1: 0.5, q3: 1.2 } }),
+      categoryRow({ category: 'PRODUCT_SHOWCASE', n: 238, engagementRate: { median: 0.72, q1: 0.4, q3: 1 } }),
+      categoryRow({ category: 'PROMOTIONAL_OFFER', n: 29, engagementRate: { median: 0.71, q1: 0.4, q3: 1 } }),
+      categoryRow({ category: 'TESTIMONIAL', n: 156, engagementRate: { median: 0.51, q1: 0.3, q3: 0.7 } }),
+    ]
+    const sig = significance(
+      [
+        pairwise('ENTERTAINMENT', 'TESTIMONIAL', { significant: true }),
+        pairwise('ENTERTAINMENT', 'PRODUCT_SHOWCASE', { significant: false }), // the silent pair
+        pairwise('ENTERTAINMENT', 'PROMOTIONAL_OFFER', { significant: false }),
+        pairwise('PRODUCT_SHOWCASE', 'TESTIMONIAL', { significant: true }),
+        pairwise('PRODUCT_SHOWCASE', 'PROMOTIONAL_OFFER', { significant: false }),
+        pairwise('TESTIMONIAL', 'PROMOTIONAL_OFFER', { significant: false }),
+      ],
+      { significant: true }
+    )
+    const s = categorySignificanceSentence(rows, sig)
+    expect(s).toContain('Testimonial posts earn a significantly lower rate than Entertainment and Product Showcase posts')
+    expect(s).toContain('Entertainment and Product Showcase are not distinguishable from each other')
+  })
 })
 
 describe('categoryCoverageSentence', () => {
@@ -260,6 +288,16 @@ describe('monthOfLifeSentence', () => {
     const s = monthOfLifeSentence([loose, strict], 123)
     expect(s).toContain('₱15.66')
     expect(s).not.toContain('₱20.00')
+  })
+
+  // Finding B (docs/raven/analysis-tab-post-fix-memo.md): the headline named
+  // totalAds (the full messaging-ad corpus) as the count the result rested
+  // on. It rests on the cohort's own n, which can be smaller than totalAds —
+  // both numbers must appear, distinctly.
+  it('names the cohort that ran long enough, not just the full messaging-ad corpus, when they differ', () => {
+    const s = monthOfLifeSentence([cohort({ n: 111 })], 187)
+    expect(s).toContain('the 111 advertisements that ran')
+    expect(s).toContain('Of 187 advertisements that recorded a messaging conversation in total')
   })
 })
 
@@ -493,10 +531,10 @@ function budgetReallocation(overrides: Partial<BudgetReallocationResult> = {}): 
     minSpendThreshold: 1000,
     n: 108,
     quartiles: [
-      { quartile: 1, n: 27, spend: 318933, inquiries: 27045, cpi: 11.79 },
-      { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0 },
-      { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0 },
-      { quartile: 4, n: 27, spend: 59745, inquiries: 1988, cpi: 30.05 },
+      { quartile: 1, n: 27, spend: 318933, inquiries: 27045, cpi: 11.79, medianSpend: 0 },
+      { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+      { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+      { quartile: 4, n: 27, spend: 59745, inquiries: 1988, cpi: 30.05, medianSpend: 0 },
     ],
     q1Cpi: 11.79,
     q4Spend: 59745,
@@ -526,10 +564,10 @@ describe('budgetReallocationFindingSentence', () => {
     const s = budgetReallocationFindingSentence(
       budgetReallocation({
         quartiles: [
-          { quartile: 1, n: 1, spend: 1000, inquiries: 100, cpi: 10 },
-          { quartile: 2, n: 1, spend: 0, inquiries: 0, cpi: 0 },
-          { quartile: 3, n: 1, spend: 0, inquiries: 0, cpi: 0 },
-          { quartile: 4, n: 1, spend: 2000, inquiries: 50, cpi: 40 },
+          { quartile: 1, n: 1, spend: 1000, inquiries: 100, cpi: 10, medianSpend: 0 },
+          { quartile: 2, n: 1, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+          { quartile: 3, n: 1, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+          { quartile: 4, n: 1, spend: 2000, inquiries: 50, cpi: 40, medianSpend: 0 },
         ],
       })
     )
@@ -542,10 +580,10 @@ describe('budgetReallocationFindingSentence', () => {
     const s = budgetReallocationFindingSentence(
       budgetReallocation({
         quartiles: [
-          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10 },
-          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0 },
-          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0 },
-          { quartile: 4, n: 27, spend: 27000, inquiries: 2500, cpi: 10.8 },
+          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10, medianSpend: 0 },
+          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+          { quartile: 4, n: 27, spend: 27000, inquiries: 2500, cpi: 10.8, medianSpend: 0 },
         ],
       })
     )
@@ -557,10 +595,10 @@ describe('budgetReallocationFindingSentence', () => {
     const s = budgetReallocationFindingSentence(
       budgetReallocation({
         quartiles: [
-          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10 },
-          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0 },
-          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0 },
-          { quartile: 4, n: 27, spend: 27000, inquiries: 1080, cpi: 25 },
+          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10, medianSpend: 0 },
+          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+          { quartile: 4, n: 27, spend: 27000, inquiries: 1080, cpi: 25, medianSpend: 0 },
         ],
       })
     )
@@ -571,10 +609,10 @@ describe('budgetReallocationFindingSentence', () => {
     const s = budgetReallocationFindingSentence(
       budgetReallocation({
         quartiles: [
-          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10 },
-          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0 },
-          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0 },
-          { quartile: 4, n: 27, spend: 27000, inquiries: 1350, cpi: 20 },
+          { quartile: 1, n: 27, spend: 27000, inquiries: 2700, cpi: 10, medianSpend: 0 },
+          { quartile: 2, n: 27, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+          { quartile: 3, n: 27, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+          { quartile: 4, n: 27, spend: 27000, inquiries: 1350, cpi: 20, medianSpend: 0 },
         ],
       })
     )
@@ -586,10 +624,10 @@ describe('budgetReallocationFindingSentence', () => {
       budgetReallocationFindingSentence(
         budgetReallocation({
           quartiles: [
-            { quartile: 1, n: 0, spend: 0, inquiries: 0, cpi: 0 },
-            { quartile: 2, n: 0, spend: 0, inquiries: 0, cpi: 0 },
-            { quartile: 3, n: 0, spend: 0, inquiries: 0, cpi: 0 },
-            { quartile: 4, n: 0, spend: 0, inquiries: 0, cpi: 0 },
+            { quartile: 1, n: 0, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+            { quartile: 2, n: 0, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+            { quartile: 3, n: 0, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
+            { quartile: 4, n: 0, spend: 0, inquiries: 0, cpi: 0, medianSpend: 0 },
           ],
         })
       )

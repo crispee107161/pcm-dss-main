@@ -189,10 +189,28 @@ export default function AnalysisView({
           the corpus once, above every panel, rather than leaving each
           panel's own record count as the only way to piece together what
           this screen covers. */}
+      {/* Finding E / §3 (docs/raven/analysis-tab-post-fix-memo.md): states
+          the corpus once, above every panel, rather than leaving each
+          panel's own record count as the only way to piece together what
+          this screen covers. The main figure is the in-period count that
+          the panels below actually analyse (not the total ever uploaded —
+          code-review-analyst caught the first draft attaching "uploaded" to
+          this number, which made "N uploaded (M outside, not analysed)" not
+          add up to the true total whenever an ad had rows on both sides of
+          the window). The parenthetical names what's excluded honestly:
+          adsExcluded is advertisements with NO in-period activity at all —
+          an ad that straddles the window boundary still counts toward the
+          main figure, not this one, since some of its rows are in period. */}
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-muted-foreground mb-6 px-1">
         <span>{coverage.periodLabel}</span>
-        <span>{coverage.adCount.toLocaleString()} advertisements</span>
-        <span>{coverage.postCount.toLocaleString()} posts</span>
+        <span>
+          {coverage.adCount.toLocaleString()} advertisements in this period
+          {coverage.adsExcluded > 0 && ` (${coverage.adsExcluded.toLocaleString()} more uploaded with no activity in this period, not analysed)`}
+        </span>
+        <span>
+          {coverage.postCount.toLocaleString()} posts in this period
+          {coverage.postsExcluded > 0 && ` (${coverage.postsExcluded.toLocaleString()} more uploaded outside it, not analysed)`}
+        </span>
         {coverage.lastUploadDate && (
           <span>
             Last upload {new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(coverage.lastUploadDate)}
@@ -223,7 +241,16 @@ export default function AnalysisView({
             PageHeader's h1 and every panel's h3 — sr-only keeps the DOM
             structure correct without reintroducing the visible duplicate. */}
         <h2 className="sr-only">How These Are Calculated</h2>
-        <InsightHeader headline="Every figure below is a ratio of raw Facebook-reported columns.">
+        {/* Finding C (docs/raven/analysis-tab-post-fix-memo.md): the old
+            headline ("Every figure below is a ratio of raw Facebook-reported
+            columns") was true of the five ratio measures listed but false of
+            the fit statistic, average/percentage error, correlation
+            coefficients, VIF figures, and any p-value on the screen — those
+            are computed FROM the ratios, several aren't ratios at all. Same
+            shape as the overclaim caught in this card's own first draft
+            (docs/raven/analysis-tab-memo-final.md Finding G), narrowed the
+            same way: scope the claim to the measures, not every figure. */}
+        <InsightHeader headline="The measures below are ratios of figures Facebook reports directly. The statistics computed from them are described in each panel.">
           <ul className="text-sm text-foreground space-y-2">
             <li><span className="font-semibold">Engagement rate, organic posts:</span> (Reactions + Comments + Shares) ÷ Reach, shown as a percentage.</li>
             {!hideAdEfficiency && (

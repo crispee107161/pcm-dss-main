@@ -54,6 +54,33 @@ describe('computeBudgetReallocation', () => {
     expect(result.quartiles[0].cpi).toBeLessThan(result.quartiles[3].cpi)
   })
 
+  it('distributes the remainder across the leading groups when the count is not divisible by four, instead of discarding it (docs/raven/budget-reallocation-memo-v3 finding A)', () => {
+    // 131 ads, distinct CPI so ranking is unambiguous. A fixed group size of
+    // 32 would drop the 3 costliest ads (finding A's "discarding" branch,
+    // which this asserts does NOT happen); the correct split is 33/33/33/32.
+    const ads = Array.from({ length: 131 }, (_, i) =>
+      ad({ ad_id: `ad-${i}`, amount_spent: 1000, total_messaging_contacts: 1000 / (i + 1) }),
+    )
+    const result = computeBudgetReallocation(ads, 500)
+    expect(result.n).toBe(131)
+    expect(result.quartiles.map(q => q.n)).toEqual([33, 33, 33, 32])
+    expect(result.quartiles.reduce((s, q) => s + q.n, 0)).toBe(131)
+  })
+
+  it('reports the median spend per ad within each group', () => {
+    const ads = [
+      ad({ ad_id: 'a', amount_spent: 100, total_messaging_contacts: 10 }), // cpi 10
+      ad({ ad_id: 'b', amount_spent: 300, total_messaging_contacts: 30 }), // cpi 10
+      ad({ ad_id: 'c', amount_spent: 200, total_messaging_contacts: 20 }), // cpi 10
+      ad({ ad_id: 'd', amount_spent: 900, total_messaging_contacts: 30 }), // cpi 30
+    ]
+    const result = computeBudgetReallocation(ads, 100)
+    // Rank-split of 4 into 4 groups gives one ad per group; median of a
+    // single value is that value.
+    expect(result.quartiles[0].medianSpend).toBe(100)
+    expect(result.quartiles[3].medianSpend).toBe(900)
+  })
+
   it('computes the counterfactual as Q4 spend at Q1 rate, based on recorded results', () => {
     // 8 ads, rank-quartiled 2/2/2/2 by cpi.
     // Q1 (lowest cpi): two ads at cpi 10 (spend 1000/inquiries 100 each) -> q1Cpi = 10

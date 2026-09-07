@@ -12,6 +12,17 @@ function formatPHP(v: number) {
   return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(v)
 }
 
+// 2dp, for the small-print line beside each card's rounded whole-peso
+// headline figure (docs/raven/budget-reallocation-memo-v3 finding C) — a
+// reader who divides the card's own spend/inquiries figures by hand should
+// land on the same rate the reallocation math actually used, not the
+// whole-peso display value. Still rounded, not the full-precision float the
+// math runs on (code-review-analyst, LOW-1, 2026-09-07: labelling a 2dp
+// figure "exact" re-opens the same overclaim finding C was raised about).
+function formatPHPUnrounded(v: number) {
+  return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
+}
+
 // The reference thresholds verified in data_catalog.md §4.3 — the default
 // (₱1,000) is provisional pending Chapter 1 (mvp.md §9, open item 1).
 const THRESHOLD_OPTIONS = [300, 500, 1000]
@@ -55,6 +66,17 @@ const QUARTILE_STYLE: Record<1 | 2 | 3 | 4, string> = {
   4: 'border-t-status-warning',
 }
 
+// Plain-language replacements for the Q1-Q4 notation (docs/raven/
+// budget-reallocation-memo-v3 finding B, rule 0.2) — deliberately no count
+// baked into the label itself, since group sizes can differ by one ad
+// (finding A); the count is the card's own "{n} advertisements" line.
+const QUARTILE_LABEL: Record<1 | 2 | 3 | 4, string> = {
+  1: 'Most efficient',
+  2: 'Second',
+  3: 'Third',
+  4: 'Least efficient',
+}
+
 function QuartileCard({ q }: { q: BudgetReallocationResult['quartiles'][number] }) {
   return (
     <div
@@ -62,7 +84,7 @@ function QuartileCard({ q }: { q: BudgetReallocationResult['quartiles'][number] 
       style={{ boxShadow: 'var(--card-elevate-shadow-ring)' }}
     >
       <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
-        Q{q.quartile} {q.quartile === 1 ? '(best)' : q.quartile === 4 ? '(worst)' : ''}
+        {QUARTILE_LABEL[q.quartile]}
       </p>
       <p className="sensitive text-2xl font-bold text-foreground mt-1 tabular">{q.n > 0 ? formatPHP(q.cpi) : '—'}</p>
       <p className="text-xs text-muted-foreground mt-1">cost per messaging conversation</p>
@@ -70,6 +92,8 @@ function QuartileCard({ q }: { q: BudgetReallocationResult['quartiles'][number] 
         <p>{q.n} advertisements</p>
         <p className="sensitive">{formatPHP(q.spend)} spend</p>
         <p className="sensitive">{q.inquiries.toLocaleString()} inquiries</p>
+        {q.n > 0 && <p className="sensitive">{formatPHPUnrounded(q.cpi)} unrounded rate</p>}
+        {q.n > 0 && <p className="sensitive">{formatPHP(q.medianSpend)} median spend per ad</p>}
       </div>
     </div>
   )
@@ -93,11 +117,11 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
           Reallocation comparison
         </p>
-        <span className="text-sm font-bold text-foreground tabular">{pct}% of Q4 spend</span>
+        <span className="text-sm font-bold text-foreground tabular">{pct}% of the least efficient group&apos;s spend</span>
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-xs text-muted-foreground">Drag to compare a different share of Q4&apos;s spend</p>
+        <p className="text-xs text-muted-foreground">Drag to compare a different share of that spend</p>
         <Slider
           min={0}
           max={100}
@@ -106,7 +130,7 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
           value={pct}
           onValueChange={next => setPct(next)}
           formatValue={v => `${v}%`}
-          aria-label="Percentage of Q4 spend to compare at Q1's rate"
+          aria-label="Percentage of the least efficient group's spend to compare at the most efficient group's rate"
         />
       </div>
 
@@ -116,7 +140,7 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
           <p className="sensitive text-lg font-bold text-foreground tabular">{formatPHP(reallocatedSpend)}</p>
         </div>
         <div>
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Would have generated at Q1&apos;s rate</p>
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Would have generated at the most efficient group&apos;s rate</p>
           <p className="sensitive text-lg font-bold text-foreground tabular">{Math.round(projectedInquiries).toLocaleString()} inquiries</p>
         </div>
         <div>
@@ -124,9 +148,13 @@ export function ReallocationSlider({ result }: { result: BudgetReallocationResul
           {/* Neutral, not text-status-positive (docs/raven/Budget_Reallocation_Review.md
               §2): green reads as a promise, but this is a retrospective
               comparison, not a recommendation. */}
-          <p className="sensitive text-lg font-bold text-foreground tabular">+{Math.round(additionalAtPct).toLocaleString()}</p>
+          <p className="sensitive text-lg font-bold text-foreground tabular">+{Math.round(additionalAtPct).toLocaleString()} inquiries</p>
         </div>
       </div>
+
+      <p className="text-[11px] text-muted-foreground pt-1">
+        Calculated at {formatPHPUnrounded(result.q1Cpi)} per inquiry, the most efficient group&apos;s unrounded rate, shown rounded on the cards above.
+      </p>
 
       <p className="text-[11px] text-muted-foreground pt-2 border-t border-border">
         Retrospective comparison of recorded results. Past efficiency does not guarantee the same rate at higher spend.
@@ -166,7 +194,7 @@ function Q4Table({ q4Ads }: { q4Ads: BudgetReallocationResult['q4Ads'] }) {
                   <TableHead className="px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Ad Set</TableHead>
                   <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Spend</TableHead>
                   <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Inquiries</TableHead>
-                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">CPI</TableHead>
+                  <TableHead className="text-right px-4 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Cost per inquiry</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

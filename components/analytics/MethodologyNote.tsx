@@ -33,7 +33,7 @@ export default function MethodologyNote({
         {label}
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2">
-        <p className="text-[11px] text-gray-400">{children}</p>
+        <div className="text-[11px] text-gray-400">{children}</div>
       </CollapsibleContent>
     </Collapsible>
   )
